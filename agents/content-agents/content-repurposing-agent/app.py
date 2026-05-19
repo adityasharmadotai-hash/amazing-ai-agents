@@ -302,7 +302,7 @@ with st.sidebar:
     st.markdown("""
     <div class="nav-divider"></div>
     <div style="font-size:11px;color:#334155;text-align:center;padding:2px 0 8px;">
-        Built with ❤️ &nbsp;·&nbsp; OpenAI + Streamlit
+        Built with ❤️ by <a href="https://www.adityasharma.ai" target="_blank" style="color:#818cf8;">Aditya Sharma</a>
     </div>
     """, unsafe_allow_html=True)
 
