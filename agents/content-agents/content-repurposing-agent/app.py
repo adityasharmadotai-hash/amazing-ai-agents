@@ -158,6 +158,23 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
     white-space: pre-wrap;
 }
 
+/* ── Content text areas (clean output display) ── */
+[data-testid="stTextArea"] textarea {
+    background: #0f172a !important;
+    color: #e2e8f0 !important;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 13px !important;
+    line-height: 1.75 !important;
+    border: 1px solid #1e293b !important;
+    border-radius: 10px !important;
+    padding: 16px !important;
+    resize: vertical !important;
+}
+[data-testid="stTextArea"] textarea:focus {
+    border-color: #6366f1 !important;
+    box-shadow: 0 0 0 2px rgba(99,102,241,0.15) !important;
+}
+
 /* URL input */
 [data-testid="stTextInput"] input {
     border-radius: 10px; border: 2px solid #e2e8f0;
@@ -552,7 +569,14 @@ elif page == "✨ Generate":
 
         with st.expander(f"{icon} {label}", expanded=bool(generated)):
             if generated and not generated.startswith("Error:"):
-                st.markdown(f'<div class="content-box">{generated}</div>', unsafe_allow_html=True)
+                # Use st.text_area for clean plain-text display — no markdown rendering
+                st.text_area(
+                    label="content",
+                    value=generated,
+                    height=300,
+                    key=f"ta_{ct_key}",
+                    label_visibility="collapsed",
+                )
                 bc1, bc2, bc3 = st.columns(3)
                 with bc1:
                     st.download_button(
@@ -564,7 +588,7 @@ elif page == "✨ Generate":
                         use_container_width=True,
                     )
                 with bc2:
-                    st.code(f"{len(generated)} chars", language=None)
+                    st.caption(f"📊 {len(generated):,} chars")
                 with bc3:
                     if st.button("🔄 Regenerate", key=f"regen_{ct_key}", use_container_width=True):
                         with st.spinner(f"Regenerating {label}..."):
@@ -644,7 +668,13 @@ elif page == "📋 All Content":
             <span style="background:#eff6ff;color:#2563eb;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;">{style}</span>
         </div>
         """, unsafe_allow_html=True)
-        st.markdown(f'<div class="content-box-full">{content}</div>', unsafe_allow_html=True)
+        st.text_area(
+            label="content_full",
+            value=content,
+            height=350,
+            key=f"allpage_ta_{ct_key}",
+            label_visibility="collapsed",
+        )
         st.download_button(
             f"⬇️ Download",
             data=content,
@@ -717,7 +747,13 @@ SUPABASE_KEY      = "your-anon-key"
 
             full = get_content_by_id(row["id"])
             if full:
-                st.markdown(f'<div class="content-box">{full.get("generated_text","")}</div>', unsafe_allow_html=True)
+                st.text_area(
+                    label="hist_content",
+                    value=full.get("generated_text", ""),
+                    height=280,
+                    key=f"hist_ta_{row['id']}",
+                    label_visibility="collapsed",
+                )
                 hc1, hc2 = st.columns(2)
                 with hc1:
                     st.download_button(
@@ -925,7 +961,12 @@ elif page == "⚙️ Prompts":
                         test_key, chunk_transcript(td["transcript"]), test_style,
                         custom_system=p["system"], custom_user=user_prompt
                     )
-                st.markdown(f'<div class="content-box-full">{result}</div>', unsafe_allow_html=True)
+                st.text_area(
+                    label="prompt_test_result",
+                    value=result,
+                    height=350,
+                    label_visibility="collapsed",
+                )
 
     with t3:
         st.markdown('<div class="section-header">🎨 Writing Style Definitions</div>', unsafe_allow_html=True)

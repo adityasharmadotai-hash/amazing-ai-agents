@@ -205,33 +205,33 @@ summaries that rank on Google and keep readers engaged.""",
 
 STYLE: {style_instruction}
 
-STRUCTURE:
-# [Compelling SEO Title]
+STRUCTURE (use plain text — NO markdown headers with # symbols):
 
-## Introduction (2-3 sentences)
-[Hook + what reader will learn]
+TITLE: [Compelling SEO Title Here]
 
-## Key Insights
-### [Section 1 Title]
-[2-3 paragraphs]
+INTRODUCTION
+[2-3 sentences: hook + what reader will learn]
 
-### [Section 2 Title]  
-[2-3 paragraphs]
+KEY INSIGHT 1: [Section Title]
+[2-3 paragraphs of content]
 
-### [Section 3 Title]
-[2-3 paragraphs]
+KEY INSIGHT 2: [Section Title]
+[2-3 paragraphs of content]
 
-## Key Takeaways
-- [Bullet 1]
-- [Bullet 2]
-- [Bullet 3]
-- [Bullet 4]
-- [Bullet 5]
+KEY INSIGHT 3: [Section Title]
+[2-3 paragraphs of content]
 
-## Conclusion (2-3 sentences)
-[Summary + CTA]
+KEY TAKEAWAYS
+• [Takeaway 1]
+• [Takeaway 2]
+• [Takeaway 3]
+• [Takeaway 4]
+• [Takeaway 5]
 
-Target: 400-600 words total. Use proper markdown.
+CONCLUSION
+[2-3 sentences: summary + CTA]
+
+Target: 400-600 words total. Use plain text formatting only, NO # headers.
 
 TRANSCRIPT:
 {transcript}
