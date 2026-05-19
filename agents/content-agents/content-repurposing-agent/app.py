@@ -26,24 +26,63 @@ st.markdown("""
 
 html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
 
-/* Sidebar */
+/* ── Sidebar background ── */
 [data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+    background: linear-gradient(180deg, #0d0d1a 0%, #1a1a2e 60%, #16213e 100%) !important;
 }
-[data-testid="stSidebar"] .stRadio label,
+[data-testid="stSidebar"] > div:first-child {
+    background: transparent !important;
+}
+/* Hide ALL default radio widget chrome inside sidebar */
+[data-testid="stSidebar"] .stRadio { display: none !important; }
+
+/* Force all text in sidebar to be white/light */
 [data-testid="stSidebar"] p,
 [data-testid="stSidebar"] span,
-[data-testid="stSidebar"] h1,
-[data-testid="stSidebar"] h2,
-[data-testid="stSidebar"] h3 { color: white !important; }
-[data-testid="stSidebar"] .stRadio label {
-    background: rgba(255,255,255,0.06);
-    border-radius: 10px; padding: 10px 14px;
-    margin: 2px 0; display: block;
-    transition: background 0.2s; font-weight: 500;
+[data-testid="stSidebar"] div,
+[data-testid="stSidebar"] label { color: #e2e8f0; }
+
+/* ── Custom nav button styles ── */
+.nav-btn {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%; padding: 11px 16px; margin: 3px 0;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 10px; cursor: pointer;
+    font-size: 14px; font-weight: 500; color: #cbd5e1;
+    text-decoration: none; transition: all 0.18s ease;
 }
-[data-testid="stSidebar"] .stRadio label:hover {
-    background: rgba(255,255,255,0.14);
+.nav-btn:hover {
+    background: rgba(99,102,241,0.25);
+    border-color: rgba(99,102,241,0.5);
+    color: white;
+}
+.nav-btn.active {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    border-color: transparent; color: white;
+    font-weight: 600;
+    box-shadow: 0 4px 14px rgba(99,102,241,0.35);
+}
+.nav-btn .nav-icon { font-size: 16px; width: 22px; text-align: center; }
+.nav-divider {
+    height: 1px; background: rgba(255,255,255,0.08);
+    margin: 12px 0;
+}
+/* Style selector buttons */
+.style-btn {
+    display: flex; align-items: center; gap: 8px;
+    width: 100%; padding: 9px 14px; margin: 3px 0;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 8px; cursor: pointer;
+    font-size: 13px; font-weight: 500; color: #94a3b8;
+    transition: all 0.15s;
+}
+.style-btn:hover { background: rgba(255,255,255,0.1); color: white; }
+.style-btn.active {
+    background: rgba(99,102,241,0.3);
+    border-color: rgba(99,102,241,0.6);
+    color: white; font-weight: 600;
 }
 
 /* Cards */
@@ -191,56 +230,76 @@ def _check_credentials():
 _check_credentials()
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
+NAV_PAGES = [
+    ("🏠", "Home"), ("📄", "Transcript"), ("✨", "Generate"),
+    ("📋", "All Content"), ("📁", "History"), ("📊", "Analytics"), ("⚙️", "Prompts"),
+]
+
 with st.sidebar:
+
+    # Branding
     st.markdown("""
-    <div style="text-align:center;padding:20px 0 16px;">
-        <div style="font-size:44px;">🎬</div>
-        <div style="font-size:17px;font-weight:700;color:white;">Content Repurposer</div>
-        <div style="font-size:12px;color:#64748b;margin-top:4px;">Powered by OpenAI</div>
+    <div style="padding:24px 4px 18px;text-align:center;">
+        <div style="font-size:52px;line-height:1;">🎬</div>
+        <div style="font-size:17px;font-weight:800;color:white;margin-top:10px;
+                    letter-spacing:-0.2px;">Content Repurposer</div>
+        <div style="font-size:11px;color:#475569;margin-top:5px;font-weight:500;">
+            ✦ Powered by OpenAI GPT-4o
+        </div>
     </div>
+    <div class="nav-divider"></div>
+    <div style="font-size:10px;color:#475569;text-transform:uppercase;letter-spacing:0.1em;
+                font-weight:600;padding:0 4px;margin-bottom:6px;">Navigation</div>
     """, unsafe_allow_html=True)
 
-    page = st.radio(
-        "nav",
-        ["🏠 Home", "📄 Transcript", "✨ Generate", "📋 All Content", "📁 History", "📊 Analytics", "⚙️ Prompts"],
-        label_visibility="collapsed",
-    )
-    st.session_state.page = page
+    # Nav buttons
+    for icon, label in NAV_PAGES:
+        full_page = f"{icon} {label}"
+        if st.button(f"{icon}  {label}", key=f"nav_{label}", use_container_width=True):
+            st.session_state.page = full_page
+            st.rerun()
 
-    # Active video indicator
+    page = st.session_state.get("page", "🏠 Home")
+
+    # Active video card + style selector
     if st.session_state.transcript_data:
         td = st.session_state.transcript_data
-        st.markdown("---")
         meta = st.session_state.video_meta
-        title = meta.get("title", "Video loaded")[:40]
+        title = meta.get("title", "Video loaded")[:36]
+        dur = td.get("duration_minutes", 0)
+        wc = td.get("word_count", 0)
         st.markdown(f"""
-        <div style="background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.4);
-                    border-radius:10px;padding:12px;">
-            <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;">Active Video</div>
-            <div style="font-size:13px;font-weight:600;color:white;margin-top:4px;">▶ {title}</div>
-            <div style="font-size:11px;color:#64748b;margin-top:2px;">
-                {td.get('duration_minutes',0)} min · {td.get('word_count',0):,} words
+        <div class="nav-divider"></div>
+        <div style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);
+                    border-radius:10px;padding:11px 13px;margin:4px 0 10px;">
+            <div style="font-size:10px;color:#818cf8;text-transform:uppercase;
+                        letter-spacing:0.08em;font-weight:600;">▶ Active Video</div>
+            <div style="font-size:12px;font-weight:600;color:white;margin-top:5px;
+                        line-height:1.35;">{title}</div>
+            <div style="font-size:11px;color:#475569;margin-top:5px;">
+                ⏱ {dur} min &nbsp;·&nbsp; 📝 {wc:,} words
             </div>
         </div>
+        <div class="nav-divider"></div>
+        <div style="font-size:10px;color:#475569;text-transform:uppercase;letter-spacing:0.1em;
+                    font-weight:600;padding:0 4px;margin-bottom:6px;">Writing Style</div>
         """, unsafe_allow_html=True)
 
-        # Style selector in sidebar
-        st.markdown("---")
-        st.markdown('<div style="color:#94a3b8;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;">Writing Style</div>', unsafe_allow_html=True)
-        style_choice = st.radio(
-            "style",
-            [f"{v['icon']} {k}" for k, v in WRITING_STYLES.items()],
-            index=list(WRITING_STYLES.keys()).index(st.session_state.current_style),
-            label_visibility="collapsed",
-        )
-        selected_style = style_choice.split(" ", 1)[1]
-        if selected_style != st.session_state.current_style:
-            st.session_state.current_style = selected_style
-            st.session_state.generated_content = {}
+        for style_name, style_data in WRITING_STYLES.items():
+            is_sel = (st.session_state.current_style == style_name)
+            lbl = f"✓  {style_data['icon']}  {style_name}" if is_sel else f"{style_data['icon']}  {style_name}"
+            if st.button(lbl, key=f"style_{style_name}", use_container_width=True):
+                if style_name != st.session_state.current_style:
+                    st.session_state.current_style = style_name
+                    st.session_state.generated_content = {}
+                    st.rerun()
 
-    st.markdown("---")
-    st.markdown('<div style="font-size:11px;color:#374151;text-align:center;">Built with OpenAI © 2025</div>', unsafe_allow_html=True)
-
+    st.markdown("""
+    <div class="nav-divider"></div>
+    <div style="font-size:11px;color:#334155;text-align:center;padding:2px 0 8px;">
+        Built with ❤️ &nbsp;·&nbsp; OpenAI + Streamlit
+    </div>
+    """, unsafe_allow_html=True)
 
 # ═════════════════════════════════════════════════════════════════════════════
 # PAGE: HOME
