@@ -33,56 +33,61 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
 [data-testid="stSidebar"] > div:first-child {
     background: transparent !important;
 }
+
 /* Hide ALL default radio widget chrome inside sidebar */
 [data-testid="stSidebar"] .stRadio { display: none !important; }
 
-/* Force all text in sidebar to be white/light */
+/* ── Force ALL sidebar text white ── */
 [data-testid="stSidebar"] p,
 [data-testid="stSidebar"] span,
-[data-testid="stSidebar"] div,
-[data-testid="stSidebar"] label { color: #e2e8f0; }
+[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] div { color: #e2e8f0 !important; }
 
-/* ── Custom nav button styles ── */
-.nav-btn {
-    display: flex; align-items: center; gap: 10px;
-    width: 100%; padding: 11px 16px; margin: 3px 0;
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.06);
-    border-radius: 10px; cursor: pointer;
-    font-size: 14px; font-weight: 500; color: #cbd5e1;
-    text-decoration: none; transition: all 0.18s ease;
+/* ── Sidebar st.button → styled as nav items ── */
+[data-testid="stSidebar"] .stButton > button {
+    background: rgba(255,255,255,0.07) !important;
+    border: 1px solid rgba(255,255,255,0.12) !important;
+    border-radius: 10px !important;
+    color: #e2e8f0 !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    padding: 11px 16px !important;
+    text-align: left !important;
+    width: 100% !important;
+    margin: 2px 0 !important;
+    transition: all 0.18s ease !important;
+    box-shadow: none !important;
 }
-.nav-btn:hover {
-    background: rgba(99,102,241,0.25);
-    border-color: rgba(99,102,241,0.5);
-    color: white;
+/* Inner text element Streamlit renders inside button */
+[data-testid="stSidebar"] .stButton > button p,
+[data-testid="stSidebar"] .stButton > button span,
+[data-testid="stSidebar"] .stButton > button div {
+    color: #e2e8f0 !important;
+    font-weight: 500 !important;
 }
-.nav-btn.active {
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
-    border-color: transparent; color: white;
-    font-weight: 600;
-    box-shadow: 0 4px 14px rgba(99,102,241,0.35);
+[data-testid="stSidebar"] .stButton > button:hover {
+    background: rgba(99,102,241,0.28) !important;
+    border-color: rgba(99,102,241,0.55) !important;
+    color: #ffffff !important;
+    transform: none !important;
+    box-shadow: 0 2px 10px rgba(99,102,241,0.2) !important;
 }
-.nav-btn .nav-icon { font-size: 16px; width: 22px; text-align: center; }
+[data-testid="stSidebar"] .stButton > button:hover p,
+[data-testid="stSidebar"] .stButton > button:hover span {
+    color: #ffffff !important;
+}
+[data-testid="stSidebar"] .stButton > button:active {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+    border-color: transparent !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 14px rgba(99,102,241,0.4) !important;
+}
+
+/* Divider */
 .nav-divider {
-    height: 1px; background: rgba(255,255,255,0.08);
+    height: 1px;
+    background: rgba(255,255,255,0.08);
     margin: 12px 0;
-}
-/* Style selector buttons */
-.style-btn {
-    display: flex; align-items: center; gap: 8px;
-    width: 100%; padding: 9px 14px; margin: 3px 0;
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.06);
-    border-radius: 8px; cursor: pointer;
-    font-size: 13px; font-weight: 500; color: #94a3b8;
-    transition: all 0.15s;
-}
-.style-btn:hover { background: rgba(255,255,255,0.1); color: white; }
-.style-btn.active {
-    background: rgba(99,102,241,0.3);
-    border-color: rgba(99,102,241,0.6);
-    color: white; font-weight: 600;
 }
 
 /* Cards */
