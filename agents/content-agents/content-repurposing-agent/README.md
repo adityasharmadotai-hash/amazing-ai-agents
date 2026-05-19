@@ -2,6 +2,8 @@
 
 > Turn any YouTube video into LinkedIn posts, Twitter threads, Instagram captions, viral hooks, carousel slides, and blog summaries — in seconds, powered by OpenAI GPT-4o.
 
+<img width="3024" height="1964" alt="image" src="https://github.com/user-attachments/assets/3dde5d57-2359-4328-8db3-2f504e262fdf" />
+
 ---
 
 <div align="center">
@@ -46,6 +48,8 @@ Built on **OpenAI GPT-4o** with a clean modular Python architecture, **Supabase*
 | ⚙️ **Prompt Manager** | View, edit, and create custom prompt templates |
 | ⬇️ **Export** | Download any piece as .txt |
 
+<img width="3024" height="1964" alt="image" src="https://github.com/user-attachments/assets/a7f5b629-35c8-492c-b338-86271102c949" />
+
 ---
 
 ## How It Works
@@ -71,6 +75,7 @@ Built on **OpenAI GPT-4o** with a clean modular Python architecture, **Supabase*
 │  4. Copy / Download / Export All                             │
 └──────────────────────────────────────────────────────────────┘
 ```
+<img width="3024" height="1964" alt="image" src="https://github.com/user-attachments/assets/7903a582-afda-4f29-a7ab-55dfc1b028fc" />
 
 ---
 
