@@ -161,8 +161,61 @@ html, body, [class*="css"] {
 </style>
 """, unsafe_allow_html=True)
 
-# ── Initialise DB ────────────────────────────────────────────────────────────
+# ── Initialise DB & check credentials ────────────────────────────────────────
 init_db()
+
+from modules.database import is_configured as _db_configured
+
+def _show_setup_banner():
+    """Show a helpful setup message when credentials are missing."""
+    missing = []
+    try:
+        ok_openai = bool(st.secrets.get("OPENAI_API_KEY") or os.environ.get("OPENAI_API_KEY"))
+    except Exception:
+        ok_openai = bool(os.environ.get("OPENAI_API_KEY"))
+    try:
+        ok_supabase = bool(
+            (st.secrets.get("SUPABASE_URL") or os.environ.get("SUPABASE_URL")) and
+            (st.secrets.get("SUPABASE_KEY") or os.environ.get("SUPABASE_KEY"))
+        )
+    except Exception:
+        ok_supabase = bool(os.environ.get("SUPABASE_URL") and os.environ.get("SUPABASE_KEY"))
+
+    if not ok_openai:
+        missing.append("OPENAI_API_KEY")
+    if not ok_supabase:
+        missing.append("SUPABASE_URL and SUPABASE_KEY")
+
+    if missing:
+        st.markdown("""
+        <div style="background:#fef2f2;border:2px solid #fecaca;border-radius:16px;padding:32px;max-width:640px;margin:40px auto;">
+            <div style="font-size:32px;margin-bottom:12px;">🔑</div>
+            <h2 style="color:#dc2626;margin:0 0 8px 0;">Setup Required</h2>
+            <p style="color:#7f1d1d;margin:0 0 16px 0;">The following credentials are missing:</p>
+        """, unsafe_allow_html=True)
+        for m in missing:
+            st.markdown(f"- **`{m}`**")
+        st.markdown("""
+        <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:16px;margin-top:16px;">
+            <strong>📋 Add these to Streamlit Cloud → App → Settings → Secrets:</strong>
+        </div>
+        """, unsafe_allow_html=True)
+        st.code(
+            'OPENAI_API_KEY  = "sk-your-openai-key-here"\n'
+            'SUPABASE_URL    = "https://your-project.supabase.co"\n'
+            'SUPABASE_KEY    = "your-supabase-anon-key-here"',
+            language="toml"
+        )
+        st.markdown("""
+        <div style="margin-top:12px;font-size:13px;color:#6b7280;">
+            <strong>Local dev?</strong> Copy <code>.env.example</code> to <code>.env</code> and fill in your keys.<br>
+            Get OpenAI key: <a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com/api-keys</a><br>
+            Get Supabase keys: <a href="https://supabase.com/dashboard" target="_blank">supabase.com</a> → Project Settings → API
+        </div>
+        """, unsafe_allow_html=True)
+        st.stop()
+
+_show_setup_banner()
 
 # ── Session state helpers ────────────────────────────────────────────────────
 def _ss(key, default=None):
@@ -248,7 +301,12 @@ if page == "🏠 Dashboard":
     </div>
     """, unsafe_allow_html=True)
 
-    stats = get_dashboard_stats()
+    try:
+        stats = get_dashboard_stats()
+    except Exception as e:
+        st.error(f"Database error: {e}")
+        st.info("Make sure your SUPABASE_URL and SUPABASE_KEY secrets are set correctly, and that you have run supabase_schema.sql in the Supabase SQL Editor.")
+        st.stop()
 
     # KPI row
     c1, c2, c3, c4 = st.columns(4)
@@ -923,7 +981,12 @@ elif page == "📊 Analytics":
 
     st.markdown('<h1 style="color:#0f172a;">📊 Analytics Dashboard</h1>', unsafe_allow_html=True)
 
-    stats = get_dashboard_stats()
+    try:
+        stats = get_dashboard_stats()
+    except Exception as e:
+        st.error(f"Database error: {e}")
+        st.info("Make sure your SUPABASE_URL and SUPABASE_KEY secrets are set correctly, and that you have run supabase_schema.sql in the Supabase SQL Editor.")
+        st.stop()
     analyses = get_all_analyses()
 
     if not analyses:
