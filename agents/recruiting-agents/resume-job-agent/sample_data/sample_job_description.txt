@@ -1,0 +1,43 @@
+Senior Software Engineer — Full Stack
+Company: Innovatech Solutions
+Location: San Francisco, CA (Hybrid)
+Salary: $160,000 - $200,000
+
+ABOUT THE ROLE
+We're looking for a Senior Software Engineer to join our Platform team and help build the 
+next generation of our developer tools platform used by 500,000+ developers worldwide.
+
+RESPONSIBILITIES
+- Design and build scalable backend services using Python and Go
+- Lead technical discussions and mentor junior engineers
+- Partner with Product Managers and Designers to ship high-quality features
+- Contribute to architectural decisions and technical roadmap
+- Write clean, well-tested code with 90%+ test coverage
+- Participate in on-call rotation and incident response
+
+REQUIRED QUALIFICATIONS
+- 5+ years of professional software engineering experience
+- Strong proficiency in Python or Go (we primarily use Python)
+- Experience with cloud infrastructure (AWS preferred, GCP or Azure acceptable)
+- Proficient with relational databases (PostgreSQL, MySQL)
+- Experience with Docker and Kubernetes
+- Track record of building and shipping production systems at scale
+- Strong communication and collaboration skills
+- Bachelor's degree in Computer Science or equivalent practical experience
+
+PREFERRED QUALIFICATIONS
+- Experience with microservices and event-driven architecture
+- Familiarity with machine learning workflows (MLflow, PyTorch, or TensorFlow)
+- Experience with GraphQL
+- Open source contributions
+- Knowledge of security best practices
+
+WHAT WE OFFER
+- Competitive salary: $160K - $200K based on experience
+- Equity package with 4-year vesting
+- Health, dental, and vision insurance
+- $3,000 annual learning budget
+- Remote-friendly with 2 days/week in SF office
+- 401(k) with company match
+
+Our tech stack: Python, FastAPI, PostgreSQL, Redis, Kafka, React, TypeScript, AWS, Kubernetes, Terraform

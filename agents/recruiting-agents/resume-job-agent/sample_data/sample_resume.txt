@@ -1,0 +1,52 @@
+ALEX JOHNSON
+Email: alex.johnson@email.com | Phone: (555) 123-4567 | Location: San Francisco, CA
+LinkedIn: linkedin.com/in/alexjohnson | GitHub: github.com/alexjohnson
+
+PROFESSIONAL SUMMARY
+Results-driven software engineer with 6+ years of experience building scalable web applications 
+and APIs. Passionate about clean code, performance optimization, and mentoring junior developers. 
+Led multiple cross-functional teams to deliver high-impact products used by millions of users.
+
+SKILLS
+Python, JavaScript, TypeScript, React, Node.js, FastAPI, Django, PostgreSQL, MongoDB, Redis,
+Docker, Kubernetes, AWS (EC2, S3, Lambda, RDS), GCP, Git, CI/CD, REST APIs, GraphQL,
+Machine Learning basics, Agile/Scrum, System Design, Microservices Architecture
+
+EXPERIENCE
+
+Senior Software Engineer — TechCorp Inc., San Francisco, CA (Jan 2022 – Present)
+- Led development of a real-time analytics platform handling 2M+ events/day, reducing query time by 40%
+- Architected migration from monolith to microservices, improving deployment frequency by 5x
+- Mentored 4 junior engineers; established code review standards adopted across 3 teams
+- Built ML-powered recommendation engine that increased user engagement by 28%
+- Collaborated with Product and Design to ship 12 major features on schedule
+
+Software Engineer — StartupXYZ, San Francisco, CA (Jun 2019 – Dec 2021)
+- Built RESTful APIs serving 500K daily active users with 99.9% uptime
+- Implemented OAuth2 authentication system reducing login issues by 65%
+- Optimized database queries reducing average response time from 800ms to 120ms
+- Developed automated testing suite with 92% code coverage
+- Participated in on-call rotation; resolved 30+ production incidents
+
+Junior Developer — WebAgency, San Jose, CA (Jul 2018 – May 2019)
+- Built 15+ client websites using React and WordPress
+- Created reusable component library used across 8 projects
+- Integrated third-party APIs (Stripe, Twilio, SendGrid)
+
+EDUCATION
+B.S. Computer Science — University of California, Berkeley (2018)
+GPA: 3.7/4.0 | Dean's List 3 semesters
+
+PROJECTS
+ResuMatch — AI-powered resume analyzer
+Built with Python, FastAPI, OpenAI API. Analyzed 10K+ resumes and matched them to job descriptions 
+with 87% accuracy. Technologies: Python, FastAPI, PostgreSQL, React, OpenAI
+
+DevMetrics Dashboard — Engineering productivity tracker
+Real-time dashboard for tracking team velocity, PR cycle time, and deployment frequency.
+Technologies: Python, Grafana, PostgreSQL, Docker
+
+CERTIFICATIONS
+- AWS Solutions Architect Associate (2023)
+- Google Cloud Professional Data Engineer (2022)
+- Python Institute PCEP (2020)
