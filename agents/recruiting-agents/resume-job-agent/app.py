@@ -164,7 +164,6 @@ html, body, [class*="css"] {
 # ── Initialise DB & check credentials ────────────────────────────────────────
 init_db()
 
-from modules.database import is_configured as _db_configured
 
 def _show_setup_banner():
     """Show a helpful setup message when credentials are missing."""
