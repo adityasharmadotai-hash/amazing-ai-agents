@@ -1,6 +1,7 @@
 # 🎙️ AI Meeting Notes Agent
 
 > Upload any meeting recording → get instant summaries, action items, decisions, tasks by person, and a follow-up email draft — powered by OpenAI Whisper + GPT-4o.
+<img width="1883" height="852" alt="image" src="https://github.com/user-attachments/assets/fd7cc03e-8bfc-4abd-986b-9af3f9a1ef19" />
 
 ---
 
@@ -23,6 +24,8 @@
 ## Overview
 
 Stop taking meeting notes manually. Upload your Zoom, Teams, or Google Meet recording — Whisper AI transcribes it and GPT-4o extracts everything you need in under 60 seconds.
+
+<img width="1879" height="781" alt="image" src="https://github.com/user-attachments/assets/c58ad35c-7dff-4656-ae83-ce34a608da9d" />
 
 ---
 
