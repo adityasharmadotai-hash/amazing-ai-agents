@@ -49,6 +49,21 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
 }
 [data-testid="stSidebar"] .stButton > button:hover p { color: #fff !important; }
 
+/* ── Active nav button — uses data-active attr set via JS workaround ── */
+[data-testid="stSidebar"] .nav-active > button,
+[data-testid="stSidebar"] .nav-active > button:hover {
+    background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;
+    border-color: transparent !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    box-shadow: 0 4px 14px rgba(79,70,229,0.4) !important;
+}
+[data-testid="stSidebar"] .nav-active > button p,
+[data-testid="stSidebar"] .nav-active > button span {
+    color: #ffffff !important;
+    font-weight: 700 !important;
+}
+
 /* ── Cards ── */
 .glass-card {
     background: white; border: 1px solid #e2e8f0;
@@ -149,23 +164,41 @@ from modules.database import init_db, is_configured as db_ok, save_meeting, get_
 from modules.transcriber import transcribe_audio, format_duration
 from modules.exporter import export_markdown, export_pdf, export_docx
 
+# Inject user-provided API key into env so all modules pick it up
+def _sync_api_key():
+    user_key = st.session_state.get("user_api_key", "").strip()
+    if user_key:
+        os.environ["OPENAI_API_KEY"] = user_key
+
+_sync_api_key()
 init_db()
 
-# ── Credential check ──────────────────────────────────────────────────────────
+# ── Credential check — allow user key from Settings page ─────────────────────
+def _get_active_api_key() -> str:
+    """Return user-provided key from session, or key from secrets/env."""
+    session_key = st.session_state.get("user_api_key", "").strip()
+    if session_key:
+        return session_key
+    try:
+        return st.secrets.get("OPENAI_API_KEY") or os.environ.get("OPENAI_API_KEY", "")
+    except Exception:
+        return os.environ.get("OPENAI_API_KEY", "")
+
 def _check_creds():
-    if not is_configured():
+    if not _get_active_api_key():
         st.markdown("""
         <div style="background:#fef2f2;border:2px solid #fecaca;border-radius:16px;
-                    padding:36px;max-width:580px;margin:60px auto;text-align:center;">
+                    padding:36px;max-width:560px;margin:60px auto;text-align:center;">
             <div style="font-size:52px;">🔑</div>
             <h2 style="color:#dc2626;margin:12px 0 8px;">API Key Required</h2>
-            <p style="color:#7f1d1d;">Add your <strong>OPENAI_API_KEY</strong> to Streamlit secrets.</p>
+            <p style="color:#7f1d1d;font-size:15px;">
+                Go to <strong>⚙️ Settings</strong> in the sidebar<br>
+                and enter your OpenAI API key to get started.
+            </p>
         </div>
         """, unsafe_allow_html=True)
-        st.code('OPENAI_API_KEY = "sk-your-key-here"\nSUPABASE_URL   = "https://xxx.supabase.co"\nSUPABASE_KEY   = "your-anon-key"', language="toml")
+        st.info("👈 Click **⚙️ Settings** in the sidebar to add your API key")
         st.stop()
-
-_check_creds()
 
 # ── Session state ─────────────────────────────────────────────────────────────
 def _ss(key, default=None):
@@ -178,34 +211,56 @@ _ss("analysis", None)
 _ss("follow_up_email", None)
 _ss("meeting_title", "")
 _ss("saved_meeting_id", None)
+_ss("user_api_key", "")
 
 # ── Nav pages ─────────────────────────────────────────────────────────────────
 NAV = [
     ("🏠", "Home"), ("🎙️", "Upload & Transcribe"),
     ("📋", "Meeting Analysis"), ("✉️", "Follow-up Email"),
     ("🔍", "Search Meetings"), ("📊", "Analytics"), ("📁", "History"),
+    ("⚙️", "Settings"),
 ]
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("""
+    # API key status indicator
+    has_key = bool(_get_active_api_key())
+    key_source = "session" if st.session_state.get("user_api_key","").strip() else "env"
+    key_indicator = "🟢" if has_key else "🔴"
+
+    st.markdown(f"""
     <div style="padding:22px 4px 18px;text-align:center;">
         <div style="font-size:52px;">🎙️</div>
         <div style="font-size:17px;font-weight:800;color:white;margin-top:10px;">
             Meeting Notes AI</div>
         <div style="font-size:11px;color:#475569;margin-top:5px;">
             ✦ Powered by OpenAI GPT-4o</div>
+        <div style="font-size:11px;margin-top:8px;">
+            {key_indicator} {"API key active" if has_key else "No API key — go to Settings"}
+        </div>
     </div>
     <div class="nav-divider"></div>
     <div style="font-size:10px;color:#475569;text-transform:uppercase;letter-spacing:0.1em;
                 font-weight:600;padding:0 4px;margin-bottom:6px;">Navigation</div>
     """, unsafe_allow_html=True)
 
+    current_page = st.session_state.get("page", "🏠 Home")
+
     for icon, label in NAV:
         full = f"{icon} {label}"
-        if st.button(f"{icon}  {label}", key=f"nav_{label}", use_container_width=True):
+        is_active = (current_page == full)
+        # Wrap in a div with class nav-active when this page is selected
+        if is_active:
+            st.markdown('<div class="nav-active">', unsafe_allow_html=True)
+        if st.button(
+            f"{'✦  ' if is_active else ''}{icon}  {label}",
+            key=f"nav_{label}",
+            use_container_width=True,
+        ):
             st.session_state.page = full
             st.rerun()
+        if is_active:
+            st.markdown('</div>', unsafe_allow_html=True)
 
     page = st.session_state.get("page", "🏠 Home")
 
@@ -236,6 +291,11 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
 
+
+# ── Guard: require API key for all pages except Settings ─────────────────────
+if page != "⚙️ Settings":
+    _sync_api_key()
+    _check_creds()
 
 # ═════════════════════════════════════════════════════════════════════════════
 # PAGE: HOME
@@ -990,3 +1050,129 @@ elif page == "📁 History":
                 <span class="badge badge-info">📁 {r.get('filename','')}</span>
             </div>
             """, unsafe_allow_html=True)
+
+# ═════════════════════════════════════════════════════════════════════════════
+# PAGE: SETTINGS
+# ═════════════════════════════════════════════════════════════════════════════
+elif page == "⚙️ Settings":
+    st.markdown('<h1 style="color:#0f172a;">⚙️ Settings</h1>', unsafe_allow_html=True)
+    st.markdown("Configure your API keys to use the app. Your keys are stored only in your browser session — never saved to any server.")
+
+    # ── API Key status banner ──
+    current_key = _get_active_api_key()
+    if current_key:
+        source = "Your own key (entered below)" if st.session_state.get("user_api_key","").strip() else "Server-configured key"
+        st.markdown(f"""
+        <div style="background:#f0fdf4;border:2px solid #86efac;border-radius:14px;padding:16px 20px;margin-bottom:20px;">
+            <div style="font-weight:700;color:#15803d;font-size:15px;">🟢 API Key Active</div>
+            <div style="font-size:13px;color:#166534;margin-top:4px;">Source: {source}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown("""
+        <div style="background:#fef2f2;border:2px solid #fca5a5;border-radius:14px;padding:16px 20px;margin-bottom:20px;">
+            <div style="font-weight:700;color:#dc2626;font-size:15px;">🔴 No API Key</div>
+            <div style="font-size:13px;color:#991b1b;margin-top:4px;">Enter your OpenAI API key below to get started.</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown('<div class="section-header">🔑 OpenAI API Key</div>', unsafe_allow_html=True)
+
+    col_key, col_info = st.columns([3, 2])
+
+    with col_key:
+        st.markdown("""
+        <div class="glass-card">
+            <div style="font-weight:600;color:#0f172a;margin-bottom:4px;">Enter your OpenAI API Key</div>
+            <div style="font-size:12px;color:#64748b;margin-bottom:14px;">
+                Used for Whisper transcription + GPT-4o analysis.
+                Stored only in your browser session — cleared when you close the tab.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        entered_key = st.text_input(
+            "OpenAI API Key",
+            value=st.session_state.get("user_api_key", ""),
+            type="password",
+            placeholder="sk-proj-... or sk-...",
+            label_visibility="collapsed",
+        )
+
+        sc1, sc2 = st.columns(2)
+        with sc1:
+            if st.button("💾 Save API Key", type="primary", use_container_width=True):
+                if entered_key.strip().startswith("sk-"):
+                    st.session_state.user_api_key = entered_key.strip()
+                    os.environ["OPENAI_API_KEY"] = entered_key.strip()
+                    st.success("✅ API key saved! You can now use all features.")
+                    st.rerun()
+                elif entered_key.strip():
+                    st.error("❌ Invalid key format. OpenAI keys start with 'sk-'")
+                else:
+                    st.error("Please enter an API key.")
+        with sc2:
+            if st.button("🗑️ Clear Key", use_container_width=True):
+                st.session_state.user_api_key = ""
+                if "OPENAI_API_KEY" in os.environ:
+                    del os.environ["OPENAI_API_KEY"]
+                st.success("Key cleared.")
+                st.rerun()
+
+        st.markdown("""
+        <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;
+                    padding:12px 16px;margin-top:12px;">
+            <div style="font-weight:600;color:#92400e;font-size:13px;">🔒 Privacy Note</div>
+            <div style="font-size:12px;color:#78350f;margin-top:4px;line-height:1.6;">
+                Your API key is stored only in your Streamlit session (browser memory).<br>
+                It is never saved to any database or sent to any server other than OpenAI.<br>
+                It disappears when you close or refresh the tab.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col_info:
+        st.markdown("""
+        <div class="glass-card">
+            <div style="font-weight:600;color:#0f172a;margin-bottom:10px;">📋 How to get your key</div>
+            <div style="font-size:13px;color:#374151;line-height:1.9;">
+                1. Go to <a href="https://platform.openai.com/api-keys" target="_blank"
+                   style="color:#4f46e5;font-weight:600;">platform.openai.com/api-keys</a><br>
+                2. Sign in or create an account<br>
+                3. Click <strong>+ Create new secret key</strong><br>
+                4. Copy the key (starts with <code>sk-</code>)<br>
+                5. Paste it in the field on the left<br>
+                6. Click <strong>Save API Key</strong>
+            </div>
+            <div style="margin-top:14px;font-weight:600;color:#0f172a;">💰 Estimated cost</div>
+            <div style="font-size:12px;color:#64748b;margin-top:6px;line-height:1.7;">
+                Whisper: ~$0.006 / minute of audio<br>
+                GPT-4o analysis: ~$0.02–0.05 per meeting<br>
+                <strong>A 1-hour meeting ≈ $0.40–0.55 total</strong>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # ── Optional Supabase ──
+    st.markdown('<div class="section-header">🗄️ Supabase Database (Optional)</div>', unsafe_allow_html=True)
+    st.markdown("""
+    <div class="glass-card">
+        <div style="font-size:13px;color:#374151;line-height:1.8;">
+            Supabase enables <strong>meeting history</strong>, <strong>search</strong>, and <strong>analytics</strong>.
+            Without it, all other features work perfectly — data just isn't saved between sessions.<br><br>
+            To enable: run <code>supabase_schema.sql</code> in your Supabase SQL Editor,
+            then set <code>SUPABASE_URL</code> and <code>SUPABASE_KEY</code> in Streamlit Cloud
+            → App → Settings → Secrets.
+        </div>
+        <div style="margin-top:12px;">
+    """, unsafe_allow_html=True)
+    db_status = "🟢 Connected" if db_ok() else "🔴 Not configured"
+    st.markdown(f"**Database status:** {db_status}")
+    st.markdown("</div></div>", unsafe_allow_html=True)
+
+    # ── Quick start ──
+    if current_key:
+        st.markdown('<div class="section-header">🚀 Ready to Go!</div>', unsafe_allow_html=True)
+        if st.button("→ Go to Upload & Transcribe", type="primary"):
+            st.session_state.page = "🎙️ Upload & Transcribe"
+            st.rerun()
