@@ -102,6 +102,7 @@ meeting-notes-agent/
 ├── README.md
 └── Tutorial.md
 ```
+<img width="1895" height="990" alt="image" src="https://github.com/user-attachments/assets/5800dce4-b6c6-4dee-a879-10a85d51c49d" />
 
 ---
 
