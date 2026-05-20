@@ -49,14 +49,18 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
 }
 [data-testid="stSidebar"] .stButton > button:hover p { color: #fff !important; }
 
-/* ── Active nav button — uses data-active attr set via JS workaround ── */
+/* ── Active nav button — current page indicator ── */
 [data-testid="stSidebar"] .nav-active > button,
 [data-testid="stSidebar"] .nav-active > button:hover {
-    background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;
-    border-color: transparent !important;
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%) !important;
+    border-left: 4px solid #a78bfa !important;
+    border-top: 1px solid rgba(167,139,250,0.4) !important;
+    border-right: 1px solid rgba(167,139,250,0.2) !important;
+    border-bottom: 1px solid rgba(167,139,250,0.2) !important;
     color: #ffffff !important;
     font-weight: 700 !important;
-    box-shadow: 0 4px 14px rgba(79,70,229,0.4) !important;
+    box-shadow: 0 4px 20px rgba(79,70,229,0.5), inset 0 1px 0 rgba(255,255,255,0.15) !important;
+    transform: translateX(3px) !important;
 }
 [data-testid="stSidebar"] .nav-active > button p,
 [data-testid="stSidebar"] .nav-active > button span {
