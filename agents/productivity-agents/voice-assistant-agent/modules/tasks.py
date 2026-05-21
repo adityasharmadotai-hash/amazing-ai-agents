@@ -40,18 +40,21 @@ def init_stores():
 def local_now() -> datetime:
     """
     Return current datetime in the USER'S local timezone.
-    Uses browser-reported UTC offset stored in session state.
-    Falls back to server time if offset not yet captured.
+    Uses browser-reported UTC offset (minutes) stored in session state.
+    IST = +330, EST = -300, PST = -480 etc.
+    Falls back safely to server datetime.now() if anything goes wrong.
     """
-    utc_now = datetime.utcnow()
-    offset = st.session_state.get("user_tz_offset")
-    if offset is not None:
-        return utc_now + timedelta(minutes=offset)
-    return local_now()  # fallback: server local time
+    try:
+        offset = st.session_state.get("user_tz_offset", None)
+        if offset is not None and isinstance(offset, (int, float)):
+            return datetime.utcnow() + timedelta(minutes=int(offset))
+    except Exception:
+        pass
+    return datetime.now()  # safe fallback — never recurses
 
 
 def _now() -> str:
-    return local_now().strftime("%Y-%m-%d %H:%M")
+    return datetime.now().strftime("%Y-%m-%d %H:%M")
 
 def _id() -> str:
     return str(uuid.uuid4())[:8]
