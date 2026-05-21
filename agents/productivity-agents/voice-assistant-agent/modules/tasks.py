@@ -29,10 +29,29 @@ def init_stores():
         st.session_state.calendar_events = []
     if "dismissed_alert_ids" not in st.session_state:
         st.session_state.dismissed_alert_ids = set()
+    if "user_tz_offset" not in st.session_state:
+        st.session_state.user_tz_offset = None  # minutes offset from UTC
+
+
+# ─────────────────────────────────────────────
+# Local time — uses browser-reported offset when available
+# ─────────────────────────────────────────────
+
+def local_now() -> datetime:
+    """
+    Return current datetime in the USER'S local timezone.
+    Uses browser-reported UTC offset stored in session state.
+    Falls back to server time if offset not yet captured.
+    """
+    utc_now = datetime.utcnow()
+    offset = st.session_state.get("user_tz_offset")
+    if offset is not None:
+        return utc_now + timedelta(minutes=offset)
+    return local_now()  # fallback: server local time
 
 
 def _now() -> str:
-    return datetime.now().strftime("%Y-%m-%d %H:%M")
+    return local_now().strftime("%Y-%m-%d %H:%M")
 
 def _id() -> str:
     return str(uuid.uuid4())[:8]
@@ -45,57 +64,89 @@ def _id() -> str:
 def _parse_time(time_str: str) -> datetime | None:
     """
     Parse natural language time strings into datetime objects.
-    Examples:
-      "3:05 PM"         → today at 15:05
-      "9 AM"            → today at 09:00
-      "tomorrow 2 PM"   → tomorrow at 14:00
-      "2025-06-01 10:00"→ exact datetime
-      "in 5 minutes"    → now + 5 min
-      "in 1 hour"       → now + 60 min
+    Always uses local_now() as base so comparisons are in the user's timezone.
+
+    Supported formats:
+      "3:05 PM"             → today at 15:05
+      "8:15 PM (IST)"       → today at 20:15  ← strips timezone labels
+      "8:15 PM IST"         → today at 20:15
+      "9 AM"                → today at 09:00
+      "tomorrow 2 PM"       → tomorrow at 14:00
+      "today at 3 PM"       → today at 15:00
+      "2025-06-01 10:00"    → exact date+time
+      "in 5 minutes"        → now + 5 min
+      "in 1 hour"           → now + 60 min
     Returns None if unparseable.
     """
     if not time_str or time_str.strip().lower() in ("not set", "tbd", ""):
         return None
 
     s = time_str.strip().lower()
-    now = datetime.now()
+
+    # ── Strip timezone labels: (IST), IST, (UTC), UTC+5:30, EST, PST etc. ──
+    # Remove parenthesized timezone: "(IST)", "(UTC+5:30)", "(EST)"
+    s = re.sub(r'\([a-z]{2,5}[+-]?\d*:?\d*\)', '', s)
+    # Remove bare 2-5 letter timezone abbreviations at word boundary
+    s = re.sub(r'\b(ist|utc|gmt|est|pst|cst|mst|cet|jst|aest|nzst|bst|eet)\b', '', s)
+    # Remove UTC offset like +05:30, -08:00
+    s = re.sub(r'[+-]\d{1,2}:\d{2}', '', s)
+    # Strip "at" as connector: "today at 3 PM" → "today 3 PM"
+    s = re.sub(r'\bat\b', '', s)
+    s = re.sub(r'\s+', ' ', s).strip()
+
+    now = local_now()
     base = now.replace(second=0, microsecond=0)
 
-    # "in X minutes/hours"
-    m = re.search(r"in\s+(\d+)\s*(min|minute|hour|hr)", s)
+    # ── "in X minutes/hours" ──
+    m = re.search(r'in\s+(\d+)\s*(min|minute|minutes|hour|hours|hr)', s)
     if m:
         val = int(m.group(1))
         unit = m.group(2)
-        if "hour" in unit or unit == "hr":
+        if 'hour' in unit or unit == 'hr':
             return base + timedelta(hours=val)
         return base + timedelta(minutes=val)
 
-    # "tomorrow"
+    # ── Day modifiers ──
     day_offset = 0
-    if "tomorrow" in s:
+    if 'tomorrow' in s:
         day_offset = 1
-        s = s.replace("tomorrow", "").strip()
-    elif "today" in s:
-        s = s.replace("today", "").strip()
+        s = s.replace('tomorrow', '').strip()
+    elif 'today' in s:
+        s = s.replace('today', '').strip()
 
-    # Try ISO format first: "2025-06-01 10:00" or "2025-06-01"
-    for fmt in ("%Y-%m-%d %H:%M", "%Y-%m-%d"):
+    s = s.strip()
+
+    # ── ISO format: "2025-06-01 10:00" or "2025-06-01" ──
+    for fmt in ('%Y-%m-%d %H:%M', '%Y-%m-%d'):
         try:
-            dt = datetime.strptime(s.strip(), fmt)
-            return dt
+            return datetime.strptime(s.strip(), fmt)
         except ValueError:
             pass
 
-    # "H:MM AM/PM" or "H AM/PM"
-    time_match = re.search(r"(\d{1,2})(?::(\d{2}))?\s*(am|pm)?", s)
+    # ── "H:MM AM/PM" or "H AM/PM" or "HH:MM" (24h) ──
+    time_match = re.search(r'(\d{1,2})(?::(\d{2}))?\s*(am|pm)?', s)
     if time_match:
-        hour = int(time_match.group(1))
+        hour   = int(time_match.group(1))
         minute = int(time_match.group(2) or 0)
-        ampm = time_match.group(3)
-        if ampm == "pm" and hour < 12:
+        ampm   = time_match.group(3)
+
+        if ampm == 'pm' and hour < 12:
             hour += 12
-        elif ampm == "am" and hour == 12:
+        elif ampm == 'am' and hour == 12:
             hour = 0
+
+        # If no am/pm given and hour looks like 12h (<=12), default to PM
+        # only if the hour has already passed today (smart guess)
+        if ampm is None and 1 <= hour <= 12:
+            candidate_am = (base + timedelta(days=day_offset)).replace(
+                hour=hour, minute=minute, second=0, microsecond=0)
+            candidate_pm = (base + timedelta(days=day_offset)).replace(
+                hour=hour + 12 if hour < 12 else hour,
+                minute=minute, second=0, microsecond=0)
+            # Pick PM if AM has already passed and PM hasn't
+            if candidate_am < base and candidate_pm >= base:
+                hour = hour + 12 if hour < 12 else hour
+
         try:
             target = (base + timedelta(days=day_offset)).replace(
                 hour=hour, minute=minute, second=0, microsecond=0
@@ -105,6 +156,7 @@ def _parse_time(time_str: str) -> datetime | None:
             pass
 
     return None
+
 
 
 # ─────────────────────────────────────────────
@@ -228,7 +280,7 @@ def check_due_reminders() -> list:
     Called on every page load.
     """
     init_stores()
-    now = datetime.now().replace(second=0, microsecond=0)
+    now = local_now().replace(second=0, microsecond=0)
     window_start = now - timedelta(minutes=30)
     dismissed = st.session_state.get("dismissed_alert_ids", set())
     due = []
@@ -258,7 +310,7 @@ def get_reminder_status(r: dict) -> str:
         return "no-time"
     try:
         due_dt = datetime.strptime(due_str, "%Y-%m-%d %H:%M")
-        now = datetime.now()
+        now = local_now()
         diff = (due_dt - now).total_seconds() / 60   # minutes
         if diff < -30:
             return "overdue"
@@ -327,7 +379,7 @@ def check_due_events() -> list:
     Called on every page load alongside check_due_reminders().
     """
     init_stores()
-    now = datetime.now().replace(second=0, microsecond=0)
+    now = local_now().replace(second=0, microsecond=0)
     window_start = now - timedelta(minutes=30)   # already started (late alert)
     window_end   = now + timedelta(minutes=15)    # starting very soon
     dismissed = st.session_state.get("dismissed_alert_ids", set())
@@ -367,7 +419,7 @@ def get_event_status(e: dict) -> str:
 
     try:
         due_dt = datetime.strptime(due_str, "%Y-%m-%d %H:%M")
-        now = datetime.now()
+        now = local_now()
         diff_mins = (due_dt - now).total_seconds() / 60
         if diff_mins < -30:
             return "past"

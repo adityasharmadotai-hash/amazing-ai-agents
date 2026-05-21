@@ -232,7 +232,7 @@ from modules.tasks import (
     check_due_reminders, get_reminder_status,
     add_calendar_event, get_calendar_events, delete_calendar_event,
     dismiss_event_alert, check_due_events, get_event_status,
-    get_analytics,
+    get_analytics, local_now,
 )
 from modules.recorder import mic_recorder, decode_recording
 from modules.database import is_configured as db_ok, save_message
@@ -274,6 +274,34 @@ def _sync_key():
         os.environ["OPENAI_API_KEY"] = k
 
 _sync_key()
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Capture browser timezone offset on every load (stores in session_state)
+# ─────────────────────────────────────────────────────────────────────────────
+import streamlit.components.v1 as _tz_comp
+
+def _capture_timezone():
+    """
+    Inject a tiny JS snippet that reads the browser's UTC offset in minutes
+    and sends it back to Python via a hidden Streamlit component.
+    The offset is stored in st.session_state.user_tz_offset.
+    Example: IST = UTC+5:30 → offset = +330 minutes.
+    """
+    tz_result = _tz_comp.html("""
+    <script>
+    // Get browser UTC offset in minutes (negative = east of UTC for getTimezoneOffset)
+    // We negate it so IST (+5:30) = +330, not -330
+    const offset = -(new Date().getTimezoneOffset());
+    window.parent.postMessage({
+        type: 'streamlit:setComponentValue',
+        value: offset
+    }, '*');
+    </script>
+    """, height=0)
+    if tz_result is not None and isinstance(tz_result, (int, float)):
+        st.session_state.user_tz_offset = int(tz_result)
+
+_capture_timezone()
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Navigation
@@ -1248,7 +1276,7 @@ elif page == "📅 Calendar":
             st.success(f"📅 Added: {ev_title}"); st.rerun()
 
     events = get_calendar_events()
-    today = datetime.now().strftime("%Y-%m-%d")
+    today = local_now().strftime("%Y-%m-%d")
     upcoming = [e for e in events if e.get("date","") >= today]
     past = [e for e in events if e.get("date","") < today]
 
