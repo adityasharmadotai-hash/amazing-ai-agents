@@ -233,6 +233,7 @@ from modules.tasks import (
     get_analytics,
 )
 from modules.recorder import mic_recorder, decode_recording
+from modules.database import is_configured as db_ok, save_message
 
 init_stores()
 
