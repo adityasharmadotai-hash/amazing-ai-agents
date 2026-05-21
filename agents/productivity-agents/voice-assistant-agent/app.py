@@ -228,11 +228,10 @@ from modules.tts import synthesize, audio_to_html, VOICES, VOICE_DESCRIPTIONS
 from modules.tasks import (
     init_stores, add_task, complete_task, delete_task, get_tasks,
     add_note, delete_note, get_notes,
-    add_reminder, dismiss_reminder, dismiss_alert, get_reminders,
-    check_due_reminders, get_reminder_status,
-    add_calendar_event, get_calendar_events, delete_calendar_event,
-    dismiss_event_alert, check_due_events, get_event_status,
+    add_reminder, dismiss_reminder, get_reminders, get_reminder_status,
+    add_calendar_event, get_calendar_events, delete_calendar_event, get_event_status,
     get_analytics, local_now,
+    poll_fired_alerts, snooze_job, cancel_job, get_session_id,
 )
 from modules.recorder import mic_recorder, decode_recording
 from modules.database import is_configured as db_ok, save_message
@@ -434,154 +433,120 @@ if page != "⚙️ Settings" and not _active_key():
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# ALERT SYSTEM — Reminders + Calendar Events — runs on every page load
+# ALERT SYSTEM — polls background thread every rerun + auto-refresh every 15s
 # ─────────────────────────────────────────────────────────────────────────────
 import streamlit.components.v1 as _comp
+import time as _time_mod
 
-def _browser_notify(title: str, body: str, icon_url: str = ""):
-    """Fire a browser push notification (requires Notification permission)."""
-    t = title.replace("'", "\'").replace('"', '\"')
-    b = body.replace("'", "\'").replace('"', '\"')
+def _auto_refresh(interval_secs: int = 15):
+    """
+    Inject a JS snippet that refreshes the Streamlit page every `interval_secs`
+    seconds, so the background scheduler fires are shown without user interaction.
+    """
     _comp.html(f"""
     <script>
     (function() {{
+        // Only set one timer per page load
+        if (window._ariaRefreshTimer) return;
+        window._ariaRefreshTimer = setTimeout(function() {{
+            // Trigger Streamlit rerun by simulating a harmless click
+            window.parent.postMessage({{type: 'streamlit:forceRerun'}}, '*');
+            // Fallback: reload
+            setTimeout(function() {{ location.reload(); }}, 500);
+        }}, {interval_secs * 1000});
+    }})();
+    </script>
+    """, height=0)
+
+
+def _browser_notify(title: str, body: str):
+    _comp.html(f"""
+    <script>
+    (function() {{
+        var t = {repr(title)};
+        var b = {repr(body)};
         if (!('Notification' in window)) return;
-        function send() {{
-            new Notification('{t}', {{body: '{b}', icon: '{icon_url}'}});
-        }}
+        function send() {{ new Notification(t, {{body: b}}); }}
         if (Notification.permission === 'granted') {{ send(); }}
         else if (Notification.permission !== 'denied') {{
-            Notification.requestPermission().then(p => {{ if (p === 'granted') send(); }});
+            Notification.requestPermission().then(function(p) {{
+                if (p === 'granted') send();
+            }});
         }}
     }})();
     </script>
     """, height=0)
 
 
-def _show_reminder_alerts():
-    """Show alert banners for due reminders."""
-    due_reminders = check_due_reminders()
-    if not due_reminders:
-        return
-    for r in due_reminders:
-        rid = r["id"]
-        _browser_notify(
-            f"⏰ ARIA Reminder",
-            r["reminder"],
-            "https://em-content.zobj.net/source/twitter/376/bell_1f514.png"
-        )
-        st.markdown(f"""
-        <div style="background:linear-gradient(135deg,#fef3c7,#fde68a);
-                    border:2px solid #f59e0b;border-radius:14px;
-                    padding:16px 20px;margin:0 0 12px 0;
-                    box-shadow:0 4px 16px rgba(245,158,11,0.25);">
-            <div style="display:flex;align-items:center;gap:12px;">
-                <div style="font-size:36px;animation:ring 1s infinite;">⏰</div>
-                <div>
-                    <div style="font-weight:800;color:#92400e;font-size:16px;">Reminder Due!</div>
-                    <div style="font-weight:600;color:#78350f;font-size:14px;margin-top:2px;">
-                        {r['reminder']}
-                    </div>
-                    <div style="font-size:12px;color:#b45309;margin-top:3px;">
-                        Set for: {r.get('due_dt', r.get('time',''))}
-                    </div>
-                </div>
-            </div>
-        </div>
-        <style>
-        @keyframes ring {{
-            0%,100% {{ transform: rotate(0deg); }}
-            25%      {{ transform: rotate(-15deg); }}
-            75%      {{ transform: rotate(15deg); }}
-        }}
-        </style>
-        """, unsafe_allow_html=True)
-        ac1, ac2 = st.columns([3, 1])
-        with ac2:
-            if st.button("✓ Dismiss", key=f"ralert_dis_{rid}", type="primary", use_container_width=True):
-                dismiss_reminder(rid)
-                st.rerun()
-        with ac1:
-            if st.button("⏰ Snooze 10 min", key=f"ralert_snz_{rid}", use_container_width=True):
-                from datetime import datetime as _dt2, timedelta as _td2
-                for rem in st.session_state.reminders:
-                    if rem["id"] == rid:
-                        new_due = _dt2.now() + _td2(minutes=10)
-                        rem["due_dt"] = new_due.strftime("%Y-%m-%d %H:%M")
-                        rem["time"] = f"Snoozed until {new_due.strftime('%I:%M %p')}"
-                        break
-                dismiss_alert(rid)
-                st.rerun()
+def _show_alerts():
+    """Poll the background thread for fired alerts and render banners."""
+    fired = poll_fired_alerts()
+    sid   = get_session_id()
 
-
-def _show_event_alerts():
-    """Show alert banners for calendar events starting soon."""
-    due_events = check_due_events()
-    if not due_events:
-        return
-    for e in due_events:
-        eid = e["id"]
-        evt_time = e.get("time", "")
-        evt_date = e.get("date", "")
-        due_str  = e.get("due_dt", "")
-        diff_info = ""
-        if due_str:
-            try:
-                from datetime import datetime as _dt3
-                due_dt = _dt3.strptime(due_str, "%Y-%m-%d %H:%M")
-                diff_mins = (due_dt - _dt3.now()).total_seconds() / 60
-                if diff_mins < 0:
-                    diff_info = f"Started {abs(int(diff_mins))} min ago"
-                elif diff_mins < 1:
-                    diff_info = "Starting NOW!"
-                else:
-                    diff_info = f"Starting in {int(diff_mins)} min"
-            except Exception:
-                pass
+    for alert in fired:
+        atype = alert.get("type", "reminder")
+        label = alert.get("label", "")
+        job_id = alert.get("job_id", "")
 
         _browser_notify(
-            f"📅 {e['title']}",
-            diff_info or f"{evt_date} {evt_time}",
-            "https://em-content.zobj.net/source/twitter/376/calendar_1f4c5.png"
+            "⏰ ARIA Alert" if atype == "reminder" else "📅 Calendar Event",
+            label
         )
-        notes_html = f"<div style='font-size:12px;color:#4338ca;margin-top:2px;'>📝 {e.get('notes','')}</div>" if e.get('notes') else ""
-        at_time = f"at {evt_time}" if evt_time else ""
-        st.markdown(f"""
-        <div style="background:linear-gradient(135deg,#eff6ff,#dbeafe);
-                    border:2px solid #6366f1;border-radius:14px;
-                    padding:16px 20px;margin:0 0 12px 0;
-                    box-shadow:0 4px 16px rgba(99,102,241,0.2);">
-            <div style="display:flex;align-items:center;gap:12px;">
-                <div style="font-size:34px;">📅</div>
-                <div style="flex:1;">
-                    <div style="font-weight:800;color:#1e3a8a;font-size:16px;">
-                        Calendar Event Starting!
-                    </div>
-                    <div style="font-weight:600;color:#1d4ed8;font-size:14px;margin-top:2px;">
-                        {e['title']}
-                    </div>
-                    <div style="font-size:12px;color:#3730a3;margin-top:3px;">
-                        📅 {evt_date} {at_time} &nbsp;·&nbsp; <strong>{diff_info}</strong>
-                    </div>
-                    {notes_html}
+
+        if atype == "reminder":
+            st.markdown(f"""
+            <div style="background:linear-gradient(135deg,#fef3c7,#fde68a);
+                        border:2px solid #f59e0b;border-radius:14px;
+                        padding:16px 20px;margin:0 0 12px 0;
+                        box-shadow:0 4px 16px rgba(245,158,11,0.3);
+                        animation:bell 0.5s ease 3;">
+                <div style="font-size:20px;font-weight:800;color:#92400e;">
+                    ⏰ Reminder!
                 </div>
+                <div style="font-size:15px;color:#78350f;margin-top:4px;">{label}</div>
             </div>
-        </div>
-        """, unsafe_allow_html=True)
-        ec1, ec2 = st.columns([3, 1])
-        with ec2:
-            if st.button("✓ Got it", key=f"ealert_dis_{eid}", type="primary", use_container_width=True):
-                dismiss_event_alert(eid)
-                st.rerun()
-        with ec1:
-            if st.button("🗑️ Remove Event", key=f"ealert_del_{eid}", use_container_width=True):
-                delete_calendar_event(eid)
-                dismiss_event_alert(eid)
+            <style>
+            @keyframes bell {{
+                0%,100% {{ transform:rotate(0); }}
+                25%      {{ transform:rotate(-12deg); }}
+                75%      {{ transform:rotate(12deg); }}
+            }}
+            </style>
+            """, unsafe_allow_html=True)
+            bc1, bc2 = st.columns([3, 1])
+            with bc2:
+                if st.button("✓ Dismiss", key=f"fa_dis_{job_id}", type="primary", use_container_width=True):
+                    # Mark the session reminder as dismissed
+                    for r in st.session_state.get("reminders", []):
+                        if r["id"] == job_id:
+                            r["status"] = "dismissed"
+                    cancel_job(sid, job_id)
+                    st.rerun()
+            with bc1:
+                if st.button("⏰ Snooze 10 min", key=f"fa_snz_{job_id}", use_container_width=True):
+                    snooze_job(sid, job_id, 10)
+                    st.success("⏰ Snoozed for 10 minutes")
+                    st.rerun()
+
+        else:  # calendar event
+            st.markdown(f"""
+            <div style="background:linear-gradient(135deg,#eff6ff,#dbeafe);
+                        border:2px solid #6366f1;border-radius:14px;
+                        padding:16px 20px;margin:0 0 12px 0;
+                        box-shadow:0 4px 16px rgba(99,102,241,0.25);">
+                <div style="font-size:20px;font-weight:800;color:#1e3a8a;">
+                    📅 Event Starting Soon!
+                </div>
+                <div style="font-size:15px;color:#1d4ed8;margin-top:4px;">{label}</div>
+            </div>
+            """, unsafe_allow_html=True)
+            if st.button("✓ Got it", key=f"fa_evt_{job_id}", type="primary"):
+                cancel_job(sid, job_id)
                 st.rerun()
 
 
-_show_reminder_alerts()
-_show_event_alerts()
+_show_alerts()
+_auto_refresh(15)   # page auto-refreshes every 15 seconds to catch alerts
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Message processor
