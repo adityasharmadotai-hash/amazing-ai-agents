@@ -228,8 +228,10 @@ from modules.tts import synthesize, audio_to_html, VOICES, VOICE_DESCRIPTIONS
 from modules.tasks import (
     init_stores, add_task, complete_task, delete_task, get_tasks,
     add_note, delete_note, get_notes,
-    add_reminder, dismiss_reminder, get_reminders,
+    add_reminder, dismiss_reminder, dismiss_alert, get_reminders,
+    check_due_reminders, get_reminder_status,
     add_calendar_event, get_calendar_events, delete_calendar_event,
+    dismiss_event_alert, check_due_events, get_event_status,
     get_analytics,
 )
 from modules.recorder import mic_recorder, decode_recording
@@ -404,6 +406,156 @@ if page != "⚙️ Settings" and not _active_key():
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# ALERT SYSTEM — Reminders + Calendar Events — runs on every page load
+# ─────────────────────────────────────────────────────────────────────────────
+import streamlit.components.v1 as _comp
+
+def _browser_notify(title: str, body: str, icon_url: str = ""):
+    """Fire a browser push notification (requires Notification permission)."""
+    t = title.replace("'", "\'").replace('"', '\"')
+    b = body.replace("'", "\'").replace('"', '\"')
+    _comp.html(f"""
+    <script>
+    (function() {{
+        if (!('Notification' in window)) return;
+        function send() {{
+            new Notification('{t}', {{body: '{b}', icon: '{icon_url}'}});
+        }}
+        if (Notification.permission === 'granted') {{ send(); }}
+        else if (Notification.permission !== 'denied') {{
+            Notification.requestPermission().then(p => {{ if (p === 'granted') send(); }});
+        }}
+    }})();
+    </script>
+    """, height=0)
+
+
+def _show_reminder_alerts():
+    """Show alert banners for due reminders."""
+    due_reminders = check_due_reminders()
+    if not due_reminders:
+        return
+    for r in due_reminders:
+        rid = r["id"]
+        _browser_notify(
+            f"⏰ ARIA Reminder",
+            r["reminder"],
+            "https://em-content.zobj.net/source/twitter/376/bell_1f514.png"
+        )
+        st.markdown(f"""
+        <div style="background:linear-gradient(135deg,#fef3c7,#fde68a);
+                    border:2px solid #f59e0b;border-radius:14px;
+                    padding:16px 20px;margin:0 0 12px 0;
+                    box-shadow:0 4px 16px rgba(245,158,11,0.25);">
+            <div style="display:flex;align-items:center;gap:12px;">
+                <div style="font-size:36px;animation:ring 1s infinite;">⏰</div>
+                <div>
+                    <div style="font-weight:800;color:#92400e;font-size:16px;">Reminder Due!</div>
+                    <div style="font-weight:600;color:#78350f;font-size:14px;margin-top:2px;">
+                        {r['reminder']}
+                    </div>
+                    <div style="font-size:12px;color:#b45309;margin-top:3px;">
+                        Set for: {r.get('due_dt', r.get('time',''))}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <style>
+        @keyframes ring {{
+            0%,100% {{ transform: rotate(0deg); }}
+            25%      {{ transform: rotate(-15deg); }}
+            75%      {{ transform: rotate(15deg); }}
+        }}
+        </style>
+        """, unsafe_allow_html=True)
+        ac1, ac2 = st.columns([3, 1])
+        with ac2:
+            if st.button("✓ Dismiss", key=f"ralert_dis_{rid}", type="primary", use_container_width=True):
+                dismiss_reminder(rid)
+                st.rerun()
+        with ac1:
+            if st.button("⏰ Snooze 10 min", key=f"ralert_snz_{rid}", use_container_width=True):
+                from datetime import datetime as _dt2, timedelta as _td2
+                for rem in st.session_state.reminders:
+                    if rem["id"] == rid:
+                        new_due = _dt2.now() + _td2(minutes=10)
+                        rem["due_dt"] = new_due.strftime("%Y-%m-%d %H:%M")
+                        rem["time"] = f"Snoozed until {new_due.strftime('%I:%M %p')}"
+                        break
+                dismiss_alert(rid)
+                st.rerun()
+
+
+def _show_event_alerts():
+    """Show alert banners for calendar events starting soon."""
+    due_events = check_due_events()
+    if not due_events:
+        return
+    for e in due_events:
+        eid = e["id"]
+        evt_time = e.get("time", "")
+        evt_date = e.get("date", "")
+        due_str  = e.get("due_dt", "")
+        diff_info = ""
+        if due_str:
+            try:
+                from datetime import datetime as _dt3
+                due_dt = _dt3.strptime(due_str, "%Y-%m-%d %H:%M")
+                diff_mins = (due_dt - _dt3.now()).total_seconds() / 60
+                if diff_mins < 0:
+                    diff_info = f"Started {abs(int(diff_mins))} min ago"
+                elif diff_mins < 1:
+                    diff_info = "Starting NOW!"
+                else:
+                    diff_info = f"Starting in {int(diff_mins)} min"
+            except Exception:
+                pass
+
+        _browser_notify(
+            f"📅 {e['title']}",
+            diff_info or f"{evt_date} {evt_time}",
+            "https://em-content.zobj.net/source/twitter/376/calendar_1f4c5.png"
+        )
+        notes_html = f"<div style='font-size:12px;color:#4338ca;margin-top:2px;'>📝 {e.get('notes','')}</div>" if e.get('notes') else ""
+        at_time = f"at {evt_time}" if evt_time else ""
+        st.markdown(f"""
+        <div style="background:linear-gradient(135deg,#eff6ff,#dbeafe);
+                    border:2px solid #6366f1;border-radius:14px;
+                    padding:16px 20px;margin:0 0 12px 0;
+                    box-shadow:0 4px 16px rgba(99,102,241,0.2);">
+            <div style="display:flex;align-items:center;gap:12px;">
+                <div style="font-size:34px;">📅</div>
+                <div style="flex:1;">
+                    <div style="font-weight:800;color:#1e3a8a;font-size:16px;">
+                        Calendar Event Starting!
+                    </div>
+                    <div style="font-weight:600;color:#1d4ed8;font-size:14px;margin-top:2px;">
+                        {e['title']}
+                    </div>
+                    <div style="font-size:12px;color:#3730a3;margin-top:3px;">
+                        📅 {evt_date} {at_time} &nbsp;·&nbsp; <strong>{diff_info}</strong>
+                    </div>
+                    {notes_html}
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        ec1, ec2 = st.columns([3, 1])
+        with ec2:
+            if st.button("✓ Got it", key=f"ealert_dis_{eid}", type="primary", use_container_width=True):
+                dismiss_event_alert(eid)
+                st.rerun()
+        with ec1:
+            if st.button("🗑️ Remove Event", key=f"ealert_del_{eid}", use_container_width=True):
+                delete_calendar_event(eid)
+                dismiss_event_alert(eid)
+                st.rerun()
+
+
+_show_reminder_alerts()
+_show_event_alerts()
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Message processor
 # ─────────────────────────────────────────────────────────────────────────────
 def _process_message(user_text: str, is_audio: bool = False):
@@ -450,9 +602,11 @@ def _process_message(user_text: str, is_audio: bool = False):
     elif intent_type == "SEARCH_WEB" and intent_data.get("query"):
         response_text += "\n\n" + web_search_answer(intent_data["query"])
 
+    # Strip any accidental HTML from action message before storing
+    safe_action_msg = action_msg.replace("<","").replace(">","") if action_msg else ""
     st.session_state.conversation.append({
         "role": "assistant", "content": response_text,
-        "intent": intent_type, "action": action_msg,
+        "intent": intent_type, "action": safe_action_msg,
         "time": datetime.now().strftime("%H:%M"), "audio": False,
     })
 
@@ -533,13 +687,14 @@ if page == "🎙️ Voice Chat":
                 is_aud = msg.get("audio", False)
 
                 if role == "user":
+                    safe_user = content.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;").replace("\n","<br>")
                     aud_html = '<span class="audio-tag">🎙️ voice</span>' if is_aud else ""
                     st.markdown(f"""
                     <div style="text-align:right;margin-bottom:2px;">
                         <span class="msg-time">{time_s}</span>{aud_html}
                     </div>
                     <div class="bubble-wrap-user">
-                        <div class="bubble-user">{content}</div>
+                        <div class="bubble-user">{safe_user}</div>
                     </div>
                     """, unsafe_allow_html=True)
                 else:
@@ -557,7 +712,8 @@ if page == "🎙️ Voice Chat":
                     </div>
                     """, unsafe_allow_html=True)
                     if action:
-                        st.markdown(f'<div class="action-card">🎯 {action}</div>', unsafe_allow_html=True)
+                        safe_action = action.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;")
+                        st.markdown(f'<div class="action-card">🎯 {safe_action}</div>', unsafe_allow_html=True)
 
         # TTS playback
         if st.session_state.last_audio:
@@ -865,7 +1021,7 @@ elif page == "💬 Chat History":
                 {aud_html}{intent_html}
             </div>
             <div style="font-size:14px;color:#0f172a;line-height:1.65;">{safe}</div>
-            {"<div style='margin-top:8px;font-size:12px;font-weight:600;color:#166534;background:#f0fdf4;padding:6px 10px;border-radius:6px;'>🎯 " + action + "</div>" if action else ""}
+{"<div style='margin-top:8px;font-size:12px;font-weight:600;color:#166534;background:#f0fdf4;padding:6px 10px;border-radius:6px;'>🎯 " + action.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;") + "</div>" if action else ""}
         </div>
         """, unsafe_allow_html=True)
 
@@ -1040,14 +1196,24 @@ elif page == "🔔 Reminders":
         </div>
         """, unsafe_allow_html=True)
     for r in active:
+        status = get_reminder_status(r)
+        border_color = {"overdue":"#ef4444","due-soon":"#f59e0b","upcoming":"#6366f1","no-time":"#94a3b8"}.get(status,"#94a3b8")
+        status_label = {"overdue":"🔴 Overdue","due-soon":"🟡 Due Soon","upcoming":"🔵 Upcoming","no-time":"⚪ No time set"}.get(status,"")
+        bg_color = {"overdue":"#fef2f2","due-soon":"#fffbeb","upcoming":"white","no-time":"#f8fafc"}.get(status,"white")
+        due_info = f"⏰ {r.get('due_dt','')}" if r.get('due_dt') else f"⏰ {r['time']}"
+
         rc1, rc2 = st.columns([5, 1])
         with rc1:
             st.markdown(f"""
-            <div style="background:white;border:1px solid #fde68a;border-left:4px solid #f59e0b;
+            <div style="background:{bg_color};border:1px solid {border_color};
+                        border-left:4px solid {border_color};
                         border-radius:10px;padding:13px 16px;margin:6px 0;">
-                <div style="font-weight:600;color:#0f172a;font-size:14px;">🔔 {r['reminder']}</div>
-                <div style="font-size:12px;color:#64748b;margin-top:4px;">
-                    ⏰ {r['time']} &nbsp;·&nbsp; Set {r['created_at']}
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                    <div style="font-weight:600;color:#0f172a;font-size:14px;">🔔 {r['reminder']}</div>
+                    <span style="font-size:11px;font-weight:700;color:{border_color};white-space:nowrap;margin-left:8px;">{status_label}</span>
+                </div>
+                <div style="font-size:12px;color:#64748b;margin-top:5px;">
+                    {due_info} &nbsp;·&nbsp; Set {r['created_at']}
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -1090,25 +1256,29 @@ elif page == "📅 Calendar":
     if not upcoming:
         st.info("No upcoming events. Ask ARIA to schedule one!")
     for e in upcoming:
-        try:
-            d = (datetime.strptime(e["date"],"%Y-%m-%d") - datetime.now()).days
-            timing = "🎯 Today!" if d == 0 else (f"Tomorrow" if d == 1 else f"In {d} days")
-            badge_color = "#dc2626" if d == 0 else "#d97706" if d <= 3 else "#16a34a"
-        except Exception:
-            timing, badge_color = "Upcoming", "#6b7280"
+        status = get_event_status(e)
+        status_map = {
+            "starting-now": ("🔴 Starting NOW!", "#dc2626"),
+            "soon":         ("🟡 Starting Soon", "#d97706"),
+            "today":        ("🔵 Today",          "#6366f1"),
+            "upcoming":     ("🟢 Upcoming",        "#16a34a"),
+            "past":         ("⚫ Past",            "#6b7280"),
+        }
+        timing, badge_color = status_map.get(status, ("📅", "#6b7280"))
+        at_time = f"at {e['time']}" if e.get('time') else ""
+        notes_bit = f"· {e.get('notes','')}" if e.get('notes') else ""
 
         st.markdown(f"""
         <div style="background:white;border:1px solid #e2e8f0;border-left:5px solid {badge_color};
                     border-radius:12px;padding:14px 18px;margin:8px 0;">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
                 <div>
                     <div style="font-weight:700;color:#0f172a;font-size:15px;">📅 {e['title']}</div>
                     <div style="font-size:12px;color:#64748b;margin-top:5px;">
-                        {e['date']} {"at " + e['time'] if e.get('time') else ""}
-                        {"· " + e.get('notes','') if e.get('notes') else ""}
+                        {e['date']} {at_time} {notes_bit}
                     </div>
                 </div>
-                <span style="background:{badge_color};color:white;padding:3px 10px;
+                <span style="background:{badge_color};color:white;padding:3px 12px;
                              border-radius:12px;font-size:11px;font-weight:700;white-space:nowrap;">
                     {timing}
                 </span>
