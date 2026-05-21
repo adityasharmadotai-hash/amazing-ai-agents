@@ -1,4 +1,4 @@
-# 🤖 Build an AI Voice Assistant Agent from Scratch
+# 🤖 Build ARIA — AI Voice Assistant Agent from Scratch
 
 ### A Step-by-Step Tutorial for Beginners to Intermediate Developers
 
@@ -16,7 +16,7 @@
 
 ---
 
-> **What you'll build:** A fully voice-enabled AI assistant that transcribes audio, understands intent, creates tasks/notes/reminders/events automatically, speaks responses aloud, and tracks everything in a dashboard.
+> **What you'll build:** A browser-based AI voice assistant that records your voice in real-time, transcribes it with Whisper, detects your intent with GPT-4o, auto-creates tasks/notes/reminders/events, and speaks responses back using OpenAI TTS — all in a Streamlit web app.
 
 ---
 
@@ -26,44 +26,34 @@
 2. [How It Works](#2-how-it-works)
 3. [Prerequisites](#3-prerequisites)
 4. [Project Setup](#4-project-setup)
-5. [File 1 — stt.py (Speech-to-Text)](#5-file-1--sttpy)
-6. [File 2 — tts.py (Text-to-Speech)](#6-file-2--ttspy)
-7. [File 3 — agent.py (Conversational AI)](#7-file-3--agentpy)
-8. [File 4 — tasks.py (Task Management)](#8-file-4--taskspy)
-9. [File 5 — database.py (Persistence)](#9-file-5--databasepy)
-10. [File 6 — app.py (Streamlit UI)](#10-file-6--apppy)
-11. [Running Locally](#11-running-locally)
-12. [Deploying to Streamlit Cloud](#12-deploying-to-streamlit-cloud)
-13. [Common Errors & Fixes](#13-common-errors--fixes)
-14. [What You Learned](#14-what-you-learned)
-15. [What's Next](#15-whats-next)
+5. [File 1 — recorder.py (Browser Microphone)](#5-file-1--recorderpy)
+6. [File 2 — stt.py (Whisper Transcription)](#6-file-2--sttpy)
+7. [File 3 — tts.py (Text-to-Speech)](#7-file-3--ttspy)
+8. [File 4 — agent.py (Conversational AI)](#8-file-4--agentpy)
+9. [File 5 — tasks.py (Task Management)](#9-file-5--taskspy)
+10. [File 6 — database.py (Persistence)](#10-file-6--databasepy)
+11. [File 7 — app.py (Streamlit UI)](#11-file-7--apppy)
+12. [Running Locally](#12-running-locally)
+13. [Deploying to Streamlit Cloud](#13-deploying-to-streamlit-cloud)
+14. [Common Errors & Fixes](#14-common-errors--fixes)
+15. [What You Learned](#15-what-you-learned)
+16. [What's Next](#16-whats-next)
 
 ---
 
 ## 1. What Are We Building?
 
-Most AI assistants require a native app. This one runs in a browser tab and uses three OpenAI APIs together:
+Most AI assistants require a native app or special hardware. ARIA runs in a browser tab and uses three OpenAI APIs plus the browser's own microphone:
 
 ```
-🎙️ You speak  →  Whisper transcribes  →  GPT-4o understands  →  TTS speaks back
+🎙️ You click mic    →  Browser records WebM audio
+🌐 Whisper API       →  "Add a task to review the proposal by Friday"
+🧠 GPT-4o            →  [INTENT: CREATE_TASK] + "Done! I've added that task."
+✅ tasks.py          →  Task created in session state
+🔊 TTS API           →  ARIA speaks the confirmation aloud
 ```
 
-Example interaction:
-
-```
-You (voice): "Remind me to call the doctor tomorrow at 9 AM"
-      ↓
-Whisper: "Remind me to call the doctor tomorrow at 9 AM"
-      ↓
-GPT-4o:  [INTENT: {"type": "CREATE_REMINDER", "data": {"reminder": "Call the doctor", "time": "Tomorrow 9 AM"}}]
-         "Done! I've set a reminder to call the doctor tomorrow at 9 AM."
-      ↓
-tasks.py: Reminder added to session state
-      ↓
-TTS: ARIA speaks the confirmation aloud
-```
-
-ARIA understands 8 intent types: CHAT, CREATE_TASK, CREATE_NOTE, CREATE_REMINDER, CALENDAR_EVENT, SEARCH_WEB, UPDATE_TASK, SUMMARISE.
+No third-party libraries needed for the microphone. No audio processing on the server. The browser handles the recording natively.
 
 ---
 
@@ -71,47 +61,65 @@ ARIA understands 8 intent types: CHAT, CREATE_TASK, CREATE_NOTE, CREATE_REMINDER
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│                    ARIA AGENT FLOW                               │
+│                    FULL ARCHITECTURE                             │
 │                                                                  │
-│  USER uploads audio / types message                             │
-│           ↓                                                       │
-│    stt.py — OpenAI Whisper                                       │
-│    audio bytes → temp file → transcript text                    │
-│           ↓                                                       │
-│    agent.py — OpenAI GPT-4o                                     │
-│    system prompt with intent schema                             │
-│    → [INTENT: {"type": "...", "data": {...}}]                   │
-│    → spoken response text                                       │
-│           ↓                                                       │
-│    Intent execution in app.py                                   │
-│    CREATE_TASK → tasks.add_task()                               │
-│    CREATE_NOTE → tasks.add_note()                               │
-│    CREATE_REMINDER → tasks.add_reminder()                       │
-│    CALENDAR_EVENT → tasks.add_calendar_event()                  │
-│           ↓                                                       │
-│    tts.py — OpenAI TTS                                           │
-│    response text → MP3 bytes → HTML audio player               │
-│           ↓                                                       │
-│    app.py — Streamlit                                            │
-│    render chat bubble + audio autoplay                          │
+│  INPUT LAYER                                                     │
+│  ├── recorder.py  — JS MediaRecorder in iframe → base64 bytes   │
+│  ├── stt.py       — file upload → Whisper API → text            │
+│  └── app.py       — st.chat_input → direct text                 │
+│                          ↓                                       │
+│  AI LAYER                                                        │
+│  └── agent.py — GPT-4o with intent schema in system prompt      │
+│      Returns: [INTENT: {"type":"...", "data":{...}}]            │
+│               + spoken response text                             │
+│                          ↓                                       │
+│  ACTION LAYER                                                    │
+│  └── tasks.py — session-state store for all data types          │
+│      add_task() / add_note() / add_reminder() / add_calendar()  │
+│                          ↓                                       │
+│  OUTPUT LAYER                                                    │
+│  ├── tts.py   — OpenAI TTS → MP3 → base64 HTML audio player    │
+│  └── app.py   — chat bubble + action card + audio autoplay      │
+│                          ↓                                       │
+│  OPTIONAL PERSISTENCE                                            │
+│  └── database.py — Supabase conversations table                 │
 └──────────────────────────────────────────────────────────────────┘
 ```
+
+**Six files, each with one clear job:**
+
+| File | Job | Key technology |
+|------|-----|----------------|
+| `recorder.py` | Browser mic recording | WebRTC MediaRecorder API (JS) |
+| `stt.py` | Audio → text | OpenAI Whisper API |
+| `tts.py` | Text → speech | OpenAI TTS API |
+| `agent.py` | Chat + intent detection | OpenAI GPT-4o |
+| `tasks.py` | Data store | Streamlit session state |
+| `database.py` | Cloud persistence | Supabase (optional) |
 
 ---
 
 ## 3. Prerequisites
 
-- [ ] Python 3.10+ — [python.org](https://python.org/downloads)
+### ✅ Required
+
+- [ ] Python 3.10+ — [python.org/downloads](https://python.org/downloads)
 - [ ] OpenAI API key — [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
-- [ ] GitHub + Streamlit accounts (for deployment)
-- [ ] Supabase account (optional — for persistent history)
+- [ ] A modern browser (Chrome recommended for mic recording)
+- [ ] GitHub + Streamlit accounts for deployment
 
-### 💰 Cost estimate
+### 🔶 Optional
 
-- Whisper: ~$0.006/minute
-- GPT-4o: ~$0.005/message
-- TTS: ~$0.015/1K characters
-- **Typical 20-message session: ~$0.15**
+- [ ] Supabase account — [supabase.com](https://supabase.com) — for persistent history
+
+### 💰 Cost per session (~20 messages)
+
+| API | Cost |
+|-----|------|
+| Whisper (5 voice messages, 1 min each) | ~$0.03 |
+| GPT-4o (20 chat messages) | ~$0.10 |
+| TTS (20 responses, ~200 chars each) | ~$0.06 |
+| **Total** | **~$0.19** |
 
 ---
 
@@ -120,20 +128,130 @@ ARIA understands 8 intent types: CHAT, CREATE_TASK, CREATE_NOTE, CREATE_REMINDER
 ```bash
 mkdir voice-assistant-agent && cd voice-assistant-agent
 mkdir modules .streamlit
-python3 -m venv venv && source venv/bin/activate
+
+python3 -m venv venv
+source venv/bin/activate      # macOS/Linux
+venv\Scripts\activate         # Windows
+
 pip install streamlit openai supabase plotly python-dotenv
-cp .env.example .env  # add OPENAI_API_KEY
+
+cp .env.example .env
+# Set OPENAI_API_KEY=sk-your-key in .env
 ```
 
 ---
 
-## 5. File 1 — `stt.py`
+## 5. File 1 — `recorder.py`
 
-> **What it does:** Converts audio bytes to text using OpenAI Whisper. Handles the temp file requirement, file size validation, and multiple language support.
+> **What this file does:** Embeds a complete HTML/JavaScript microphone recorder inside a Streamlit `components.html()` iframe. The browser records audio using the native **MediaRecorder API**, encodes it as WebM/Opus, and passes the base64 bytes back to Python via a `postMessage`.
 
-### Key Pattern: Temp File
+### Why not use a Python audio library?
 
-Whisper API needs a file object with an extension — not raw bytes. We write to a temp file:
+Streamlit runs on a server. Python has no access to the user's microphone. The only way to record in a Streamlit app is via browser JavaScript injected through `st.components.v1.html()`.
+
+### The Architecture
+
+```
+Streamlit Python process
+    └── st.components.v1.html(RECORDER_HTML, height=320)
+              ↓
+         Browser renders HTML in an <iframe>
+              ↓
+         User clicks mic → navigator.mediaDevices.getUserMedia()
+              ↓
+         MediaRecorder collects audio chunks every 100ms
+              ↓
+         User clicks stop → Blob assembled from chunks
+              ↓
+         User clicks "Send to ARIA"
+              ↓
+         FileReader → base64 string
+              ↓
+         window.parent.postMessage({type: "streamlit:setComponentValue", value: {...}})
+              ↓
+         Python receives: {"audio_b64": "...", "ext": ".webm", "duration": 12}
+```
+
+### Key JavaScript Concepts
+
+**`navigator.mediaDevices.getUserMedia()`** — prompts the user for mic permission and returns an audio stream:
+
+```javascript
+const stream = await navigator.mediaDevices.getUserMedia({
+    audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true }
+});
+```
+
+**`MediaRecorder`** — records chunks from the stream:
+
+```javascript
+const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+mediaRecorder.start(100);   // collect chunk every 100ms
+```
+
+**Sending back to Python:**
+```javascript
+window.parent.postMessage({
+    type: 'streamlit:setComponentValue',
+    value: { audio_b64: base64String, ext: '.webm', duration: secondsElapsed }
+}, '*');
+```
+
+**MIME type fallback** — different browsers support different formats:
+```javascript
+const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+    ? 'audio/webm;codecs=opus'
+    : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm'
+    : MediaRecorder.isTypeSupported('audio/ogg') ? 'audio/ogg'
+    : '';  // browser decides
+```
+
+### Python Side
+
+```python
+def mic_recorder(key="mic_recorder", height=320):
+    result = components.html(RECORDER_HTML, height=height, scrolling=False)
+    return result   # dict or None
+
+def decode_recording(result: dict) -> tuple[bytes, str]:
+    b64 = result.get("audio_b64", "")
+    ext = result.get("ext", ".webm")
+    return base64.b64decode(b64), ext
+```
+
+### Deduplication — Preventing Double Processing
+
+Each recording has a `duration` field. We track the last processed duration in session state to avoid sending the same recording twice when Streamlit reruns:
+
+```python
+rec_hash = rec_result.get("duration", 0)
+last_hash = st.session_state.get("_last_rec_hash", -1)
+if audio_bytes and rec_hash != last_hash:
+    st.session_state["_last_rec_hash"] = rec_hash
+    # process...
+```
+
+### Browser Compatibility
+
+| Browser | MediaRecorder | WebM/Opus |
+|---------|--------------|-----------|
+| Chrome 70+ | ✅ | ✅ |
+| Edge 79+ | ✅ | ✅ |
+| Firefox 65+ | ✅ | ✅ (OGG fallback) |
+| Safari 14.1+ | ✅ | ✅ |
+
+> **HTTPS requirement:** `getUserMedia()` only works on HTTPS or `localhost`. Streamlit Cloud provides HTTPS automatically. For local development, `http://localhost:8501` works fine.
+
+---
+
+## 6. File 2 — `stt.py`
+
+> **What this file does:** Sends audio bytes (from the mic recorder or a file upload) to OpenAI Whisper API and returns structured transcript data.
+
+### The Temp File Pattern
+
+Whisper API requires a file-like object with an extension. Raw bytes don't have a name, so we write to a temp file:
 
 ```python
 with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
@@ -148,51 +266,64 @@ try:
             response_format="verbose_json",
         )
 finally:
-    os.unlink(tmp_path)   # ← always clean up
+    os.unlink(tmp_path)   # always clean up
 ```
 
-`verbose_json` returns timestamps + detected language in addition to text.
+`verbose_json` returns timestamps, detected language, and duration — not just the text.
+
+### Language Support
+
+Whisper auto-detects the language. You can also specify `language="en"` to force English and slightly improve accuracy and speed. The app exposes this as a dropdown in the Upload tab.
 
 ---
 
-## 6. File 2 — `tts.py`
+## 7. File 3 — `tts.py`
 
-> **What it does:** Converts text to speech using OpenAI's TTS API. Returns MP3 bytes and provides a helper to render an HTML audio player in Streamlit.
+> **What this file does:** Converts ARIA's text responses to speech using OpenAI TTS API, then generates an HTML `<audio>` tag with base64-encoded MP3 for browser playback.
 
-### Key Pattern: Base64 Audio in Streamlit
+### The Base64 Audio Pattern
 
-Streamlit can't play audio bytes directly via `st.audio` with autoplay. We encode to base64 and inject an HTML `<audio>` tag:
+Streamlit's `st.audio()` doesn't support autoplay. We inject a raw HTML audio tag:
 
 ```python
 def audio_to_html(audio_bytes: bytes, autoplay: bool = True) -> str:
     b64 = base64.b64encode(audio_bytes).decode()
     return f"""
-    <audio controls {'autoplay'} style="width:100%;">
+    <audio controls {'autoplay'} style="width:100%;border-radius:8px;">
         <source src="data:audio/mp3;base64,{b64}" type="audio/mp3">
     </audio>
     """
 ```
 
-Then in the app: `st.markdown(audio_to_html(bytes), unsafe_allow_html=True)`
+Then: `st.markdown(audio_to_html(bytes), unsafe_allow_html=True)`
 
 ### 6 Available Voices
 
-alloy (neutral) · echo (male) · fable (British) · onyx (deep) · nova (female) · shimmer (soft)
+| Voice | Character |
+|-------|-----------|
+| alloy | Neutral, balanced |
+| echo | Clear, male |
+| fable | Warm, British |
+| onyx | Deep, authoritative |
+| nova | Bright, female (default) |
+| shimmer | Soft, friendly |
 
 ---
 
-## 7. File 3 — `agent.py`
+## 8. File 4 — `agent.py`
 
-> **What it does:** Sends messages to GPT-4o with a system prompt that instructs it to output a structured intent JSON block before every response.
+> **What this file does:** The brain of ARIA. Sends the user's message to GPT-4o with a carefully engineered system prompt that forces structured intent output before every response.
 
-### The Intent Detection Trick
+### Intent Detection via Prompting
 
-The system prompt tells GPT-4o to start every response with:
+Instead of OpenAI's function calling API, we use a simpler pattern — the system prompt instructs GPT-4o to output a JSON intent block at the start of every response:
+
 ```
 [INTENT: {"type": "CREATE_TASK", "data": {"task": "Review proposal", "deadline": "Friday", "priority": "High"}}]
+Done! I've added that task to your list.
 ```
 
-We parse this with a regex, execute the action, then show only the clean spoken response:
+We parse this with a regex and execute the action in `app.py`:
 
 ```python
 def _parse_intent(text: str) -> tuple[dict, str]:
@@ -205,205 +336,265 @@ def _parse_intent(text: str) -> tuple[dict, str]:
     return {"type": "CHAT"}, text
 ```
 
-This gives us structured data extraction without any function calling setup — just clever prompting.
+### Why this works better than function calling for voice
+
+Function calling requires pre-defined schemas and multiple round trips. The prompt-based approach:
+- Works in a single API call
+- The intent and response come together
+- Easier to customise for new intent types
+- GPT-4o is instruction-following enough to be reliable
 
 ### Context Injection
 
-We pass the user's current tasks and notes as context so ARIA can reference them:
+ARIA's responses are smarter because we inject the user's current data:
 
 ```python
-context = "CURRENT TASKS: Review proposal; Send invoice\nRECENT NOTES: Meeting summary"
+context = "TASKS: Review proposal; Send invoice\nNOTES: Meeting summary"
 messages.append({"role": "system", "content": f"CONTEXT:\n{context}"})
 ```
 
+This lets ARIA say "You already have 3 pending tasks" or reference a previous note.
+
 ---
 
-## 8. File 4 — `tasks.py`
+## 9. File 5 — `tasks.py`
 
-> **What it does:** Session-state-based storage for tasks, notes, reminders, and calendar events. No database required — everything lives in `st.session_state`.
+> **What this file does:** Session-state-based in-memory store for tasks, notes, reminders, and calendar events. No database required — everything persists within a browser tab.
 
-### Why Session State (Not a Database)?
+### Why Session State?
 
-For a demo/personal tool, session state is perfect:
-- Zero setup
-- Instant reads/writes
-- No network latency
-- Works without Supabase
-
-For production, swap to Supabase (database.py handles this).
-
-### The Pattern
+Streamlit reruns the entire script on every user interaction. `st.session_state` persists Python objects between reruns — it's essentially a per-user in-memory dictionary.
 
 ```python
 def init_stores():
-    """Called once at app startup."""
     if "tasks" not in st.session_state:
         st.session_state.tasks = []
 
 def add_task(task, deadline="", priority="Medium") -> dict:
     item = {"id": _id(), "task": task, "deadline": deadline,
             "priority": priority, "status": "pending", "created_at": _now()}
-    st.session_state.tasks.insert(0, item)  # newest first
+    st.session_state.tasks.insert(0, item)
     return item
+```
+
+Each item gets a random 8-character UUID as its `id` — used for the complete/delete buttons.
+
+### All Four Stores
+
+```python
+st.session_state.tasks          # list of task dicts
+st.session_state.notes          # list of note dicts
+st.session_state.reminders      # list of reminder dicts
+st.session_state.calendar_events  # list of event dicts
 ```
 
 ---
 
-## 9. File 5 — `database.py`
+## 10. File 6 — `database.py`
 
-> **What it does:** Optional Supabase persistence. Saves conversations, tasks, and notes permanently. Returns empty/None gracefully if not configured.
+> **What this file does:** Optional Supabase persistence for conversation history. Falls back gracefully — the entire app works without it.
 
 ```python
 def _db():
     url = st.secrets.get("SUPABASE_URL") or os.environ.get("SUPABASE_URL", "")
     key = st.secrets.get("SUPABASE_KEY") or os.environ.get("SUPABASE_KEY", "")
     if not url or not key:
-        return None       # ← app works without DB
+        return None        # ← safe fallback
     return create_client(url, key)
 ```
 
+Every function checks `if not db: return` — so `save_message()`, `get_history()`, etc. all silently no-op when Supabase isn't configured.
+
 ---
 
-## 10. File 6 — `app.py`
+## 11. File 7 — `app.py`
 
-> **What it does:** 8-page Streamlit UI with voice chat, task manager, notes, reminders, calendar, dashboard, and settings.
+> **What this file does:** 8-page Streamlit UI. The Voice Chat page has two input methods (🔴 Record tab, 📁 Upload tab) and a full chat interface with styled bubbles, action cards, and TTS playback.
+
+### The Voice Chat Page Layout
+
+```
+┌─────────────────────────┬──────────────────────────┐
+│  CHAT (col ratio 3)     │  VOICE INPUT (col ratio 2)│
+│                         │                           │
+│  Welcome card /         │  Tab: 🔴 Record           │
+│  Conversation bubbles   │   └── JS recorder iframe  │
+│                         │   └── Transcription result│
+│  TTS audio player       │                           │
+│  Chat input box         │  Tab: 📁 Upload           │
+│  Quick action buttons   │   └── File uploader       │
+│  Clear button           │   └── Language selector   │
+│                         │   └── Transcribe button   │
+│                         │                           │
+│                         │  🔊 ARIA's Voice          │
+│                         │   └── TTS toggle          │
+│                         │   └── Voice selector      │
+│                         │   └── Speed slider        │
+│                         │   └── Preview button      │
+│                         │                           │
+│                         │  🔔 Active Reminders      │
+└─────────────────────────┴──────────────────────────┘
+```
 
 ### The Message Processing Pipeline
 
-Every user message (voice or text) goes through one function:
+All three input methods (mic, upload, type) funnel through one function:
 
 ```python
 def _process_message(user_text: str, is_audio: bool = False):
-    # 1. Add user message to conversation
+    # 1. Add user bubble
     st.session_state.conversation.append({"role": "user", "content": user_text, ...})
 
-    # 2. Build context from current tasks/notes
-    context = "CURRENT TASKS: " + "; ".join(t["task"] for t in get_tasks("pending")[:5])
+    # 2. Build context from tasks/notes
+    context = "TASKS: " + "; ".join(t["task"] for t in get_tasks("pending")[:5])
 
-    # 3. Get AI response with intent
-    result = ai_chat(user_text, st.session_state.conversation[:-1], context)
-    intent = result["intent"]         # {"type": "CREATE_TASK", "data": {...}}
-    response = result["response"]     # clean spoken text
+    # 3. GPT-4o → intent + response
+    result = ai_chat(user_text, history, context)
+    intent_type = result["intent"]["type"]   # e.g. "CREATE_TASK"
+    intent_data = result["intent"]["data"]   # e.g. {"task": "..."}
 
     # 4. Execute intent
-    if intent["type"] == "CREATE_TASK":
-        add_task(intent["data"]["task"], ...)
+    if intent_type == "CREATE_TASK":
+        task = add_task(intent_data["task"], ...)
+        action_msg = f"✅ Task added: {task['task']}"
 
-    # 5. Add assistant response
-    st.session_state.conversation.append({"role": "assistant", "content": response})
+    # 5. Add ARIA bubble with action card
+    st.session_state.conversation.append({
+        "role": "assistant", "content": response_text,
+        "intent": intent_type, "action": action_msg, ...
+    })
 
-    # 6. TTS if enabled
+    # 6. TTS
     if st.session_state.tts_enabled:
-        audio = synthesize(response, st.session_state.tts_voice)
-        st.session_state.last_audio = audio
+        st.session_state.last_audio = synthesize(response_text, voice, speed)
 ```
 
-### Chat Bubbles via HTML
-
-Streamlit's `st.chat_message` doesn't support the custom bubble styling we want. We use `st.markdown` with `unsafe_allow_html=True`:
+### Handling the Mic Recording in app.py
 
 ```python
-st.markdown(f'<div class="bubble-user">{content}</div>', unsafe_allow_html=True)
-st.markdown(f'<div class="bubble-assistant">{content}</div>', unsafe_allow_html=True)
+rec_result = mic_recorder(key="live_mic", height=320)
+
+if rec_result and isinstance(rec_result, dict) and rec_result.get("audio_b64"):
+    audio_bytes, ext = decode_recording(rec_result)
+    rec_hash = rec_result.get("duration", 0)
+
+    if audio_bytes and rec_hash != st.session_state.get("_last_rec_hash", -1):
+        st.session_state["_last_rec_hash"] = rec_hash
+        result = transcribe_bytes(audio_bytes, ext)   # Whisper
+        if result.get("text"):
+            _process_message(result["text"], is_audio=True)
+            st.rerun()
 ```
 
 ---
 
-## 11. Running Locally
+## 12. Running Locally
 
 ```bash
 source venv/bin/activate
 streamlit run app.py
+# Opens at http://localhost:8501
 ```
 
 ### First Run Walkthrough
 
-1. **⚙️ Settings** — Enter your OpenAI API key → Save
-2. **🎙️ Voice Chat** — Type "Add a task to review the proposal by Friday"
-3. Watch ARIA create the task automatically and confirm
-4. Upload an MP3/WAV recording → Transcribe & Send
-5. Toggle "Auto-speak responses" → ARIA speaks back
-6. **✅ Tasks** — See your task created automatically
-7. **📊 Dashboard** — See intent breakdown and task stats
-8. Try: "Set a reminder to call Alice tomorrow at 2 PM"
-9. Try: "Schedule a team meeting on Thursday at 3 PM"
+1. **⚙️ Settings** → Enter your OpenAI API key → Save
+2. **🎙️ Voice Chat** → Click **🔴 Record** tab
+3. Click the **pulse mic button** → allow microphone access
+4. Say: *"Add a task to finish the report by Thursday"*
+5. Click the mic again to stop → preview plays in browser
+6. Click **📤 Send to ARIA** → see the transcript → ARIA responds
+7. Watch the task get created automatically in the chat
+8. Click **✅ Tasks** in sidebar → your task is there
+9. Say: *"Remind me to check emails every morning at 8 AM"*
+10. Say: *"Schedule a team standup tomorrow at 10 AM"*
+11. Go to **📊 Dashboard** → see your intent breakdown chart
 
 ---
 
-## 12. Deploying to Streamlit Cloud
+## 13. Deploying to Streamlit Cloud
 
 ```bash
 git add . && git commit -m "ARIA Voice Assistant" && git push
 ```
 
-1. [share.streamlit.io](https://share.streamlit.io) → New app → your repo
-2. Main file: `app.py`
-3. Secrets:
+1. [share.streamlit.io](https://share.streamlit.io) → New app
+2. Select repo, main file: `app.py`
+3. **Advanced → Secrets** (TOML format — quotes required):
+
 ```toml
-OPENAI_API_KEY = "sk-your-key"
+OPENAI_API_KEY = "sk-your-openai-key"
 SUPABASE_URL   = "https://xxx.supabase.co"
 SUPABASE_KEY   = "your-anon-key"
 ```
-4. Deploy ✅
 
-Users can also add their own key via **⚙️ Settings** — no server key needed for public demos.
+4. Deploy ✅ — live in ~2 minutes
 
----
+**Microphone on Streamlit Cloud:** Works automatically because Streamlit Cloud serves on HTTPS, which is required for `getUserMedia()`.
 
-## 13. Common Errors & Fixes
-
-| Error | Fix |
-|-------|-----|
-| `Invalid API key` | Check key in ⚙️ Settings |
-| `Audio too short` | Record > 1 second of speech |
-| `File too large` | Max 25 MB — compress to MP3 |
-| `Rate limit` | Wait 10s and retry |
-| Intent not detected | GPT-4o sometimes skips intent block — normal for very short messages |
-| TTS not playing | Some browsers block autoplay — click the audio player manually |
-| No speech in audio | Ensure mic is recording / file has actual audio |
+**Public access without sharing your key:** Users can enter their own OpenAI key on the **⚙️ Settings** page.
 
 ---
 
-## 14. What You Learned
+## 14. Common Errors & Fixes
 
-- ✅ **OpenAI Whisper API** — audio bytes → text via temp file pattern
-- ✅ **OpenAI TTS API** — text → MP3 bytes → base64 HTML audio player
-- ✅ **Intent detection via prompting** — structured JSON in LLM responses without function calling
-- ✅ **Context injection** — feeding task/note state into GPT-4o for smart responses
-- ✅ **Session state as database** — storing structured data in st.session_state
-- ✅ **Chat bubble UI** — custom styled bubbles via HTML in Streamlit
-- ✅ **Multi-page Streamlit** — 8-page app with sidebar button navigation
-- ✅ **Graceful degradation** — optional Supabase, optional TTS, optional DB
+| Error | Cause | Fix |
+|-------|-------|-----|
+| Mic button does nothing | No mic permission | Click the lock icon in browser URL bar → allow mic |
+| `NotAllowedError` in JS console | Mic permission denied | Allow in browser settings → refresh |
+| `Invalid API key` | Wrong key | Go to ⚙️ Settings → re-enter key |
+| `Audio too short` | < 1 second recorded | Speak for at least 2 seconds |
+| `File too large` | > 25 MB | Compress: `ffmpeg -i file.mp4 file.mp3` |
+| TTS doesn't autoplay | Browser policy | Click the audio player manually |
+| Intent not detected | Very short message | ARIA defaults to CHAT — rephrase |
+| Recording works locally but not on server | HTTP vs HTTPS | Streamlit Cloud uses HTTPS — deploy there |
+| `relation does not exist` | No Supabase schema | Run `supabase_schema.sql` in SQL Editor |
+| No audio in recording | Wrong input device | Check OS microphone settings |
 
 ---
 
-## 15. What's Next
+## 15. What You Learned
+
+- ✅ **Browser MediaRecorder API** — recording audio in the browser with JavaScript
+- ✅ **Streamlit HTML components** — embedding JavaScript and communicating back to Python
+- ✅ **Base64 audio transfer** — encoding audio bytes for browser-to-Python transfer
+- ✅ **OpenAI Whisper API** — temp file pattern, verbose_json response format
+- ✅ **OpenAI TTS API** — MP3 bytes → base64 HTML audio tag for browser playback
+- ✅ **Intent detection via prompting** — structured JSON extraction without function calling
+- ✅ **GPT-4o system prompt engineering** — forcing consistent structured output
+- ✅ **Streamlit session state** — using it as an in-memory database across reruns
+- ✅ **Graceful degradation** — optional Supabase, optional TTS, always works
+- ✅ **HTTPS/microphone security** — why browser mic requires secure context
+
+---
+
+## 16. What's Next
 
 ### Easy
-- **Browser microphone recording** — use `streamlit-webrtc` for real-time mic input
-- **More languages** — Whisper supports 99 languages, just change the `language` param
-- **Voice command shortcuts** — map specific phrases to instant actions
+- **More languages** — Whisper supports 99 languages; just change `language` param
+- **Larger context** — pass more history to GPT-4o for better follow-up handling
+- **Custom wake word UI** — add a "listening" animation while waiting for speech
 
 ### Intermediate
-- **Live web search** — integrate Serper/Tavily API for real-time web answers
-- **Google Calendar sync** — push events to real Google Calendar via OAuth
-- **Recurring reminders** — add repeat logic with APScheduler
+- **Real-time streaming TTS** — stream GPT-4o tokens and feed to TTS progressively
+- **Live web search** — integrate Serper/Tavily for real-time search results
+- **Google Calendar sync** — push events to actual Google Calendar via OAuth
 
 ### Advanced
-- **Real-time streaming** — stream GPT-4o responses token-by-token with TTS
-- **Wake word detection** — listen continuously for "Hey ARIA"
-- **Multi-user sessions** — tie session_id to user auth via Supabase Auth
+- **Continuous listening mode** — poll `getUserMedia` in a loop to detect silence/speech
+- **Speaker identification** — use pyannote to identify who spoke in a group meeting
+- **Multi-session persistence** — store tasks/notes per user using Supabase Auth
 
 ---
 
 ## ⭐ Enjoyed this tutorial?
 
-- ⭐ **[Star the repository](https://github.com/adityasharmadotai-hash)**
-- 🌐 **[Visit adityasharma.ai](https://www.adityasharma.ai)**
-- 💼 **[Follow on LinkedIn](https://www.linkedin.com/in/aditya-hicounselor/)**
-- 📺 **[Subscribe on YouTube](https://www.youtube.com/channel/UCPjQtVNUrf7EKrm8ZoqrCAQ)**
+- ⭐ **[Star the repository](https://github.com/adityasharmadotai-hash)** — helps others discover this
+- 🌐 **[Visit adityasharma.ai](https://www.adityasharma.ai)** — AI training for professionals
+- 💼 **[Follow on LinkedIn](https://www.linkedin.com/in/aditya-hicounselor/)** — daily AI updates
+- 📺 **[Subscribe on YouTube](https://www.youtube.com/channel/UCPjQtVNUrf7EKrm8ZoqrCAQ)** — AI agent tutorials
 - 🚀 **[AI Jobs in the USA](https://docs.google.com/forms/d/e/1FAIpQLSc3gJssBV3B25EZ3sYA7Qcen9NbtOB_wgQaturfB7lTXuAdLQ/viewform)**
 
 ---
 
-*Built with ❤️ by [Aditya Sharma](https://www.adityasharma.ai) · OpenAI Whisper + GPT-4o + TTS + Streamlit*
+*Built with ❤️ by [Aditya Sharma](https://www.adityasharma.ai) · OpenAI Whisper + GPT-4o + TTS + WebRTC + Streamlit*
