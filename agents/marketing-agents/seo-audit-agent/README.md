@@ -1,6 +1,6 @@
 # 🔍 AI SEO Audit Agent
 
-> Enter any website URL → get a complete 6-category SEO audit with AI-powered scores, issue detection, GPT-4o recommendations, keyword strategy, and PDF/Markdown export — in under 60 seconds.
+> Enter any website URL → get a complete SEO audit with AI-powered scores, step-by-step fix guides, SERP preview, keyword strategy, and PDF/Markdown export — in under 60 seconds.
 
 ---
 
@@ -22,7 +22,7 @@
 
 ## Overview
 
-SEO audits that used to take hours and cost hundreds of dollars are now instant and free. Paste any URL — the agent scrapes the page, runs 6 rule-based scoring modules, then calls GPT-4o five times to generate a complete improvement plan, optimised meta tags, technical fixes, UX suggestions, and a keyword strategy.
+SEO audits that used to take hours and cost hundreds of dollars are now instant and free. Paste any URL — the agent scrapes the page, runs 6 rule-based scoring modules, calls GPT-4o five times for AI recommendations, and provides step-by-step fix guides with copy-paste code for every issue found.
 
 ---
 
@@ -31,45 +31,68 @@ SEO audits that used to take hours and cost hundreds of dollars are now instant 
 | Feature | Description |
 |---------|-------------|
 | 🔍 **6-Category Audit** | Meta tags, headings, keywords, technical SEO, images, links |
-| 📊 **SEO Score 0-100** | Weighted overall score with radar chart per category |
-| ❌ **Issue Detection** | Critical, warning, info, and pass findings with fix instructions |
-| 🤖 **AI Improvement Plan** | GPT-4o: quick wins, short-term, long-term actions with impact ratings |
+| 📊 **SEO Score 0-100** | Weighted score with animated ring gauge + radar chart |
+| ❌ **Issue Detection** | Critical / warning / info / pass with severity breakdown |
+| 🔧 **Fix Guides** | Step-by-step instructions + copy-paste code for every issue |
+| 🤖 **AI Improvement Plan** | GPT-4o: quick wins, short-term and long-term action plan |
 | ✍️ **Content Optimisation** | 3 improved title options, 3 meta descriptions, CTA ideas |
-| ⚙️ **Technical Guidance** | Core Web Vitals tips, schema recommendations, robots/sitemap |
-| 🎨 **UX Suggestions** | Readability, navigation, mobile UX, trust signals |
-| 📈 **Keyword Strategy** | Top keywords found, AI target suggestions, long-tail opportunities |
-| 💡 **Content Ideas** | AI-generated blog/page ideas with target keywords |
-| 📥 **PDF Export** | Professional ReportLab PDF with tables, scores, and AI recommendations |
-| 📝 **Markdown Export** | Clean Markdown for Notion, Obsidian, GitHub |
+| ⚙️ **Technical Guidance** | Core Web Vitals, schema recommendations, performance fixes |
+| 🎨 **UX Suggestions** | Readability, mobile UX, trust signals, navigation tips |
+| 📈 **Keyword Strategy** | Top keywords, density, AI targets, long-tail, content ideas |
+| 👁️ **SERP Preview** | Live Google result preview + Facebook/Twitter social card preview |
+| 📊 **Benchmark Comparison** | Your score vs industry average, good, and excellent |
+| 💡 **Sample URLs** | One-click test with openai.com, stripe.com, notion.so, linear.app |
+| 📥 **PDF Export** | Professional ReportLab PDF with all findings and AI recommendations |
+| 📝 **Markdown Export** | Clean Markdown for Notion, Obsidian, GitHub, Confluence |
 | 🔑 **User API Key** | Anyone can test on Streamlit Cloud with their own OpenAI key |
+| 🕐 **Audit History** | Recent audits saved in session with score and domain |
 
 ---
 
 ## How It Works
 
 ```
-Paste Website URL
+Paste Website URL (or click a sample)
       ↓
 scraper.py — requests + BeautifulSoup
 Fetch page, measure load time, extract all HTML data
       ↓
 analyser.py — 6 rule-based modules
 Meta / Headings / Keywords / Technical / Images / Links
-Each scored 0-100 with detailed issues list
+Each scored 0-100 with issues list (critical/warning/info/pass)
       ↓
-ai_advisor.py — GPT-4o (5 API calls)
+fixes.py — Fix guide library (18 guides)
+Match each issue → step-by-step fix + code example
+      ↓
+ai_advisor.py — GPT-4o (5 API calls, optional)
 1. SEO improvement plan (quick wins / short / long term)
 2. Content optimisation (title, description, CTA)
 3. Technical guidance (performance, schema, CWV)
 4. UX suggestions (readability, mobile, trust)
 5. Keyword strategy (targets, long-tail, content ideas)
       ↓
-app.py — 7-page Streamlit dashboard
-Scores, radar chart, issue cards, AI cards, charts
+app.py — 9-page Streamlit dashboard
+Audit · Dashboard · AI · Keywords · Technical · SERP · Fix Guides · Export · Settings
       ↓
 exporter.py — PDF + Markdown
 Download full audit report
 ```
+
+---
+
+## 9 Pages at a Glance
+
+| Page | What You Get |
+|------|-------------|
+| 🔍 **Audit** | URL input, sample URLs, step progress bar, recent history |
+| 📊 **Dashboard** | Score ring, radar chart, issue counts, benchmark comparison |
+| 🤖 **AI Suggestions** | Grade, priorities, action plan, content optimisation, UX |
+| 📈 **Keywords** | Frequency bar chart, AI keyword strategy, content ideas |
+| ⚙️ **Technical** | Speed gauge, technical issues, image/link stats |
+| 👁️ **SERP Preview** | Google result preview, social card preview, OG checklist |
+| 🔧 **Fix Guides** | Step-by-step fixes for YOUR issues + browse all 18 guides |
+| 📤 **Export** | PDF + Markdown download with full report |
+| 🔑 **Settings** | API key, what works without a key, cost breakdown |
 
 ---
 
@@ -78,13 +101,13 @@ Download full audit report
 | Tool | Purpose |
 |------|---------|
 | Python 3.10+ | Core language |
-| Streamlit | 7-page web dashboard |
-| OpenAI GPT-4o | 5 AI analysis calls per audit |
+| Streamlit | 9-page web dashboard |
+| OpenAI GPT-4o | 5 AI analysis calls per audit (optional) |
 | requests | HTTP page fetching with load time measurement |
 | BeautifulSoup4 | HTML parsing and data extraction |
 | lxml | Fast HTML parser backend |
 | ReportLab | Professional PDF report generation |
-| Plotly | Radar chart, bar charts, analytics |
+| Plotly | Radar chart, bar charts, benchmark comparison |
 
 ---
 
@@ -92,12 +115,13 @@ Download full audit report
 
 ```
 seo-audit-agent/
-├── app.py                  # Main Streamlit app — 7 pages
+├── app.py                  # Main Streamlit app — 9 pages
 ├── modules/
 │   ├── __init__.py
 │   ├── scraper.py          # Web fetch + HTML parsing
 │   ├── analyser.py         # 6-category rule-based scoring
 │   ├── ai_advisor.py       # GPT-4o recommendations (5 calls)
+│   ├── fixes.py            # ← NEW: 18 step-by-step fix guides with code
 │   └── exporter.py         # PDF (ReportLab) + Markdown export
 ├── .streamlit/
 │   └── config.toml         # Theme + server settings
@@ -126,6 +150,7 @@ pip install -r requirements.txt
 ```bash
 cp .env.example .env
 # Edit .env — add your OPENAI_API_KEY
+# Note: the audit works WITHOUT a key — AI sections are disabled
 ```
 
 ### 3. Run
@@ -150,7 +175,24 @@ OPENAI_API_KEY = "sk-your-openai-key"
 
 5. Deploy ✅
 
-> **Public access:** Users visiting your app can add their own OpenAI key via **🔑 Settings** — no need to share yours.
+> **Public access:** Users can enter their own OpenAI key via **🔑 Settings**. The full 6-category audit + fix guides + SERP preview work without any key — only AI sections require one.
+
+---
+
+## What Works Without an API Key?
+
+| Feature | No Key | With Key |
+|---------|--------|----------|
+| 6-Category SEO Audit | ✅ | ✅ |
+| SEO Score & Charts | ✅ | ✅ |
+| Issue Detection | ✅ | ✅ |
+| 🔧 Fix Guides (all 18) | ✅ | ✅ |
+| 👁️ SERP & Social Preview | ✅ | ✅ |
+| Markdown Export | ✅ | ✅ |
+| 🤖 AI Improvement Plan | ❌ | ✅ |
+| AI Content Optimisation | ❌ | ✅ |
+| AI Keyword Strategy | ❌ | ✅ |
+| PDF with AI content | ❌ | ✅ |
 
 ---
 
@@ -158,12 +200,12 @@ OPENAI_API_KEY = "sk-your-openai-key"
 
 | Error | Fix |
 |-------|-----|
-| `Could not connect` | Check the URL — ensure the site is publicly accessible |
-| `SSL certificate error` | Site has an invalid certificate — try the HTTP version |
-| `Request timed out` | Site is too slow or blocking scrapers — try again |
-| `Invalid API key` | Go to 🔑 Settings and re-enter your OpenAI key |
-| `Invalid format: TOML` | Use `KEY = "value"` with quotes in Streamlit secrets |
-| AI sections empty | Enable "Run AI Analysis" in audit options |
+| `Could not connect` | Check URL is publicly accessible |
+| `SSL certificate error` | Try `http://` version of the URL |
+| `Request timed out` | Site too slow or blocking bots — try again |
+| `Invalid API key` | Go to 🔑 Settings → re-enter key |
+| `Invalid format: TOML` | Use `KEY = "value"` with quotes in secrets |
+| AI sections empty | Enable "AI Analysis" in audit options |
 | `lxml not found` | Run `pip install lxml` |
 
 ---
