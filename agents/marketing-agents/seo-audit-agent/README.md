@@ -136,6 +136,12 @@ seo-audit-agent/
 
 <img width="1912" height="1013" alt="image" src="https://github.com/user-attachments/assets/86d59855-a30a-4dfb-b735-da8bf73db91c" />
 
+---
+
+<img width="1276" height="741" alt="image" src="https://github.com/user-attachments/assets/1c3a60da-b1df-4bdb-b49d-b236b6455dd6" />
+
+---
+
 <img width="1291" height="814" alt="image" src="https://github.com/user-attachments/assets/55bbd1eb-51e9-4349-bfa5-ad3187b27300" />
 
 ---
@@ -213,8 +219,6 @@ OPENAI_API_KEY = "sk-your-openai-key"
 | `Invalid format: TOML` | Use `KEY = "value"` with quotes in secrets |
 | AI sections empty | Enable "AI Analysis" in audit options |
 | `lxml not found` | Run `pip install lxml` |
-
-<img width="1276" height="741" alt="image" src="https://github.com/user-attachments/assets/1c3a60da-b1df-4bdb-b49d-b236b6455dd6" />
 
 ---
 
