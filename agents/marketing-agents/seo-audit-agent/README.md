@@ -2,6 +2,8 @@
 
 > Enter any website URL → get a complete SEO audit with AI-powered scores, step-by-step fix guides, SERP preview, keyword strategy, and PDF/Markdown export — in under 60 seconds.
 
+<img width="1921" height="2003" alt="screencapture-seo-audit-agent-streamlit-app-2026-05-22-18_48_09" src="https://github.com/user-attachments/assets/0ec18b7b-b98a-4758-8035-f70e1337a919" />
+
 ---
 
 <div align="center">
@@ -132,6 +134,10 @@ seo-audit-agent/
 └── Tutorial.md
 ```
 
+<img width="1912" height="1013" alt="image" src="https://github.com/user-attachments/assets/86d59855-a30a-4dfb-b735-da8bf73db91c" />
+
+<img width="1291" height="814" alt="image" src="https://github.com/user-attachments/assets/55bbd1eb-51e9-4349-bfa5-ad3187b27300" />
+
 ---
 
 ## Getting Started
@@ -207,6 +213,8 @@ OPENAI_API_KEY = "sk-your-openai-key"
 | `Invalid format: TOML` | Use `KEY = "value"` with quotes in secrets |
 | AI sections empty | Enable "AI Analysis" in audit options |
 | `lxml not found` | Run `pip install lxml` |
+
+<img width="1276" height="741" alt="image" src="https://github.com/user-attachments/assets/1c3a60da-b1df-4bdb-b49d-b236b6455dd6" />
 
 ---
 
