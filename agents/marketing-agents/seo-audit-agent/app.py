@@ -224,6 +224,43 @@ html,body,[class*="css"]{ font-family:'Inter',sans-serif; }
 [data-testid="stTextInput"] input:focus{border-color:#4f46e5 !important;}
 
 #MainMenu,footer{visibility:hidden;}
+
+/* ── Fix guide panel ── */
+.fix-panel{
+    background:linear-gradient(135deg,#f8faff,#f0f4ff);
+    border:2px solid #c7d2fe;border-radius:14px;
+    padding:20px 24px;margin-top:10px;
+}
+.fix-step{
+    display:flex;gap:12px;padding:8px 0;
+    border-bottom:1px solid rgba(99,102,241,0.1);
+    align-items:flex-start;
+}
+.fix-step-num{
+    width:24px;height:24px;border-radius:50%;
+    background:#4f46e5;color:white;
+    font-size:12px;font-weight:700;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+}
+.fix-step-text{font-size:13px;color:#374151;line-height:1.5;padding-top:3px;}
+.fix-badge{
+    display:inline-block;padding:3px 10px;border-radius:12px;
+    font-size:11px;font-weight:700;margin-right:6px;
+}
+.fix-easy  {background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;}
+.fix-medium{background:#fffbeb;color:#d97706;border:1px solid #fde68a;}
+.fix-hard  {background:#fef2f2;color:#dc2626;border:1px solid #fecaca;}
+.fix-code{
+    background:#0f172a;border-radius:10px;padding:14px 16px;
+    font-family:monospace;font-size:12px;color:#a5f3fc;
+    line-height:1.7;overflow-x:auto;margin:10px 0;
+    white-space:pre;
+}
+.fix-list-item{
+    font-size:12px;color:#374151;padding:3px 0;
+    display:flex;align-items:flex-start;gap:6px;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -239,6 +276,7 @@ from modules.ai_advisor import (
     technical_guidance, ux_suggestions, keyword_strategy,
 )
 from modules.exporter import export_markdown, export_pdf
+from modules.fixes import get_fix_guide, FIX_GUIDES
 
 # ── Session state ─────────────────────────────────────────────────────────────
 for k, v in {
@@ -263,8 +301,81 @@ _sync()
 NAV = [
     ("🔍","Audit"), ("📊","Dashboard"), ("🤖","AI Suggestions"),
     ("📈","Keywords"), ("⚙️","Technical"), ("👁️","SERP Preview"),
-    ("📤","Export"), ("🔑","Settings"),
+    ("🔧","Fix Guides"), ("📤","Export"), ("🔑","Settings"),
 ]
+
+# ── Fix guide renderer ────────────────────────────────────────────────────────
+def _render_fix_guide(guide: dict):
+    """Render a comprehensive fix guide inline."""
+    diff  = guide.get("difficulty","Medium")
+    time_ = guide.get("time","")
+    impact = guide.get("impact","Medium")
+    diff_cls  = {"Easy":"fix-easy","Medium":"fix-medium","Hard":"fix-hard"}.get(diff,"fix-medium")
+    impact_color = {"High":"#dc2626","Medium":"#d97706","Low":"#16a34a"}.get(impact,"#64748b")
+
+    st.markdown(f"""
+    <div class="fix-panel">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+            <span class="fix-badge {diff_cls}">🎯 {diff} difficulty</span>
+            <span class="fix-badge" style="background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;">
+                ⏱ {time_}
+            </span>
+            <span class="fix-badge" style="background:#fef2f2;color:{impact_color};border:1px solid #fecaca;">
+                ⚡ {impact} impact
+            </span>
+        </div>
+        <div style="font-size:13px;color:#374151;line-height:1.7;margin-bottom:16px;
+                    background:white;border-radius:8px;padding:12px 14px;border:1px solid #e2e8f0;">
+            {guide.get('summary','')}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Steps
+    steps = guide.get("steps",[])
+    if steps:
+        st.markdown("**📋 Step-by-Step Instructions:**")
+        for i, step in enumerate(steps, 1):
+            st.markdown(f"""
+            <div class="fix-step">
+                <div class="fix-step-num">{i}</div>
+                <div class="fix-step-text">{step}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+    # Code example
+    code = guide.get("code","")
+    if code:
+        st.markdown("**💻 Code Example:**")
+        st.code(code, language="html")
+
+    # Do / Don't
+    dos   = guide.get("do",[])
+    donts = guide.get("dont",[])
+    if dos or donts:
+        dc1, dc2 = st.columns(2)
+        with dc1:
+            if dos:
+                st.markdown("**✅ Do:**")
+                for d in dos:
+                    st.markdown(f"""
+                    <div class="fix-list-item">
+                        <span style="color:#22c55e;flex-shrink:0;">✓</span>
+                        <span>{d}</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+        with dc2:
+            if donts:
+                st.markdown("**❌ Don't:**")
+                for d in donts:
+                    st.markdown(f"""
+                    <div class="fix-list-item">
+                        <span style="color:#ef4444;flex-shrink:0;">✗</span>
+                        <span>{d}</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
@@ -759,18 +870,25 @@ elif page == "📊 Dashboard":
         score_ = audit[key]["score"]
         sc_ = "#22c55e" if score_>=70 else ("#f59e0b" if score_>=50 else "#ef4444")
         with st.expander(f"{icon} {cat}  —  {score_}/100  ({len(shown)} shown)"):
-            for iss in shown:
-                sev = iss.get("severity","info")
+            for i_iss, iss in enumerate(shown):
+                sev   = iss.get("severity","info")
                 icons = {"critical":"❌","warning":"⚠️","info":"ℹ️","pass":"✅"}
                 css   = {"critical":"iss-critical","warning":"iss-warning","info":"iss-info","pass":"iss-pass"}
                 safe  = iss["message"].replace("<","&lt;").replace(">","&gt;")
-                fix   = iss.get("fix","").replace("<","&lt;")
+                fix_  = iss.get("fix","").replace("<","&lt;")
+                guide = get_fix_guide(iss["message"])
+
                 st.markdown(f"""
                 <div class="{css.get(sev,'iss-info')}">
                     <div class="iss-title">{icons.get(sev,'ℹ️')} {safe}</div>
-                    {"<div class='iss-fix'>🔧 " + fix + "</div>" if fix else ""}
+                    {"<div class='iss-fix'>🔧 " + fix_ + "</div>" if fix_ else ""}
                 </div>
                 """, unsafe_allow_html=True)
+
+                # Show "How to Fix" guide for actionable issues
+                if guide and sev in ("critical","warning"):
+                    with st.expander(f"📖 How to Fix This →  {guide['title']}", expanded=False):
+                        _render_fix_guide(guide)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1413,6 +1531,128 @@ elif page == "👁️ SERP Preview":
                 <span style="color:#64748b;">{preview}</span>
             </div>
             """, unsafe_allow_html=True)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE: FIX GUIDES
+# ══════════════════════════════════════════════════════════════════════════════
+elif page == "🔧 Fix Guides":
+    audit = st.session_state.audit
+
+    st.markdown("""
+    <div class="page-hdr">
+        <h1>🔧 How to Fix Your SEO Issues</h1>
+        <p>Step-by-step fix instructions with code examples for every issue found on your site</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── Priority: show YOUR issues first ──────────────────────────────────────
+    your_issues = []
+    for cat_name, cat_data in audit.items():
+        if not isinstance(cat_data, dict): continue
+        for iss in cat_data.get("issues",[]):
+            if iss.get("severity") in ("critical","warning"):
+                guide = get_fix_guide(iss["message"])
+                if guide:
+                    your_issues.append({
+                        "severity": iss["severity"],
+                        "message": iss["message"],
+                        "fix": iss.get("fix",""),
+                        "category": cat_name.title(),
+                        "guide": guide,
+                    })
+
+    if your_issues:
+        # Sort: critical first
+        your_issues.sort(key=lambda x: (0 if x["severity"]=="critical" else 1))
+
+        st.markdown(f'<div class="sec-hdr">🎯 Fix Guides for YOUR {len(your_issues)} Issues</div>', unsafe_allow_html=True)
+        st.info(f"Found **{sum(1 for i in your_issues if i['severity']=='critical')} critical** and **{sum(1 for i in your_issues if i['severity']=='warning')} warning** issues with available fix guides.")
+
+        for item in your_issues:
+            sev   = item["severity"]
+            guide = item["guide"]
+            diff  = guide.get("difficulty","Medium")
+            time_ = guide.get("time","")
+            diff_cls = {"Easy":"fix-easy","Medium":"fix-medium","Hard":"fix-hard"}.get(diff,"fix-medium")
+            sev_icon = "❌" if sev=="critical" else "⚠️"
+            sev_color = "#ef4444" if sev=="critical" else "#f59e0b"
+
+            with st.expander(
+                f"{sev_icon} [{item['category']}] {item['message'][:70]}{'...' if len(item['message'])>70 else ''}",
+                expanded=(sev=="critical")
+            ):
+                st.markdown(f"""
+                <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+                    <span style="background:{sev_color}22;color:{sev_color};border:1px solid {sev_color}44;
+                                 padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700;">
+                        {sev.upper()}
+                    </span>
+                    <span class="fix-badge {diff_cls}">🎯 {diff}</span>
+                    <span class="fix-badge" style="background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;">⏱ {time_}</span>
+                    <span class="tag tag-gray">📂 {item['category']}</span>
+                </div>
+                """, unsafe_allow_html=True)
+
+                if item.get("fix"):
+                    st.markdown(f"""
+                    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;
+                                padding:10px 14px;margin-bottom:12px;font-size:13px;color:#374151;">
+                        🔧 <strong>Quick fix:</strong> {item['fix']}
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                _render_fix_guide(guide)
+
+    else:
+        st.success("🎉 No critical or warning issues with fix guides available. Your site looks good!")
+
+    # ── Browse all fix guides ─────────────────────────────────────────────────
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown('<div class="sec-hdr">📚 Browse All Fix Guides</div>', unsafe_allow_html=True)
+
+    # Category filter
+    all_guides_by_cat = {
+        "Meta Tags": ["No <title> tag","Title too short","Title too long","No meta description",
+                      "Meta description too short","Meta description too long",
+                      "No canonical URL","No viewport meta tag","Page is NOINDEX",
+                      "Missing Open Graph tags"],
+        "Headings": ["No H1 tag","Multiple H1 tags found","No H2 tags"],
+        "Images": ["images missing alt","images missing width/height","Only X/Y images use lazy loading"],
+        "Technical": ["NOT using HTTPS","Load time too slow","No structured data","Missing HTML lang attribute"],
+        "Links": ["links have no anchor text","Very few internal links"],
+        "Keywords": ["Top keywords not in title","Low word count"],
+    }
+
+    selected_cat = st.selectbox("Filter by category:", ["All"] + list(all_guides_by_cat.keys()))
+
+    shown_cats = all_guides_by_cat if selected_cat == "All" else {selected_cat: all_guides_by_cat.get(selected_cat,[])}
+
+    for cat_name, guide_keys in shown_cats.items():
+        st.markdown(f"""
+        <div style="font-size:14px;font-weight:700;color:#4f46e5;padding:8px 0 4px;
+                    border-bottom:2px solid #e0e7ff;margin:16px 0 8px;">
+            {cat_name}
+        </div>
+        """, unsafe_allow_html=True)
+        for gkey in guide_keys:
+            guide = FIX_GUIDES.get(gkey)
+            if not guide: continue
+            diff = guide.get("difficulty","Medium")
+            diff_cls = {"Easy":"fix-easy","Medium":"fix-medium","Hard":"fix-hard"}.get(diff,"fix-medium")
+            time_ = guide.get("time","")
+            impact = guide.get("impact","Medium")
+            impact_color = {"High":"#dc2626","Medium":"#d97706","Low":"#16a34a"}.get(impact,"#64748b")
+
+            with st.expander(f"📖 {guide['title']}"):
+                st.markdown(f"""
+                <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+                    <span class="fix-badge {diff_cls}">🎯 {diff}</span>
+                    <span class="fix-badge" style="background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;">⏱ {time_}</span>
+                    <span class="fix-badge" style="background:#fef2f2;color:{impact_color};border:1px solid #fecaca;">⚡ {impact} impact</span>
+                </div>
+                """, unsafe_allow_html=True)
+                _render_fix_guide(guide)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
