@@ -2,6 +2,8 @@
 
 > Fill in 5 fields → GPT-4o generates a complete professional business proposal with scope, pricing, timeline, terms, and case study — export as branded PDF or DOCX in seconds.
 
+<img width="1921" height="2790" alt="screencapture-proposal-generator-agent-streamlit-app-2026-05-25-21_39_38" src="https://github.com/user-attachments/assets/bc920953-45ce-43ea-968a-61f754c9a883" />
+
 ---
 
 <div align="center">
@@ -65,6 +67,7 @@ proposal-agent/
 ├── requirements.txt
 └── .env.example
 ```
+<img width="1901" height="1031" alt="image" src="https://github.com/user-attachments/assets/d806a1a4-cd8e-4905-a4cf-b8bab1b24cf5" />
 
 ## Cost
 
