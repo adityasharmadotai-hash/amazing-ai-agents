@@ -1,0 +1,37 @@
+Sarah Chen
+Software Engineer II at DataFlow Inc.
+San Francisco Bay Area · 500+ connections
+
+About
+I'm a software engineer passionate about the intersection of data engineering and machine learning. I've spent the last 3 years building scalable data pipelines and shipping ML models to production. Currently exploring deep learning and MLOps to level up toward senior ML engineering roles.
+
+Open to: Senior ML Engineer, ML Platform Engineer, Applied Scientist
+
+Experience
+Software Engineer II · DataFlow Inc.
+Jan 2022 – Present · 2 yrs 5 mos · San Francisco, CA
+Building the data infrastructure that powers our ML models. Key work includes Airflow pipelines, FastAPI model-serving endpoints, and a basic feature store. Collaborated cross-functionally with data scientists and product.
+
+Software Engineer I · StartupXYZ
+Jun 2021 – Dec 2021 · 7 mos · Remote
+Full-stack microservices development. Shipping fast in a small team environment.
+
+Data Science Intern · Analytics Co.
+Jan 2021 – May 2021 · 5 mos · New York, NY
+First real exposure to end-to-end ML projects. Built churn models and presented to C-suite.
+
+Education
+University of California, Berkeley
+Bachelor of Science, Computer Science · 2017 – 2021
+
+Skills
+Top skills: Python · Machine Learning · SQL · Data Engineering · Apache Airflow
+
+Other skills: FastAPI · Flask · Docker · scikit-learn · TensorFlow (learning) · AWS · PostgreSQL · pandas · NumPy · Git · MLflow (beginner)
+
+Licenses & Certifications
+AWS Certified Cloud Practitioner · Amazon Web Services · 2022
+Machine Learning Specialization · Coursera / DeepLearning.AI · 2021
+
+Volunteer
+Mentor at Women in Tech SF — helping early-career engineers navigate ML career paths

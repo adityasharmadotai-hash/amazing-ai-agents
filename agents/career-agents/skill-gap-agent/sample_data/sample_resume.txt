@@ -1,0 +1,54 @@
+SARAH CHEN
+sarah.chen@email.com | linkedin.com/in/sarahchen | github.com/sarahchen | San Francisco, CA
+
+SUMMARY
+Software Engineer with 3 years of experience building Python backends and data pipelines. Proficient in REST APIs, SQL databases, and basic machine learning. Looking to transition into a Senior ML Engineer role.
+
+EXPERIENCE
+
+Software Engineer II — DataFlow Inc., San Francisco, CA  (Jan 2022 – Present)
+• Built and maintained REST APIs using FastAPI and Flask serving 50,000+ daily users
+• Developed ETL pipelines using Apache Airflow, processing 2TB of data daily
+• Implemented basic recommendation system using collaborative filtering (scikit-learn)
+• Wrote unit and integration tests achieving 85% code coverage
+• Collaborated with data science team to deploy 3 ML models to production
+• Mentored 2 junior engineers on Python best practices
+
+Software Engineer I — StartupXYZ, Remote  (Jun 2021 – Dec 2021)
+• Built microservices using Python and Docker
+• Created dashboards using Plotly and Streamlit for internal analytics
+
+Data Science Intern — Analytics Co., New York, NY  (Jan 2021 – May 2021)
+• Cleaned and analyzed datasets using pandas and NumPy
+• Built predictive models using scikit-learn (Random Forest, Logistic Regression)
+• Presented findings to stakeholders in weekly meetings
+
+EDUCATION
+B.S. Computer Science — UC Berkeley, 2021
+Relevant coursework: Machine Learning, Algorithms, Distributed Systems, Statistics
+
+TECHNICAL SKILLS
+Languages: Python, SQL, JavaScript (basic), Bash
+ML/Data: scikit-learn, pandas, NumPy, Matplotlib, basic TensorFlow
+Infrastructure: Docker, Linux, Git, GitHub Actions, AWS S3 & EC2 (basic)
+Databases: PostgreSQL, MySQL, MongoDB (basic)
+Frameworks: FastAPI, Flask, Apache Airflow
+
+PROJECTS
+Movie Recommendation Engine (2023)
+• Built collaborative filtering system using Python and scikit-learn
+• Deployed to AWS EC2; serves 200+ active users
+• GitHub: github.com/sarahchen/movie-rec
+
+Customer Churn Predictor (2022)
+• XGBoost model achieving 87% accuracy on 100K record dataset
+• Automated retraining pipeline with Airflow
+
+CERTIFICATIONS
+• AWS Cloud Practitioner (2022)
+• Coursera: Machine Learning Specialization — Andrew Ng (2021)
+
+ACHIEVEMENTS
+• Led migration from monolith to microservices, reducing API latency by 40%
+• Won internal hackathon (2023): built real-time anomaly detection dashboard
+• Speaker at PyBay 2023: "Building Production ML Pipelines"
