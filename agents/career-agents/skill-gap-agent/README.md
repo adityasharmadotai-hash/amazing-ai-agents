@@ -13,6 +13,8 @@ AI Skill Gap Agent is an open-source, production-ready Streamlit application tha
 
 Built on OpenAI's GPT-4o with a modular Python architecture, SQLite storage, and a beautiful dark-mode UI.
 
+<img width="1921" height="1621" alt="screencapture-skill-gap-agent-streamlit-app-2026-05-28-14_59_28" src="https://github.com/user-attachments/assets/4feb9c2f-dc80-4dea-bcfa-94d61bc5a29a" />
+
 ---
 
 ## Features
