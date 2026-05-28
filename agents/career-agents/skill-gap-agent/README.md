@@ -99,7 +99,7 @@ skill-gap-agent/
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/yourname/skill-gap-agent.git
+git clone https://github.com/adityasharmadotai-hash/amazing-ai-agents.git
 cd skill-gap-agent
 ```
 
