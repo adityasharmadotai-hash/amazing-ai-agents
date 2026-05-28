@@ -254,12 +254,18 @@ def _priority_emoji(priority: str) -> str:
 
 
 def metric_card(value, label, sub=""):
-    sub_html = f'<div class="metric-sub">{sub}</div>' if sub else ""
-    return f"""<div class="metric-card">
-        <div class="metric-value">{value}</div>
-        <div class="metric-label">{label}</div>
-        {sub_html}
-    </div>"""
+    """Render a metric card directly inside a column."""
+    sub_html = f'<p style="font-size:0.88rem;color:#C4B5FD;margin:2px 0 0;">{sub}</p>' if sub else ""
+    st.markdown(f"""
+<div style="background:linear-gradient(135deg,#1A1A3E 0%,#16213E 100%);
+            border:1px solid #2D2D5E;border-radius:16px;padding:20px 24px;
+            text-align:center;">
+  <div style="font-size:2.4rem;font-weight:800;color:#7C3AED;line-height:1;">{value}</div>
+  <div style="font-size:0.78rem;color:#94A3B8;margin-top:4px;text-transform:uppercase;
+              letter-spacing:0.05em;">{label}</div>
+  {sub_html}
+</div>
+""", unsafe_allow_html=True)
 
 
 def skill_pills(skills: list, style: str = "") -> str:
@@ -281,6 +287,7 @@ PAGES = {
     "💬 Interview Prep": "interview",
     "📈 Progress Tracker": "progress",
     "📁 History": "history",
+    "⚙️ Settings": "settings",
 }
 
 with st.sidebar:
@@ -337,12 +344,12 @@ if page == "dashboard":
     analyses = database.get_analyses()
 
     col1, col2, col3, col4 = st.columns(4)
-    with col1: st.markdown(metric_card(stats["profiles"], "Profiles Analyzed"), unsafe_allow_html=True)
-    with col2: st.markdown(metric_card(stats["analyses"], "Gap Analyses Run"), unsafe_allow_html=True)
-    with col3: st.markdown(metric_card(f"{stats['avg_score']}%", "Average Readiness"), unsafe_allow_html=True)
+    with col1: metric_card(stats["profiles"], "Profiles Analyzed")
+    with col2: metric_card(stats["analyses"], "Gap Analyses Run")
+    with col3: metric_card(f"{stats['avg_score']}%", "Average Readiness")
     with col4:
         active = len([a for a in analyses if a["readiness_score"] >= 75])
-        st.markdown(metric_card(active, "Ready Candidates", "score ≥ 75%"), unsafe_allow_html=True)
+        metric_card(active, "Ready Candidates", "score ≥ 75%")
 
     st.markdown("")
 
@@ -901,9 +908,9 @@ if page == "courses":
     courses = analysis["courses_data"]
 
     col1, col2, col3 = st.columns(3)
-    with col1: st.markdown(metric_card(courses.get("total_resources", 0), "Total Resources"), unsafe_allow_html=True)
-    with col2: st.markdown(metric_card(len(courses.get("certifications_to_pursue", [])), "Certifications"), unsafe_allow_html=True)
-    with col3: st.markdown(metric_card(len(courses.get("books_to_read", [])), "Books"), unsafe_allow_html=True)
+    with col1: metric_card(courses.get("total_resources", 0), "Total Resources")
+    with col2: metric_card(len(courses.get("certifications_to_pursue", [])), "Certifications")
+    with col3: metric_card(len(courses.get("books_to_read", [])), "Books")
 
     st.markdown("")
 
@@ -1218,10 +1225,10 @@ if page == "progress":
     pct = int(done / total * 100) if total else 0
 
     col1, col2, col3, col4 = st.columns(4)
-    with col1: st.markdown(metric_card(total, "Total Tasks"), unsafe_allow_html=True)
-    with col2: st.markdown(metric_card(done, "Completed"), unsafe_allow_html=True)
-    with col3: st.markdown(metric_card(f"{pct}%", "Progress"), unsafe_allow_html=True)
-    with col4: st.markdown(metric_card(total - done, "Remaining"), unsafe_allow_html=True)
+    with col1: metric_card(total, "Total Tasks")
+    with col2: metric_card(done, "Completed")
+    with col3: metric_card(f"{pct}%", "Progress")
+    with col4: metric_card(total - done, "Remaining")
 
     st.markdown("")
     st.markdown(f"""
@@ -1356,5 +1363,227 @@ st.markdown("""
 <hr style='border-color:#1E1E40;margin-top:40px;'>
 <div style='text-align:center;font-size:0.72rem;color:#374151;padding-bottom:16px;'>
     🎯 AI Skill Gap Agent · Powered by GPT-4o · Built with Streamlit
+</div>
+""", unsafe_allow_html=True)
+
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+#  SETTINGS PAGE (appended)
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+
+if page == "settings":
+    st.markdown("# ⚙️ Settings")
+    st.markdown("<p style='color:#64748B;margin-top:-12px;'>Configure your AI Skill Gap Agent</p>", unsafe_allow_html=True)
+
+    # ── API Configuration ──────────────────────────────────────────────────
+    st.markdown("""
+<div style="background:linear-gradient(135deg,#1A1A3E,#16213E);border:1px solid #2D2D5E;
+            border-radius:16px;padding:24px;margin-bottom:20px;">
+  <div style="font-size:1.1rem;font-weight:700;color:#C4B5FD;margin-bottom:4px;">🔑 API Configuration</div>
+  <div style="font-size:0.82rem;color:#64748B;">Your API key is used only for on-demand AI calls and never stored in the database.</div>
+</div>
+""", unsafe_allow_html=True)
+
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        new_key = st.text_input(
+            "OpenAI API Key",
+            value=os.environ.get("OPENAI_API_KEY", ""),
+            type="password",
+            placeholder="sk-proj-...",
+            help="Get your key at platform.openai.com/api-keys",
+        )
+    with col2:
+        st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+        if st.button("💾 Save Key", use_container_width=True):
+            if new_key.startswith("sk-"):
+                os.environ["OPENAI_API_KEY"] = new_key
+                st.session_state.api_key_saved = True
+                st.success("✅ API key saved for this session!")
+            else:
+                st.error("Key must start with sk-")
+
+    if os.environ.get("OPENAI_API_KEY"):
+        key = os.environ["OPENAI_API_KEY"]
+        masked = key[:8] + "..." + key[-4:]
+        st.markdown(f"""
+<div style="background:#064E3B22;border:1px solid #10B98144;border-radius:10px;
+            padding:10px 16px;font-size:0.83rem;color:#6EE7B7;margin-top:8px;">
+  ✅ Active key: <code style="color:#A7F3D0;">{masked}</code>
+</div>
+""", unsafe_allow_html=True)
+
+        # Test API key
+        if st.button("🧪 Test API Connection"):
+            with st.spinner("Testing connection..."):
+                try:
+                    from openai import OpenAI
+                    client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+                    client.models.list()
+                    st.success("✅ Connection successful! GPT-4o is ready.")
+                except Exception as e:
+                    st.error(f"❌ Connection failed: {e}")
+
+    st.markdown("---")
+
+    # ── Model Settings ─────────────────────────────────────────────────────
+    st.markdown("""
+<div style="font-size:1.05rem;font-weight:700;color:#E2E8F0;margin:20px 0 12px;">
+  🤖 Model Settings
+</div>
+""", unsafe_allow_html=True)
+
+    col1, col2 = st.columns(2)
+    with col1:
+        model = st.selectbox(
+            "AI Model",
+            ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo"],
+            index=0,
+            help="gpt-4o gives best results. gpt-4o-mini is faster and cheaper.",
+        )
+        if "ai_model" not in st.session_state:
+            st.session_state.ai_model = "gpt-4o"
+        if model != st.session_state.ai_model:
+            st.session_state.ai_model = model
+
+    with col2:
+        temperature = st.slider(
+            "Response Creativity",
+            min_value=0.0, max_value=1.0, value=0.3, step=0.05,
+            help="Lower = more consistent/structured. Higher = more creative recommendations.",
+        )
+        st.session_state.ai_temperature = temperature
+
+    cost_map = {"gpt-4o": "$0.05–0.08", "gpt-4o-mini": "$0.005–0.01", "gpt-4-turbo": "$0.06–0.10"}
+    st.markdown(f"""
+<div style="background:#1A1A3E;border:1px solid #2D2D5E;border-radius:10px;
+            padding:12px 16px;font-size:0.82rem;color:#94A3B8;margin-top:8px;">
+  💰 Estimated cost per full analysis with <strong style="color:#C4B5FD;">{model}</strong>: 
+  <strong style="color:#7C3AED;">{cost_map.get(model, "~$0.05")}</strong>
+</div>
+""", unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # ── Analysis Defaults ──────────────────────────────────────────────────
+    st.markdown("""
+<div style="font-size:1.05rem;font-weight:700;color:#E2E8F0;margin:20px 0 12px;">
+  📋 Analysis Defaults
+</div>
+""", unsafe_allow_html=True)
+
+    col1, col2 = st.columns(2)
+    with col1:
+        default_industry = st.selectbox(
+            "Default Industry",
+            ["Technology", "Finance / FinTech", "Healthcare / MedTech",
+             "E-Commerce / Retail", "Consulting", "Media / Entertainment",
+             "Education / EdTech", "Government / Public Sector", "Manufacturing",
+             "Startup / Venture", "Other"],
+            index=0,
+        )
+        st.session_state.default_industry = default_industry
+
+    with col2:
+        roadmap_months = st.selectbox(
+            "Roadmap Duration",
+            ["3 months", "6 months", "9 months", "12 months"],
+            index=1,
+            help="Length of the learning roadmap generated by AI.",
+        )
+        st.session_state.roadmap_months = roadmap_months
+
+    st.markdown("---")
+
+    # ── Database Management ────────────────────────────────────────────────
+    st.markdown("""
+<div style="font-size:1.05rem;font-weight:700;color:#E2E8F0;margin:20px 0 12px;">
+  🗄️ Database Management
+</div>
+""", unsafe_allow_html=True)
+
+    stats = database.get_stats()
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        metric_card(stats["profiles"], "Profiles")
+    with col2:
+        metric_card(stats["analyses"], "Analyses")
+    with col3:
+        metric_card(f"{stats['avg_score']}%", "Avg Score")
+    with col4:
+        from pathlib import Path
+        db_path = Path("data/skill_gap.db")
+        db_size = f"{db_path.stat().st_size / 1024:.1f} KB" if db_path.exists() else "0 KB"
+        metric_card(db_size, "DB Size")
+
+    st.markdown("")
+
+    col_a, col_b = st.columns(2)
+    with col_a:
+        if st.button("📤 Export All Data (JSON)", use_container_width=True):
+            import json as json_mod
+            all_data = {
+                "profiles": database.get_profiles(),
+                "analyses": database.get_analyses(),
+                "exported_at": datetime.now().isoformat(),
+            }
+            st.download_button(
+                "⬇️ Download backup.json",
+                data=json_mod.dumps(all_data, indent=2, default=str),
+                file_name="skill_gap_backup.json",
+                mime="application/json",
+            )
+    with col_b:
+        with st.expander("⚠️ Danger Zone — Clear Database"):
+            st.warning("This will permanently delete ALL profiles, analyses, and progress data.")
+            confirm = st.text_input("Type DELETE to confirm", key="delete_confirm")
+            if st.button("🗑️ Clear All Data", type="primary", key="clear_db"):
+                if confirm == "DELETE":
+                    import sqlite3
+                    conn = sqlite3.connect("data/skill_gap.db")
+                    conn.executescript("DELETE FROM progress; DELETE FROM analyses; DELETE FROM profiles;")
+                    conn.commit()
+                    conn.close()
+                    st.success("✅ Database cleared.")
+                    st.rerun()
+                else:
+                    st.error("Type DELETE to confirm.")
+
+    st.markdown("---")
+
+    # ── About ──────────────────────────────────────────────────────────────
+    st.markdown("""
+<div style="font-size:1.05rem;font-weight:700;color:#E2E8F0;margin:20px 0 12px;">
+  ℹ️ About
+</div>
+<div style="background:linear-gradient(135deg,#1A1A3E,#16213E);border:1px solid #2D2D5E;
+            border-radius:16px;padding:24px;display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+  <div>
+    <div style="font-size:0.78rem;color:#7C3AED;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;">Application</div>
+    <div style="color:#E2E8F0;font-weight:600;margin-top:4px;">AI Skill Gap Agent</div>
+    <div style="color:#64748B;font-size:0.82rem;">v1.0.0</div>
+  </div>
+  <div>
+    <div style="font-size:0.78rem;color:#7C3AED;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;">AI Engine</div>
+    <div style="color:#E2E8F0;font-weight:600;margin-top:4px;">OpenAI GPT-4o</div>
+    <div style="color:#64748B;font-size:0.82rem;">7 specialized prompts</div>
+  </div>
+  <div>
+    <div style="font-size:0.78rem;color:#7C3AED;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;">Frontend</div>
+    <div style="color:#E2E8F0;font-weight:600;margin-top:4px;">Streamlit + Plotly</div>
+    <div style="color:#64748B;font-size:0.82rem;">9 interactive pages</div>
+  </div>
+  <div>
+    <div style="font-size:0.78rem;color:#7C3AED;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;">Storage</div>
+    <div style="color:#E2E8F0;font-weight:600;margin-top:4px;">SQLite (local)</div>
+    <div style="color:#64748B;font-size:0.82rem;">3 tables, zero config</div>
+  </div>
+</div>
+""", unsafe_allow_html=True)
+
+    st.markdown("""
+<div style="margin-top:16px;padding:14px 18px;background:#1A1A3E;border:1px solid #2D2D5E;
+            border-radius:12px;font-size:0.82rem;color:#64748B;">
+  💡 <strong style="color:#C4B5FD;">Tip:</strong> Set your OpenAI API key as an environment variable 
+  <code>OPENAI_API_KEY=sk-...</code> or in <code>.streamlit/secrets.toml</code> to avoid re-entering it each session.
 </div>
 """, unsafe_allow_html=True)
