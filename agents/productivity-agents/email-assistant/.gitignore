@@ -1,0 +1,10 @@
+.env
+.streamlit/secrets.toml
+credentials/google_token.json
+data/
+exports/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.DS_Store
