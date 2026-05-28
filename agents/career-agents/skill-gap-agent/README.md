@@ -94,7 +94,7 @@ skill-gap-agent/
 └── Tutorial.md
 ```
 
-<img width="1921" height="1621" alt="screencapture-skill-gap-agent-streamlit-app-2026-05-28-14_59_28" src="https://github.com/user-attachments/assets/4377ebd9-838f-4192-b919-50af91dd3cc6" />
+<img width="1834" height="995" alt="image" src="https://github.com/user-attachments/assets/515590cc-2df6-4976-b89a-2de8cfa0b3bb" />
 
 ---
 
