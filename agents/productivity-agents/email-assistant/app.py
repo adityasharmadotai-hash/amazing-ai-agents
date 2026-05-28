@@ -139,15 +139,168 @@ html, body, [data-testid="stAppViewContainer"] {
     background: linear-gradient(135deg, #6366F1, #4F46E5) !important;
     color: white !important; border: none !important;
     border-radius: 9px !important; font-weight: 600 !important;
+    padding: 0.35rem 1rem !important;
 }
 .stButton > button:hover { opacity: 0.85 !important; }
-[data-testid="stTabs"] [role="tab"] { color: #64748B !important; }
+
+/* ── Email list select buttons: transparent ghost ── */
+[data-testid="column"]:has(+ [data-testid="column"] div[style*="margin-top:-42px"]) 
+  .stButton > button,
+div[data-testid="stVerticalBlock"] [data-testid="stButton"]:has(button) + div[style*="margin-top:-42px"] {
+    /* target via adjacent sibling */
+}
+/* Universal approach: any button inside the email list col_card that precedes a margin-top card */
+div[style*="margin-top:-42px"] ~ .stButton > button {
+    background: transparent !important;
+    color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* ── Ghost/invisible email select buttons ── */
+[data-testid="stButton"] button[kind="secondary"].ghost-email-btn,
+div[data-testid="column"] .stButton.email-select-btn > button {
+    display: none !important;
+}
+/* Target email select buttons by aria-label pattern */
+button[aria-label="select"] {
+    visibility: hidden !important;
+    height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    background: none !important;
+    position: absolute !important;
+}
+/* Make ALL email list buttons invisible - only HTML cards show */
+[data-testid="stVerticalBlock"] [data-testid="stButton"]:has(button[kind="secondary"]) > button[title] {
+    visibility: hidden !important;
+    height: 1px !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    min-height: 0 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+/* ── Sidebar nav buttons ── */
+[data-testid="stSidebar"] .stButton > button {
+    background: transparent !important;
+    border: 1px solid transparent !important;
+    color: #94A3B8 !important;
+    font-weight: 500 !important;
+    text-align: left !important;
+    border-radius: 8px !important;
+    padding: 0.4rem 0.8rem !important;
+    transition: all 0.15s !important;
+}
+[data-testid="stSidebar"] .stButton > button:hover {
+    background: #1E1E3A !important;
+    color: #E2E8F0 !important;
+    opacity: 1 !important;
+    border-color: #2D2D5E !important;
+}
+
+/* ── Toggle labels — prevent wrap ── */
+[data-testid="stToggle"] label {
+    white-space: nowrap !important;
+    font-size: 0.78rem !important;
+}
+[data-testid="stToggle"] { min-width: 0 !important; }
+
+/* ── Tabs ── */
+[data-testid="stTabs"] [role="tab"] { color: #64748B !important; font-size: 0.85rem !important; }
 [data-testid="stTabs"] [role="tab"][aria-selected="true"] {
     color: #818CF8 !important; border-bottom: 2px solid #6366F1 !important;
 }
 [data-testid="stExpander"] {
     background: #12122A !important; border: 1px solid #1E1E3A !important;
     border-radius: 10px !important;
+}
+
+/* ════ EMAIL SELECT BUTTONS — fully transparent ════
+   These buttons have keys starting with "esel_"
+   We use the button's visible text (truncated subject) and 
+   negative margin card trick. Button must be transparent. */
+button[data-testid="baseButton-secondary"] {
+    /* All secondary buttons get styled unless overridden */
+}
+/* The email-card button: sits ABOVE the card visually but is transparent */
+[data-testid="stVerticalBlock"] [data-testid="stHorizontalBlock"] 
+  [data-testid="column"]:last-child .stButton > button {
+    background: transparent !important;
+    color: transparent !important;
+    border: 1px solid transparent !important;
+    box-shadow: none !important;
+    height: 66px !important;
+    min-height: 66px !important;
+    margin-bottom: -66px !important;
+    position: relative !important;
+    z-index: 5 !important;
+    cursor: pointer !important;
+}
+[data-testid="stVerticalBlock"] [data-testid="stHorizontalBlock"] 
+  [data-testid="column"]:last-child .stButton > button:hover {
+    background: transparent !important;
+    opacity: 0 !important;
+}
+[data-testid="stVerticalBlock"] [data-testid="stHorizontalBlock"] 
+  [data-testid="column"]:last-child .stButton > button:active {
+    background: transparent !important;
+}
+
+/* ════ SIDEBAR: override nav buttons to be subtle text nav ════ */
+[data-testid="stSidebar"] .stButton > button {
+    background: transparent !important;
+    color: #6B7280 !important;
+    border: none !important;
+    border-radius: 8px !important;
+    padding: 0.45rem 1rem !important;
+    font-size: 0.86rem !important;
+    font-weight: 500 !important;
+    text-align: left !important;
+    justify-content: flex-start !important;
+    letter-spacing: 0 !important;
+    opacity: 1 !important;
+    box-shadow: none !important;
+}
+[data-testid="stSidebar"] .stButton > button:hover {
+    background: #1A1A30 !important;
+    color: #C4C9F0 !important;
+    opacity: 1 !important;
+}
+
+/* ── Scrollable email list ── */
+.email-list-scroll {
+    max-height: calc(100vh - 280px);
+    overflow-y: auto;
+    padding-right: 4px;
+}
+.email-list-scroll::-webkit-scrollbar { width: 4px; }
+.email-list-scroll::-webkit-scrollbar-track { background: transparent; }
+.email-list-scroll::-webkit-scrollbar-thumb { background: #2D2D5E; border-radius: 4px; }
+
+/* ── Invisible email select buttons (dot buttons used as click targets) ── */
+/* These buttons have "·" as their label */
+[data-testid="stVerticalBlock"] .stButton > button:not([aria-expanded]) {
+    /* Only hide buttons inside the email list column that are invisible triggers */
+}
+/* The wrapper div makes space; button is hidden inside it */
+div[style*="margin-top:-74px"] .stButton > button,
+div[style*="margin-top:-74"] .stButton > button {
+    height: 74px !important;
+    background: transparent !important;
+    color: transparent !important;
+    border: none !important;
+    opacity: 0 !important;
+    cursor: pointer !important;
+    box-shadow: none !important;
+    font-size: 1px !important;
+}
+div[style*="margin-top:-74px"] .stButton > button:hover {
+    background: transparent !important;
+    opacity: 0 !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -259,22 +412,61 @@ PAGES = {
 
 with st.sidebar:
     st.markdown("""
-<div style='text-align:center;padding:14px 0 6px;'>
-  <div style='font-size:2rem;'>✉️</div>
-  <div style='font-size:1.05rem;font-weight:800;color:#818CF8;'>Email Assistant</div>
+<style>
+/* ── Sidebar nav button overrides ── */
+[data-testid="stSidebar"] .stButton > button {
+    background: transparent !important;
+    border: 1px solid transparent !important;
+    color: #6B7280 !important;
+    font-weight: 500 !important;
+    text-align: left !important;
+    border-radius: 8px !important;
+    padding: 0.42rem 0.9rem !important;
+    font-size: 0.87rem !important;
+    justify-content: flex-start !important;
+    opacity: 1 !important;
+}
+[data-testid="stSidebar"] .stButton > button:hover {
+    background: #1A1A30 !important;
+    color: #C4C9F0 !important;
+    border-color: #2D2D5E !important;
+}
+[data-testid="stSidebar"] .stButton.nav-active > button,
+[data-testid="stSidebar"] .stButton > button[data-active="true"] {
+    background: linear-gradient(135deg,#2D2D6A,#1E1E50) !important;
+    color: #818CF8 !important;
+    border-color: #4F46E533 !important;
+}
+/* Toggle in sidebar */
+[data-testid="stSidebar"] [data-testid="stToggle"] label { font-size: 0.82rem !important; }
+</style>
+<div style='text-align:center;padding:16px 0 10px;'>
+  <div style='width:40px;height:40px;background:linear-gradient(135deg,#6366F1,#4F46E5);
+              border-radius:12px;display:flex;align-items:center;justify-content:center;
+              font-size:1.2rem;margin:0 auto 10px;'>✉️</div>
+  <div style='font-size:1rem;font-weight:700;color:#E2E8F0;'>Email Assistant</div>
   <div style='font-size:0.68rem;color:#374151;margin-top:2px;'>AI-Powered · Personal</div>
 </div>
-<hr style='border-color:#1E1E3A;margin:8px 0 14px;'>
+<hr style='border-color:#1E1E3A;margin:6px 0 10px;'>
 """, unsafe_allow_html=True)
 
     if "page" not in st.session_state:
         st.session_state.page = "inbox"
 
     for label, key in PAGES.items():
-        active_style = "background:linear-gradient(135deg,#6366F122,#4F46E522);color:#818CF8;border:1px solid #6366F133;" if st.session_state.page == key else ""
+        is_active = st.session_state.page == key
+        # Render active state with a highlight div behind the button
+        if is_active:
+            st.markdown(f"""
+<div style="background:linear-gradient(135deg,#1E1E4A,#181838);border:1px solid #3730A333;
+            border-radius:8px;margin-bottom:2px;overflow:hidden;">""", unsafe_allow_html=True)
         if st.button(label, key=f"nav_{key}", use_container_width=True):
             st.session_state.page = key
             st.rerun()
+        if is_active:
+            st.markdown("</div>", unsafe_allow_html=True)
+        elif not is_active:
+            st.markdown("<div style='margin-bottom:2px;'></div>", unsafe_allow_html=True)
 
     st.markdown("<hr style='border-color:#1E1E3A;margin:14px 0;'>", unsafe_allow_html=True)
 
@@ -301,30 +493,52 @@ page = st.session_state.page
 #  INBOX
 # ═══════════════════════════════════════════════════════════════════════════════
 if page == "inbox":
-    st.markdown("# 📬 Inbox")
+    # Page header
+    st.markdown("""
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+  <div style="font-size:1.6rem;font-weight:800;color:#E2E8F0;">📬 Inbox</div>
+</div>""", unsafe_allow_html=True)
 
     emails = current_emails()
-    col_list, col_viewer = st.columns([2, 3])
+    col_list, col_viewer = st.columns([5, 7])
 
     with col_list:
-        # Filter bar
-        fc1, fc2, fc3 = st.columns(3)
-        with fc1:
-            show_unread = st.toggle("Unread", value=False)
-        with fc2:
-            show_important = st.toggle("Important", value=False)
-        with fc3:
-            show_starred = st.toggle("⭐", value=False)
+        # ── Filter bar: single row, no wrapping ──────────────────────────
+        st.markdown("""
+<style>
+/* Make filter row compact and no-wrap */
+div[data-testid="stHorizontalBlock"]:has(div[data-testid="stToggle"]) {
+    gap: 4px !important; align-items: center !important;
+}
+div[data-testid="stHorizontalBlock"]:has(div[data-testid="stToggle"]) 
+  [data-testid="stToggle"] label p {
+    font-size: 0.74rem !important; white-space: nowrap !important;
+}
+/* Search box compact */
+div[data-testid="stHorizontalBlock"]:has(div[data-testid="stToggle"]) 
+  [data-testid="stTextInput"] input {
+    font-size: 0.82rem !important; padding: 0.3rem 0.6rem !important;
+}
+</style>""", unsafe_allow_html=True)
 
-        search = st.text_input("🔍", placeholder="Search emails...", label_visibility="collapsed")
+        fc = st.columns([1.1, 1.1, 0.8, 3.2])
+        with fc[0]:
+            show_unread = st.toggle("Unread", value=False, key="tog_unread")
+        with fc[1]:
+            show_important = st.toggle("⭐ Star", value=False, key="tog_star")
+        with fc[2]:
+            show_starred = st.toggle("❗", value=False, key="tog_imp")
+        with fc[3]:
+            search = st.text_input("", placeholder="🔍 Search...",
+                                   label_visibility="collapsed", key="inbox_search")
 
         filtered = emails
         if show_unread:
             filtered = [e for e in filtered if e.get("is_unread")]
         if show_important:
-            filtered = [e for e in filtered if e.get("is_important")]
-        if show_starred:
             filtered = [e for e in filtered if e.get("is_starred")]
+        if show_starred:
+            filtered = [e for e in filtered if e.get("is_important")]
         if search:
             s = search.lower()
             filtered = [e for e in filtered
@@ -332,31 +546,83 @@ if page == "inbox":
                         or s in e.get("sender", e.get("from", "")).lower()
                         or s in e.get("snippet", "").lower()]
 
-        st.markdown(f"<div style='font-size:0.75rem;color:#4B5563;margin-bottom:8px;'>{len(filtered)} emails</div>", unsafe_allow_html=True)
+        # Count line
+        unread_count = sum(1 for e in filtered if e.get("is_unread"))
+        st.markdown(
+            f"<div style='font-size:0.72rem;color:#4B5563;margin:6px 0 8px;'>"
+            f"{len(filtered)} emails · <span style='color:#6366F1;'>{unread_count} unread</span></div>",
+            unsafe_allow_html=True,
+        )
 
+        # ── Email cards ──────────────────────────────────────────────────
         for email in filtered:
             p = email.get("_ai_priority", "")
-            unread_cls = "unread" if email.get("is_unread") else ""
-            p_cls = p if p else ""
-            p_badge = f'<span class="badge badge-{p}">{p.upper()}</span>' if p else ""
-            starred = "⭐ " if email.get("is_starred") else ""
-            important = "❗" if email.get("is_important") else ""
+            is_unread = email.get("is_unread", False)
+            is_selected = st.session_state.get("selected_email_id") == email["id"]
+            p_color = priority_color(p) if p else "#2D2D5E"
+            sender_name = get_sender_name(email.get("sender", email.get("from", "")))
+            subject = email.get("subject", "(no subject)")
+            snippet = email.get("snippet", "")
+            date_str = fmt_date(email.get("date_str", email.get("date", "")))
 
-            if st.button(
-                f"{email.get('subject','(no subject)')[:45]}",
-                key=f"email_btn_{email['id']}",
-                use_container_width=True,
-            ):
-                st.session_state.selected_email_id = email["id"]
-                st.session_state.selected_email = email
+            # Priority badge HTML
+            p_badge = ""
+            if p:
+                p_badge = f'<span style="background:{p_color}22;color:{p_color};border:1px solid {p_color}55;border-radius:3px;font-size:0.6rem;font-weight:700;padding:1px 5px;text-transform:uppercase;letter-spacing:0.04em;flex-shrink:0;">{p}</span>'
 
-            st.markdown(f"""
-<div class="email-row {unread_cls} {p_cls}" style="margin-top:-8px;margin-bottom:4px;">
-  <div style="display:flex;justify-content:space-between;align-items:center;">
-    <div class="email-from">{starred}{important}{get_sender_name(email.get('sender',email.get('from','')))} {p_badge}</div>
-    <div class="email-date">{fmt_date(email.get('date_str',email.get('date','')))}</div>
+            # Unread dot
+            dot_color = "#6366F1" if is_unread else "transparent"
+            bold_subj = "font-weight:700;" if is_unread else "font-weight:400;"
+            card_bg = "#1A1A4A" if is_selected else "#12122A"
+            card_border = "#6366F1" if is_selected else "#1E1E3A"
+            left_bar = p_color if p else ("#6366F1" if is_unread else "#1E1E3A")
+
+            # Flags
+            flags = ""
+            if email.get("is_starred"):
+                flags += '<span style="font-size:0.72rem;">⭐</span>'
+            if email.get("is_important"):
+                flags += '<span style="font-size:0.72rem;">❗</span>'
+
+            # ── Clickable email card using a hidden tiny button + HTML card ──
+            # The button is styled to be invisible; the HTML card is the visual
+            col_btn, col_card = st.columns([0.001, 1])
+            with col_btn:
+                pass  # empty spacer
+            with col_card:
+                clicked = st.button(
+                    f"{subject[:30]}",
+                    key=f"esel_{email['id']}",
+                    use_container_width=True,
+                )
+                if clicked:
+                    st.session_state.selected_email_id = email["id"]
+                    st.session_state.selected_email = email
+                    st.rerun()
+
+                st.markdown(f"""
+<div style="background:{card_bg};border:1px solid {card_border};
+     border-left:3px solid {left_bar};border-radius:10px;
+     padding:10px 13px;margin-top:-42px;margin-bottom:4px;
+     pointer-events:none;">
+  <div style="display:flex;align-items:flex-start;gap:8px;">
+    <div style="width:7px;height:7px;border-radius:50%;background:{dot_color};
+                flex-shrink:0;margin-top:6px;"></div>
+    <div style="flex:1;min-width:0;">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:4px;margin-bottom:2px;">
+        <div style="font-size:0.74rem;color:#818CF8;white-space:nowrap;
+                    overflow:hidden;text-overflow:ellipsis;max-width:160px;">{flags}{sender_name}</div>
+        <div style="font-size:0.66rem;color:#374151;white-space:nowrap;flex-shrink:0;">{date_str}</div>
+      </div>
+      <div style="font-size:0.83rem;{bold_subj}color:#E2E8F0;white-space:nowrap;
+                  overflow:hidden;text-overflow:ellipsis;margin-bottom:3px;">{subject}</div>
+      <div style="display:flex;align-items:center;gap:5px;">
+        {p_badge}
+        <div style="font-size:0.73rem;color:#4B5563;white-space:nowrap;
+                    overflow:hidden;text-overflow:ellipsis;">{snippet[:80]}</div>
+      </div>
+    </div>
   </div>
-  <div class="email-snippet">{email.get('snippet','')[:90]}</div>
 </div>
 """, unsafe_allow_html=True)
 
