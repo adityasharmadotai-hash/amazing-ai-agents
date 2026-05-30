@@ -3,6 +3,8 @@
 > **Your personal AI-powered news intelligence platform.**
 > Aggregate news from 20+ sources, let GPT-4o detect high-signal stories, remove duplicates, generate executive digests, and deliver them to your email or WhatsApp — automatically.
 
+<img width="1921" height="2547" alt="screencapture-ai-news-summary-agent-streamlit-app-2026-05-30-16_45_26" src="https://github.com/user-attachments/assets/c2795150-2d2b-44af-bf6b-afc6da502cf6" />
+
 **👉 STEP-BY-STEP TUTORIAL: [Tutorial.md](./Tutorial.md)**
 
 ---
@@ -22,6 +24,8 @@
 - 🕐 **Scheduler** — Daily at 6 AM UTC, hourly, or custom schedule
 - ❓ **Ask the News** — GPT-4o Q&A over today's news feed
 - 🎭 **Demo Mode** — Full functionality without any API keys
+
+<img width="1797" height="778" alt="image" src="https://github.com/user-attachments/assets/b49023c4-44c7-4509-a8a9-82c905ea2c25" />
 
 ---
 
@@ -72,7 +76,7 @@ Add to `.env`: `OPENAI_API_KEY=sk-...`
 ## Project Structure
 
 ```
-news-agent/
+ai-news-summary-agent/
 ├── app.py                  # Streamlit UI (10 pages)
 ├── modules/
 │   ├── agent.py            # 8 GPT-4o functions
@@ -85,6 +89,7 @@ news-agent/
 ├── requirements.txt
 └── .env.example
 ```
+<img width="1656" height="689" alt="image" src="https://github.com/user-attachments/assets/c4b8f254-031e-4c74-ae98-d800a1690c06" />
 
 ---
 
