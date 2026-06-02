@@ -5,7 +5,6 @@ import streamlit as st
 
 from config.settings import get_settings
 from database.models import get_latest_briefing
-from services.briefing_service import BriefingService
 from utils.components import export_buttons
 from utils.ui import (
     bootstrap,
@@ -39,6 +38,8 @@ owner = profile.get("name") or settings.owner_name
 if st.button("🚀 Generate today's briefing", type="primary"):
     with st.spinner("Reading inbox, triaging, checking calendar, writing briefing…"):
         try:
+            from services.briefing_service import BriefingService
+
             service = BriefingService(gmail, cal, ai)
             st.session_state["briefing"] = service.generate(owner=owner)
         except Exception as exc:  # noqa: BLE001

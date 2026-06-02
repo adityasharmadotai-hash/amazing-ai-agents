@@ -4,7 +4,6 @@ from __future__ import annotations
 import streamlit as st
 
 from config.settings import get_settings
-from services.voice_service import VoiceService
 from utils.components import email_list
 from utils.ui import bootstrap, gmail_service, page_config, render_sidebar, require_auth, safe_ai
 
@@ -27,6 +26,8 @@ if ai is None:
 gmail = gmail_service()
 
 try:
+    from services.voice_service import VoiceService
+
     voice = VoiceService()
 except Exception as exc:  # noqa: BLE001
     st.error(f"Voice service unavailable: {exc}")

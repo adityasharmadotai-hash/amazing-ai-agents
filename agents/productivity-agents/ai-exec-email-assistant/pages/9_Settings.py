@@ -209,6 +209,31 @@ with st.expander("⚠️ Reset"):
         st.success("Cleared saved settings.")
         st.rerun()
 
+with st.expander("🩺 Diagnostics (installed dependencies)"):
+    import importlib.util as _ilu
+
+    deps = [
+        ("openai", "OpenAI (chat, Whisper, TTS)"),
+        ("googleapiclient", "Google API client (Gmail/Calendar)"),
+        ("google_auth_oauthlib", "Google OAuth flow"),
+        ("plotly", "Analytics charts"),
+        ("pandas", "Data tables"),
+        ("reportlab", "PDF export"),
+        ("docx", "DOCX export"),
+    ]
+    drows = []
+    for mod, label in deps:
+        ok = _ilu.find_spec(mod) is not None
+        drows.append({"Package": mod, "Used for": label, "Installed": "✅" if ok else "❌ missing"})
+    st.dataframe(drows, use_container_width=True, hide_index=True)
+    if any("missing" in r["Installed"] for r in drows):
+        st.warning(
+            "Some packages are missing in this environment. On Streamlit Cloud, "
+            "make sure the app's **requirements.txt** is the one in THIS project "
+            "folder (or copied to your repo root). See docs/DEPLOYMENT.md.",
+            icon="📦",
+        )
+
 st.info(
     "🔒 Settings are stored in plaintext JSON on the server's disk. On hosts with "
     "an ephemeral filesystem (e.g. Streamlit Community Cloud) they reset when the "

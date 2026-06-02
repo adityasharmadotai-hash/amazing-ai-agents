@@ -5,23 +5,25 @@ gate live in exactly one place.
 """
 from __future__ import annotations
 
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 import streamlit as st
 
 from config.settings import get_settings
 from database.db import init_db
-from services.ai_service import AIService
-from services.analytics_service import AnalyticsService
 from services.auth_service import (
     exchange_code_for_credentials,
     get_authorization_url,
     get_user_profile,
     load_saved_credentials,
 )
-from services.calendar_service import CalendarService
-from services.gmail_service import GmailService
 from utils.logging_config import setup_logging
+
+if TYPE_CHECKING:  # imports for type hints only — not evaluated at runtime
+    from services.ai_service import AIService
+    from services.analytics_service import AnalyticsService
+    from services.calendar_service import CalendarService
+    from services.gmail_service import GmailService
 
 # ---------------------------------------------------------------------------
 # One-time process setup
@@ -91,6 +93,7 @@ def get_credentials():
             creds = exchange_code_for_credentials(code)
             _store_creds(creds)
             st.query_params.clear()
+            st.session_state.pop("_oauth_auth_url", None)
             return creds
         except Exception as exc:  # noqa: BLE001
             st.error(f"Authentication failed: {exc}")
@@ -145,7 +148,10 @@ def require_auth() -> Optional[object]:
         except Exception:  # noqa: BLE001
             pass
     try:
-        auth_url, _ = get_authorization_url()
+        auth_url = st.session_state.get("_oauth_auth_url")
+        if not auth_url:
+            auth_url, _ = get_authorization_url()
+            st.session_state["_oauth_auth_url"] = auth_url
         st.link_button("Continue with Google", auth_url, type="primary")
     except Exception as exc:  # noqa: BLE001
         st.error(f"Could not start OAuth flow: {exc}")
@@ -174,14 +180,18 @@ def logout() -> None:
 # ---------------------------------------------------------------------------
 # Service factory (cached per session where possible)
 # ---------------------------------------------------------------------------
-def gmail_service() -> GmailService:
+def gmail_service() -> "GmailService":
+    from services.gmail_service import GmailService
+
     creds = require_auth()
     if not creds:
         st.stop()
     return GmailService(creds)
 
 
-def calendar_service() -> CalendarService:
+def calendar_service() -> "CalendarService":
+    from services.calendar_service import CalendarService
+
     creds = require_auth()
     if not creds:
         st.stop()
@@ -189,16 +199,21 @@ def calendar_service() -> CalendarService:
 
 
 @st.cache_resource(show_spinner=False)
-def ai_service() -> AIService:
+def ai_service() -> "AIService":
+    from services.ai_service import AIService
+
     return AIService()
 
 
-def analytics_service() -> AnalyticsService:
+def analytics_service() -> "AnalyticsService":
+    from services.analytics_service import AnalyticsService
+    from services.gmail_service import GmailService
+
     creds = st.session_state.get("credentials")
     return AnalyticsService(GmailService(creds) if creds else None)
 
 
-def safe_ai() -> Optional[AIService]:
+def safe_ai() -> Optional["AIService"]:
     """Return AIService or show a friendly error if OpenAI isn't configured."""
     try:
         return ai_service()

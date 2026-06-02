@@ -27,6 +27,18 @@ Three supported paths: **Streamlit Community Cloud**, **Docker**, and a **plain 
    Google Cloud Console (see `OAUTH_SETUP.md`).
 5. Deploy. Done.
 
+> **⚠️ Monorepo note (important if your repo holds multiple apps).** If this
+> project lives in a subfolder (e.g.
+> `amazing-ai-agents/agents/.../ai-exec-email-assistant/app.py`), Streamlit
+> Cloud installs dependencies from a `requirements.txt` it can find at the
+> **repo root** or **next to the main file**. If yours is only inside this
+> subfolder and the root has a different one, you'll get
+> `ImportError: No module named 'openai'` (or similar) on launch. Fix by either:
+> (a) setting the app's **Main file path** to this folder's `app.py` AND keeping
+> `requirements.txt` beside it, or (b) copying/merging this `requirements.txt`
+> into the repo root. The in-app **Settings → Diagnostics** panel shows exactly
+> which packages are present so you can confirm the fix.
+
 **Note on token persistence:** Community Cloud has an ephemeral filesystem, so
 `.tokens/` resets on restart — users simply re-auth. For durable tokens, use a
 VM/Docker volume or store the token in Streamlit secrets / a managed DB.
