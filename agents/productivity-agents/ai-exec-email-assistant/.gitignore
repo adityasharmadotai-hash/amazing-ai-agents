@@ -1,0 +1,11 @@
+.env
+.tokens/
+database/*.db
+database/*.db-wal
+database/*.db-shm
+__pycache__/
+*.pyc
+.venv/
+venv/
+.DS_Store
+*.egg-info/
