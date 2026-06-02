@@ -18,7 +18,7 @@ from config.settings import (
     overrides_path,
     save_overrides,
 )
-from utils.ui import bootstrap, page_config, render_sidebar
+from utils.ui import bootstrap, detect_app_url, page_config, render_sidebar
 
 page_config("Settings", icon="⚙️")
 bootstrap()
@@ -102,9 +102,23 @@ with st.form("settings_form"):
         type="password",
         placeholder="GOCSPX-...",
     )
+
+    # Detect this app's public URL so the redirect URI defaults correctly
+    # instead of localhost when running on a host like Streamlit Cloud.
+    _detected = detect_app_url()
+    _saved_redirect = _current("GOOGLE_REDIRECT_URI", "")
+    if _saved_redirect and "localhost" not in _saved_redirect and "127.0.0.1" not in _saved_redirect:
+        _redirect_default = _saved_redirect
+    elif _detected and "localhost" not in _detected and "127.0.0.1" not in _detected:
+        _redirect_default = _detected
+    else:
+        _redirect_default = _saved_redirect or _detected or "http://localhost:8501"
+
+    if _detected:
+        st.info(f"Detected this app's URL: **{_detected}**", icon="🌐")
     google_redirect_uri = st.text_input(
         "Redirect URI",
-        value=_current("GOOGLE_REDIRECT_URI", "http://localhost:8501"),
+        value=_redirect_default,
         help=(
             "Must EXACTLY match an Authorized redirect URI in Google Cloud "
             "Console (including https:// and any trailing slash). For Streamlit "
@@ -114,7 +128,8 @@ with st.form("settings_form"):
     st.caption(
         "After changing the redirect URI, add the same value under "
         "**APIs & Services → Credentials → your OAuth client → Authorized "
-        "redirect URIs** in Google Cloud Console. See docs/OAUTH_SETUP.md."
+        "redirect URIs** in Google Cloud Console — otherwise Google will reject "
+        "the sign-in or bounce you to a dead URL. See docs/OAUTH_SETUP.md."
     )
 
     st.subheader("👤 Personalization")

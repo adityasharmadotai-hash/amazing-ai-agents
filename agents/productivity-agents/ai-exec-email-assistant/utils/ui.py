@@ -32,6 +32,35 @@ def bootstrap() -> None:
     init_db()
 
 
+def detect_app_url() -> Optional[str]:
+    """Best-effort detection of this app's public base URL (with trailing slash).
+
+    Reads the incoming request headers that Streamlit exposes via
+    ``st.context.headers``. Behind Streamlit Community Cloud's proxy the
+    ``Host`` header carries the public hostname and ``X-Forwarded-Proto`` the
+    scheme, so we can reconstruct e.g. ``https://my-app.streamlit.app/``.
+    Returns None if it can't be determined (older Streamlit, local run, etc.).
+    """
+    try:
+        raw = getattr(st.context, "headers", None)
+        if not raw:
+            return None
+        headers = {str(k).lower(): v for k, v in dict(raw).items()}
+        host = headers.get("host")
+        proto = headers.get("x-forwarded-proto") or "https"
+        if host:
+            # If a local dev server, prefer http.
+            if host.startswith("localhost") or host.startswith("127.0.0.1"):
+                proto = headers.get("x-forwarded-proto") or "http"
+            return f"{proto}://{host}/"
+        origin = headers.get("origin")
+        if origin:
+            return origin.rstrip("/") + "/"
+    except Exception:  # noqa: BLE001 - detection is best-effort only
+        return None
+    return None
+
+
 def page_config(page_title: str, icon: str = "📧") -> None:
     st.set_page_config(
         page_title=f"{page_title} · {get_settings().app_title}",
@@ -96,12 +125,40 @@ def require_auth() -> Optional[object]:
             pass
         return None
     st.write("Connect your Google account to let the assistant manage your inbox and calendar.")
+    detected = detect_app_url()
+    redirect = settings.google_redirect_uri
+    if (
+        detected
+        and "localhost" not in detected
+        and "127.0.0.1" not in detected
+        and ("localhost" in redirect or "127.0.0.1" in redirect)
+    ):
+        st.warning(
+            "Your Redirect URI is set to localhost, but this app is running at "
+            f"**{detected}**. Google will send you to a dead localhost page after "
+            "sign-in. Open ⚙️ Settings and set the Redirect URI to this app's URL "
+            "(and register the same URL in Google Cloud Console).",
+            icon="⚠️",
+        )
+        try:
+            st.page_link("pages/9_Settings.py", label="Fix in Settings", icon="⚙️")
+        except Exception:  # noqa: BLE001
+            pass
     try:
         auth_url, _ = get_authorization_url()
         st.link_button("Continue with Google", auth_url, type="primary")
     except Exception as exc:  # noqa: BLE001
         st.error(f"Could not start OAuth flow: {exc}")
-    st.caption("Read-only calendar access · draft creation · no emails sent without your action.")
+    st.caption(
+        "Read-only calendar access · draft creation · no emails sent without your action."
+    )
+    st.divider()
+    st.caption(
+        "🔎 This app will send the following **redirect URI** to Google. It must be "
+        "registered **exactly** (including the trailing slash) under your OAuth "
+        "client's Authorized redirect URIs:"
+    )
+    st.code(redirect or "(not set)", language=None)
     return None
 
 
