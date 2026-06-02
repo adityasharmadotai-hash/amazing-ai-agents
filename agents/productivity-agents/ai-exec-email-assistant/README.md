@@ -16,6 +16,8 @@
 
 > A voice-first, AI-powered command center for Gmail — triage, draft, brief, and analyze your inbox by simply speaking, powered by the OpenAI API.
 
+<img width="1921" height="1735" alt="screencapture-ai-exec-email-assistant-streamlit-app-2026-06-02-18_17_22" src="https://github.com/user-attachments/assets/9d42c0ac-a4f3-4807-8ea0-1ec1b6414fc5" />
+
 ---
 
 ## 📖 Overview
