@@ -5,6 +5,7 @@ import streamlit as st
 
 from config.settings import get_settings
 from utils.components import email_list
+from utils.theme import hero
 from utils.ui import bootstrap, gmail_service, page_config, render_sidebar, require_auth
 
 bootstrap()
@@ -14,7 +15,7 @@ if not require_auth():
     st.stop()
 
 settings = get_settings()
-st.title("📥 Inbox")
+hero("Inbox", "Read, search, and filter your mail — all in one view.", eyebrow="Gmail")
 
 gmail = gmail_service()
 max_n = st.sidebar.slider("Emails to fetch", 5, settings.max_emails_fetch, 25, step=5)

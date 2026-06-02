@@ -18,16 +18,17 @@ from config.settings import (
     overrides_path,
     save_overrides,
 )
+from utils.theme import hero
 from utils.ui import bootstrap, detect_app_url, page_config, render_sidebar
 
 page_config("Settings", icon="⚙️")
 bootstrap()
 render_sidebar()
 
-st.title("⚙️ Settings")
-st.caption(
-    "Configure your API keys and Google OAuth credentials here. "
-    "Saved settings are applied immediately — no redeploy needed."
+hero(
+    "Settings",
+    "Configure API keys and Google OAuth here — saved changes apply instantly, no redeploy.",
+    eyebrow="Configuration",
 )
 
 
@@ -214,7 +215,7 @@ with st.expander("🩺 Diagnostics (installed dependencies)"):
 
     deps = [
         ("openai", "OpenAI (chat, Whisper, TTS)"),
-        ("googleapiclient", "Google API client (Gmail/Calendar)"),
+        ("googleapiclient", "Google API client (Gmail)"),
         ("google_auth_oauthlib", "Google OAuth flow"),
         ("plotly", "Analytics charts"),
         ("pandas", "Data tables"),

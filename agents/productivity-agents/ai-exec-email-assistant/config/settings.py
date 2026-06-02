@@ -37,11 +37,10 @@ _CONFIG_DIR = Path(os.getenv("CONFIG_DIR", str(PROJECT_ROOT / ".config")))
 _OVERRIDES_PATH = _CONFIG_DIR / "runtime_settings.json"
 
 
-# Google API scopes. Keep read/modify for Gmail (draft creation) + calendar read.
+# Google API scopes. Gmail read/modify + compose (draft creation) and basic profile.
 GOOGLE_SCOPES: List[str] = [
     "https://www.googleapis.com/auth/gmail.modify",
     "https://www.googleapis.com/auth/gmail.compose",
-    "https://www.googleapis.com/auth/calendar.readonly",
     "openid",
     "https://www.googleapis.com/auth/userinfo.email",
     "https://www.googleapis.com/auth/userinfo.profile",

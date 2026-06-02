@@ -6,6 +6,7 @@ import streamlit as st
 from database.models import save_draft
 from prompts.templates import TONE_GUIDE
 from utils.components import export_buttons
+from utils.theme import hero
 from utils.ui import bootstrap, gmail_service, page_config, render_sidebar, require_auth, safe_ai
 
 bootstrap()
@@ -14,7 +15,7 @@ render_sidebar()
 if not require_auth():
     st.stop()
 
-st.title("✍️ Smart Drafting")
+hero("Smart Drafting", "Generate drafts, context-aware replies, and rewrite tone instantly.", eyebrow="Compose")
 gmail = gmail_service()
 ai = safe_ai()
 if ai is None:

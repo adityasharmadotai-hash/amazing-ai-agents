@@ -6,25 +6,27 @@ from typing import Iterable
 import streamlit as st
 
 from database.models import Email
+from utils.theme import pill
 
 
 def email_card(email: Email, key_prefix: str = "") -> None:
-    badges = []
+    pills = []
     if email.is_unread:
-        badges.append("🔵 Unread")
+        pills.append(pill("Unread", "accent"))
     if email.is_starred:
-        badges.append("⭐ Starred")
+        pills.append(pill("★ Starred", "warn"))
     if email.is_important:
-        badges.append("❗ Important")
+        pills.append(pill("Important", "bad"))
     if email.needs_followup:
-        badges.append("↩️ Follow-up")
+        pills.append(pill("Follow-up", "good"))
     when = email.received_at.strftime("%d %b, %H:%M") if email.received_at else ""
-    title = f"**{email.subject}** — {email.sender}"
+    unread_mark = "🔵 " if email.is_unread else ""
+    title = f"{unread_mark}**{email.subject or '(no subject)'}** — {email.sender}"
     with st.expander(title, expanded=False):
         meta = " · ".join(filter(None, [email.sender_email, when]))
         st.caption(meta)
-        if badges:
-            st.write(" ".join(badges))
+        if pills:
+            st.markdown(" ".join(pills), unsafe_allow_html=True)
         if email.ai_summary:
             st.info(f"💡 {email.ai_summary}")
         body = email.body or email.snippet or "(no content)"

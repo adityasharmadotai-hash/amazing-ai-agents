@@ -6,6 +6,7 @@ import streamlit as st
 from database.models import update_email_ai_fields
 from utils.components import export_buttons
 from utils.helpers import run_async
+from utils.theme import hero
 from utils.ui import bootstrap, gmail_service, page_config, render_sidebar, require_auth, safe_ai
 
 bootstrap()
@@ -14,7 +15,7 @@ render_sidebar()
 if not require_auth():
     st.stop()
 
-st.title("🤖 AI Email Assistant")
+hero("AI Assistant", "Summaries, digests, and follow-up detection across your inbox.", eyebrow="Intelligence")
 gmail = gmail_service()
 ai = safe_ai()
 if ai is None:

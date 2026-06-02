@@ -22,7 +22,6 @@ from utils.logging_config import setup_logging
 if TYPE_CHECKING:  # imports for type hints only — not evaluated at runtime
     from services.ai_service import AIService
     from services.analytics_service import AnalyticsService
-    from services.calendar_service import CalendarService
     from services.gmail_service import GmailService
 
 # ---------------------------------------------------------------------------
@@ -70,6 +69,9 @@ def page_config(page_title: str, icon: str = "📧") -> None:
         layout="wide",
         initial_sidebar_state="expanded",
     )
+    from utils.theme import inject_global_css
+
+    inject_global_css()
 
 
 # ---------------------------------------------------------------------------
@@ -114,22 +116,32 @@ def require_auth() -> Optional[object]:
         return creds
 
     settings = get_settings()
-    st.title("🔐 Sign in")
+    detected = detect_app_url()
+    redirect = settings.google_redirect_uri
+
+    st.markdown("<div class='signin-wrap'>", unsafe_allow_html=True)
+    st.markdown(
+        "<div class='signin-card'>"
+        "<div class='signin-logo'>📧</div>"
+        f"<div class='section-eyebrow'>{settings.app_title}</div>"
+        "<h1 style='margin:.1rem 0 .4rem;font-size:1.7rem'>Sign in</h1>"
+        "<p style='color:var(--muted);margin:0 0 18px'>Connect your Google account "
+        "to let the assistant read, triage, and draft your email.</p>",
+        unsafe_allow_html=True,
+    )
+
     if not settings.has_google_credentials:
         st.error(
-            "Google OAuth credentials are not configured yet. "
-            "Open **⚙️ Settings** to add your GOOGLE_CLIENT_ID and "
-            "GOOGLE_CLIENT_SECRET (or set them via environment / Streamlit "
-            "secrets). See docs/OAUTH_SETUP.md."
+            "Google OAuth isn't configured yet. Open **⚙️ Settings** to add your "
+            "Client ID and Client Secret (or set them via Streamlit secrets)."
         )
         try:
             st.page_link("pages/9_Settings.py", label="Go to Settings", icon="⚙️")
-        except Exception:  # noqa: BLE001 - older Streamlit without page_link
+        except Exception:  # noqa: BLE001
             pass
+        st.markdown("</div></div>", unsafe_allow_html=True)
         return None
-    st.write("Connect your Google account to let the assistant manage your inbox and calendar.")
-    detected = detect_app_url()
-    redirect = settings.google_redirect_uri
+
     if (
         detected
         and "localhost" not in detected
@@ -137,34 +149,38 @@ def require_auth() -> Optional[object]:
         and ("localhost" in redirect or "127.0.0.1" in redirect)
     ):
         st.warning(
-            "Your Redirect URI is set to localhost, but this app is running at "
-            f"**{detected}**. Google will send you to a dead localhost page after "
-            "sign-in. Open ⚙️ Settings and set the Redirect URI to this app's URL "
-            "(and register the same URL in Google Cloud Console).",
+            f"Redirect URI is localhost but the app runs at **{detected}**. "
+            "Update it in ⚙️ Settings and register the same URL in Google Cloud Console.",
             icon="⚠️",
         )
         try:
             st.page_link("pages/9_Settings.py", label="Fix in Settings", icon="⚙️")
         except Exception:  # noqa: BLE001
             pass
+
     try:
         auth_url = st.session_state.get("_oauth_auth_url")
         if not auth_url:
             auth_url, _ = get_authorization_url()
             st.session_state["_oauth_auth_url"] = auth_url
-        st.link_button("Continue with Google", auth_url, type="primary")
+        st.link_button("Continue with Google", auth_url, type="primary", use_container_width=True)
     except Exception as exc:  # noqa: BLE001
         st.error(f"Could not start OAuth flow: {exc}")
-    st.caption(
-        "Read-only calendar access · draft creation · no emails sent without your action."
+
+    st.markdown(
+        "<p style='color:var(--muted);font-size:.8rem;margin:14px 0 0;text-align:center'>"
+        "Gmail access · draft creation · nothing sent without your explicit action.</p>",
+        unsafe_allow_html=True,
     )
-    st.divider()
-    st.caption(
-        "🔎 This app will send the following **redirect URI** to Google. It must be "
-        "registered **exactly** (including the trailing slash) under your OAuth "
-        "client's Authorized redirect URIs:"
-    )
-    st.code(redirect or "(not set)", language=None)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    with st.expander("Advanced · redirect URI being sent to Google"):
+        st.caption(
+            "This exact value must be registered (including any trailing slash) "
+            "under your OAuth client's Authorized redirect URIs:"
+        )
+        st.code(redirect or "(not set)", language=None)
+    st.markdown("</div>", unsafe_allow_html=True)
     return None
 
 
@@ -187,15 +203,6 @@ def gmail_service() -> "GmailService":
     if not creds:
         st.stop()
     return GmailService(creds)
-
-
-def calendar_service() -> "CalendarService":
-    from services.calendar_service import CalendarService
-
-    creds = require_auth()
-    if not creds:
-        st.stop()
-    return CalendarService(creds)
 
 
 @st.cache_resource(show_spinner=False)
@@ -228,16 +235,30 @@ def safe_ai() -> Optional["AIService"]:
 def render_sidebar() -> None:
     settings = get_settings()
     with st.sidebar:
-        st.markdown(f"### 🤖 {settings.app_title}")
+        st.markdown(
+            f"<div class='brand'><span class='dot'></span>{settings.app_title}</div>"
+            "<div class='brand-sub'>Inbox Intelligence</div>",
+            unsafe_allow_html=True,
+        )
         profile = st.session_state.get("profile")
         if profile and profile.get("email"):
-            st.success(f"Signed in as **{profile.get('name') or profile['email']}**")
-            st.caption(profile["email"])
+            name = profile.get("name") or profile["email"]
+            initial = (name[:1] or "?").upper()
+            st.markdown(
+                f"<div class='user-chip'><div class='avatar'>{initial}</div>"
+                f"<div><div class='u-name'>{name}</div>"
+                f"<div class='u-mail'>{profile['email']}</div></div></div>",
+                unsafe_allow_html=True,
+            )
             if st.button("Sign out", use_container_width=True):
                 logout()
         st.divider()
         try:
             st.page_link("pages/9_Settings.py", label="Settings", icon="⚙️")
-        except Exception:  # noqa: BLE001 - older Streamlit without page_link
+        except Exception:  # noqa: BLE001
             pass
-        st.caption("Navigate using the pages above ☝️")
+        st.markdown(
+            "<div style='color:var(--muted);font-size:.72rem;margin-top:10px'>"
+            "Built with OpenAI + Gmail API</div>",
+            unsafe_allow_html=True,
+        )

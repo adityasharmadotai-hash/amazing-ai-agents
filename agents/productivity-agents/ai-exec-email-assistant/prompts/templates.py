@@ -116,25 +116,6 @@ TONE_GUIDE = {
     "short": "extremely concise, 1-3 sentences, no pleasantries beyond a greeting",
 }
 
-# --- Calendar / meeting prep ---
-MEETING_BRIEF = """Prepare a meeting brief for the executive.
-
-Meeting: {title}
-When: {when}
-Attendees: {attendees}
-
-Prior email context with attendees:
-{email_context}
-
-Produce a Markdown brief with:
-### Objective
-### Attendee Notes
-### Suggested Talking Points
-### Open Action Items
-### Questions to Ask
-
-If context is thin, infer reasonable points from the meeting title."""
-
 # --- Daily executive briefing ---
 EXECUTIVE_BRIEFING = """You are preparing the morning executive briefing for {owner}.
 Today is {today}.
@@ -146,15 +127,11 @@ Important emails:
 Emails needing follow-up:
 {followup_emails}
 
-Today's meetings:
-{meetings}
-
 Produce a polished Markdown briefing with these sections:
 # Executive Briefing — {today}
 ## 🔴 Top Priorities (ranked, max 5)
 ## 📧 Important Emails
 ## ↩️ Follow-ups Needed
-## 📅 Today's Meetings
 ## ✅ Suggested Focus for the Day
 
 Be specific and actionable. No fluff."""
@@ -170,7 +147,6 @@ Available intents:
 - summarize_inbox
 - followups
 - draft_reply (params: {{"target": "<who/what>"}})
-- meeting_brief
 - daily_briefing
 - unknown
 

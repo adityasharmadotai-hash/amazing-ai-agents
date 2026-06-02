@@ -5,6 +5,7 @@ import streamlit as st
 
 from config.settings import get_settings
 from utils.components import email_list
+from utils.theme import hero
 from utils.ui import bootstrap, gmail_service, page_config, render_sidebar, require_auth, safe_ai
 
 bootstrap()
@@ -14,7 +15,7 @@ if not require_auth():
     st.stop()
 
 settings = get_settings()
-st.title("🎤 Voice Commands")
+hero("Voice Commands", "Speak a command — the assistant transcribes and acts on Gmail.", eyebrow="Hands-free")
 
 if not settings.enable_voice:
     st.warning("Voice is disabled. Set ENABLE_VOICE=true in your .env to use it.")
@@ -100,7 +101,5 @@ if transcript:
             st.info("Couldn't find a matching thread.")
     elif intent == "daily_briefing":
         st.switch_page("pages/6_Briefing.py")
-    elif intent == "meeting_brief":
-        st.switch_page("pages/5_Calendar.py")
     else:
         st.warning("I didn't recognise that command. Try rephrasing.")

@@ -1,8 +1,7 @@
 # 🤖 AI Executive Email Assistant
 
-A production-ready, modular **Streamlit** application that lets you manage
-**Gmail** and **Google Calendar** with natural language and voice — powered by
-the **OpenAI API**.
+A production-ready, modular **Streamlit** application that lets you manage your
+**Gmail** inbox with natural language and voice — powered by the **OpenAI API**.
 
 ---
 
@@ -14,8 +13,7 @@ the **OpenAI API**.
 | **AI Assistant** | Inbox summary, daily digest, weekly summary, importance + follow-up detection (async batch triage), follow-up drafting |
 | **Smart Drafting** | Generate drafts, context-aware replies from full threads, tone rewriting (Professional / Friendly / Executive / Short) |
 | **Voice** | Record a command → Whisper transcription → intent routing → Gmail action, with optional spoken reply (TTS) |
-| **Calendar** | Upcoming meetings, AI meeting-prep briefs using prior email history with attendees, talking points, open action items |
-| **Daily Briefing** | One-click morning executive briefing (priorities, important mail, follow-ups, today's meetings) |
+| **Daily Briefing** | One-click morning executive briefing (priorities, important mail, follow-ups) |
 | **Analytics** | Inbox health score, response time, follow-up rate, volume trend, top contacts (Plotly charts) |
 | **Export** | Any content → PDF, DOCX, or Markdown |
 
@@ -31,14 +29,13 @@ ai-exec-email-assistant/
 │   ├── 2_AI_Assistant.py
 │   ├── 3_Drafting.py
 │   ├── 4_Voice.py
-│   ├── 5_Calendar.py
 │   ├── 6_Briefing.py
 │   ├── 7_Analytics.py
-│   └── 8_Export.py
+│   ├── 8_Export.py
+│   └── 9_Settings.py
 ├── services/               # Business logic (one concern each)
 │   ├── auth_service.py     # Google OAuth (web + installed flows)
 │   ├── gmail_service.py    # Gmail read/search/draft/send
-│   ├── calendar_service.py # Calendar events
 │   ├── ai_service.py       # OpenAI: summaries, classify, draft, brief (sync + async)
 │   ├── voice_service.py    # Whisper STT + OpenAI TTS
 │   ├── briefing_service.py # Orchestrates the daily briefing
@@ -93,7 +90,7 @@ You need:
 ## 🔐 Security notes
 
 - `.env`, `.tokens/`, and the SQLite DB are git-ignored.
-- Calendar access is **read-only**. Gmail scope allows reading and *creating
+- Gmail scope allows reading and *creating
   drafts*; **emails are never sent automatically** — sending is always an
   explicit button press.
 - Tokens are cached locally so you don't re-auth every session; sign out clears them.

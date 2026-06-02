@@ -1,7 +1,7 @@
 # 🔐 Google OAuth Setup Guide
 
-This app needs OAuth credentials to access Gmail and Google Calendar on your
-behalf. Follow these steps once.
+This app needs OAuth credentials to access Gmail on your behalf. Follow these
+steps once.
 
 ## 1. Create / select a Google Cloud project
 
@@ -11,12 +11,11 @@ behalf. Follow these steps once.
 
 ## 2. Enable the APIs
 
-In **APIs & Services → Library**, enable both:
+In **APIs & Services → Library**, enable:
 
 - **Gmail API**
-- **Google Calendar API**
 
-(Search each by name and click **Enable**.)
+(Search by name and click **Enable**.)
 
 ## 3. Configure the OAuth consent screen
 
@@ -25,7 +24,6 @@ In **APIs & Services → Library**, enable both:
 3. Fill app name, user support email, developer email.
 4. **Scopes** — you can leave default; the app requests these at runtime:
    - `gmail.modify`, `gmail.compose`
-   - `calendar.readonly`
    - `userinfo.email`, `userinfo.profile`, `openid`
 5. **Test users** — while your app is in *Testing* mode, add the Google
    account(s) you'll sign in with. (Publishing is only needed for many users.)

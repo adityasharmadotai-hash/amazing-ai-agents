@@ -5,6 +5,7 @@ import streamlit as st
 
 from database.models import get_latest_briefing, list_drafts
 from utils.components import export_buttons
+from utils.theme import hero
 from utils.ui import bootstrap, page_config, render_sidebar, require_auth
 
 bootstrap()
@@ -13,7 +14,7 @@ render_sidebar()
 if not require_auth():
     st.stop()
 
-st.title("📤 Export Center")
+hero("Export Center", "Download briefings, drafts, or any text as PDF, DOCX, or Markdown.", eyebrow="Deliverables")
 st.caption("Export briefings, drafts, or any custom text to PDF, DOCX, or Markdown.")
 
 source = st.radio(

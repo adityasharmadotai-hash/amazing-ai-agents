@@ -179,27 +179,14 @@ class AIService:
         return self._chat(P.SYSTEM_DRAFTER, prompt)
 
     # ------------------------------------------------------------------
-    # Meeting brief
-    # ------------------------------------------------------------------
-    def meeting_brief(self, title: str, when: str, attendees: list[str],
-                      email_context: str) -> str:
-        prompt = P.MEETING_BRIEF.format(
-            title=title, when=when,
-            attendees=", ".join(attendees) or "(none listed)",
-            email_context=truncate(email_context, 4000) or "(no prior email context found)",
-        )
-        return self._chat(P.SYSTEM_ASSISTANT, prompt, model=self.settings.openai_reasoning_model)
-
-    # ------------------------------------------------------------------
     # Executive briefing
     # ------------------------------------------------------------------
     def executive_briefing(self, owner: str, today: str, important_emails: str,
-                           followup_emails: str, meetings: str) -> str:
+                           followup_emails: str) -> str:
         prompt = P.EXECUTIVE_BRIEFING.format(
             owner=owner or "the executive", today=today,
             important_emails=important_emails or "(none)",
             followup_emails=followup_emails or "(none)",
-            meetings=meetings or "(none)",
         )
         return self._chat(
             P.SYSTEM_ASSISTANT, prompt, model=self.settings.openai_reasoning_model
