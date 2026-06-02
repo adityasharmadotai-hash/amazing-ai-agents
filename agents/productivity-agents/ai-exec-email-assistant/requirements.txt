@@ -5,7 +5,7 @@ python-dotenv>=1.0.1
 # --- OpenAI (LLM, Whisper STT, TTS) ---
 openai>=1.40.0
 
-# --- Google APIs (Gmail + Calendar + OAuth) ---
+# --- Google APIs (Gmail + OAuth) ---
 google-api-python-client>=2.140.0
 google-auth>=2.34.0
 google-auth-oauthlib>=1.2.1
