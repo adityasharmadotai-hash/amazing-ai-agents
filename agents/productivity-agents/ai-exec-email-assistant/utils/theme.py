@@ -204,6 +204,75 @@ h1 {{ font-weight: 800 !important; }}
 [data-testid="stSidebarNav"] ul {{ padding-top: 4px; }}
 [data-testid="stSidebarNav"] a {{ border-radius: 10px; }}
 
+/* Hide Streamlit's auto-generated page nav — we render a custom one below. */
+[data-testid="stSidebarNav"] {{ display: none; }}
+
+/* ---- Custom sidebar navigation ---- */
+[data-testid="stSidebar"] .nav-group {{
+    font-family: 'Sora'; font-size: 0.68rem; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted);
+    margin: 16px 2px 6px;
+}}
+/* page_link rows */
+[data-testid="stSidebar"] [data-testid="stPageLink"] a,
+[data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"] {{
+    border-radius: 11px;
+    padding: 7px 11px !important;
+    font-family: 'Sora'; font-weight: 500;
+    transition: background .15s ease, transform .12s ease;
+}}
+[data-testid="stSidebar"] [data-testid="stPageLink"] a:hover,
+[data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"]:hover {{
+    background: var(--surface-2);
+    transform: translateX(2px);
+}}
+
+/* ---- Featured Voice card ---- */
+.voice-feature {{
+    position: relative;
+    border-radius: 16px;
+    padding: 14px 15px 13px;
+    margin: 4px 0 6px;
+    background:
+        linear-gradient(135deg, rgba(55,215,194,0.18), rgba(109,139,255,0.14));
+    border: 1px solid rgba(55,215,194,0.45);
+    box-shadow: 0 6px 22px rgba(55,215,194,0.12);
+    overflow: hidden;
+}}
+.voice-feature::before {{
+    content: ""; position: absolute; inset: 0;
+    background: radial-gradient(180px 80px at 90% -20%, rgba(55,215,194,0.30), transparent 70%);
+    pointer-events: none;
+}}
+.voice-feature .vf-top {{ display: flex; align-items: center; gap: 9px; }}
+.voice-feature .vf-mic {{
+    width: 32px; height: 32px; border-radius: 10px; flex: none;
+    display: grid; place-items: center; font-size: 1.05rem;
+    background: linear-gradient(120deg, var(--accent-2), var(--accent));
+    color: #06121f;
+    box-shadow: 0 0 16px rgba(55,215,194,0.6);
+    animation: vfpulse 2.6s ease-in-out infinite;
+}}
+@keyframes vfpulse {{
+    0%,100% {{ box-shadow: 0 0 12px rgba(55,215,194,0.45); }}
+    50% {{ box-shadow: 0 0 22px rgba(55,215,194,0.85); }}
+}}
+.voice-feature .vf-title {{ font-family: 'Sora'; font-weight: 700; font-size: 0.96rem; color: var(--text); line-height: 1; }}
+.voice-feature .vf-badge {{
+    font-family: 'Sora'; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--accent-2);
+    border: 1px solid rgba(55,215,194,0.5); border-radius: 999px;
+    padding: 2px 7px; margin-top: 3px; display: inline-block;
+}}
+.voice-feature .vf-desc {{ color: var(--muted); font-size: 0.76rem; line-height: 1.4; margin: 9px 0 0; }}
+/* The actual link button inside the card gets a filled accent treatment */
+.voice-feature + div [data-testid="stPageLink"] a {{
+    background: linear-gradient(120deg, var(--accent-2), var(--accent)) !important;
+    color: #06121f !important; font-weight: 700 !important;
+    justify-content: center; margin-top: -2px;
+}}
+.voice-feature + div [data-testid="stPageLink"] a:hover {{ transform: translateY(-1px); filter: brightness(1.05); }}
+
 /* User chip */
 .user-chip {{
     display: flex; align-items: center; gap: 11px;

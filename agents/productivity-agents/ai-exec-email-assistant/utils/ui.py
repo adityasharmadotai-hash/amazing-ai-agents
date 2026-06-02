@@ -232,14 +232,23 @@ def safe_ai() -> Optional["AIService"]:
 # ---------------------------------------------------------------------------
 # Sidebar
 # ---------------------------------------------------------------------------
+def _nav_link(path: str, label: str, icon: str) -> None:
+    try:
+        st.page_link(path, label=label, icon=icon)
+    except Exception:  # noqa: BLE001 - older Streamlit without page_link
+        st.markdown(f"<div style='padding:6px 10px;color:var(--muted)'>{icon} {label}</div>",
+                    unsafe_allow_html=True)
+
+
 def render_sidebar() -> None:
     settings = get_settings()
     with st.sidebar:
         st.markdown(
             f"<div class='brand'><span class='dot'></span>{settings.app_title}</div>"
-            "<div class='brand-sub'>Inbox Intelligence</div>",
+            "<div class='brand-sub'>Voice-First Inbox</div>",
             unsafe_allow_html=True,
         )
+
         profile = st.session_state.get("profile")
         if profile and profile.get("email"):
             name = profile.get("name") or profile["email"]
@@ -250,15 +259,41 @@ def render_sidebar() -> None:
                 f"<div class='u-mail'>{profile['email']}</div></div></div>",
                 unsafe_allow_html=True,
             )
+
+        # ---- Featured: Voice is the primary way to drive the whole app ----
+        st.markdown(
+            "<div class='voice-feature'>"
+            "<div class='vf-top'><div class='vf-mic'>🎤</div>"
+            "<div><div class='vf-title'>Voice Command</div>"
+            "<span class='vf-badge'>Primary Control</span></div></div>"
+            "<p class='vf-desc'>Run the entire assistant hands-free — "
+            "read, search, draft, and brief by just speaking.</p>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+        st.markdown("<div></div>", unsafe_allow_html=True)  # CSS anchor for the link below
+        _nav_link("pages/4_Voice.py", "Start Voice Command", "🎙️")
+
+        # ---- Workspace ----
+        st.markdown("<div class='nav-group'>Workspace</div>", unsafe_allow_html=True)
+        _nav_link("app.py", "Home", "🏠")
+        _nav_link("pages/1_Inbox.py", "Inbox", "📥")
+        _nav_link("pages/2_AI_Assistant.py", "AI Assistant", "🤖")
+        _nav_link("pages/3_Drafting.py", "Drafting", "✍️")
+        _nav_link("pages/6_Briefing.py", "Briefing", "📋")
+
+        # ---- Insights ----
+        st.markdown("<div class='nav-group'>Insights & Tools</div>", unsafe_allow_html=True)
+        _nav_link("pages/7_Analytics.py", "Analytics", "📊")
+        _nav_link("pages/8_Export.py", "Export", "📤")
+        _nav_link("pages/9_Settings.py", "Settings", "⚙️")
+
+        st.markdown("<div class='nav-group'>Account</div>", unsafe_allow_html=True)
+        if profile and profile.get("email"):
             if st.button("Sign out", use_container_width=True):
                 logout()
-        st.divider()
-        try:
-            st.page_link("pages/9_Settings.py", label="Settings", icon="⚙️")
-        except Exception:  # noqa: BLE001
-            pass
         st.markdown(
-            "<div style='color:var(--muted);font-size:.72rem;margin-top:10px'>"
+            "<div style='color:var(--muted);font-size:.72rem;margin-top:12px'>"
             "Built with OpenAI + Gmail API</div>",
             unsafe_allow_html=True,
         )
