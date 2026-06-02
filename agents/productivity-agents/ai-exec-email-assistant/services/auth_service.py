@@ -12,10 +12,17 @@ to re-auth every session, and mirrored into `st.session_state`.
 from __future__ import annotations
 
 import json
+import os
 import secrets
 import string
 from pathlib import Path
 from typing import Optional
+
+# Google often returns MORE scopes than requested (e.g. gmail.modify implies
+# gmail.readonly and gmail.labels). oauthlib's strict equality check raises a
+# "Scope has changed" error on any difference, so relax it BEFORE importing the
+# library. Being granted broader scopes than asked for is expected and safe.
+os.environ.setdefault("OAUTHLIB_RELAX_TOKEN_SCOPE", "1")
 
 import google.auth.transport.requests
 from google.oauth2.credentials import Credentials
@@ -52,9 +59,13 @@ def load_saved_credentials() -> Optional[Credentials]:
     if not path.exists():
         return None
     try:
-        settings = get_settings()
+        os.environ["OAUTHLIB_RELAX_TOKEN_SCOPE"] = "1"
+        # Pass scopes=None so the credentials use whatever scopes Google actually
+        # granted (stored in the token JSON). Forcing the originally-requested
+        # list here can re-trigger a "Scope has changed" error on refresh, since
+        # Google may have granted a broader set (e.g. gmail.readonly/labels).
         creds = Credentials.from_authorized_user_info(
-            json.loads(path.read_text(encoding="utf-8")), settings.scopes
+            json.loads(path.read_text(encoding="utf-8")), scopes=None
         )
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(google.auth.transport.requests.Request())
@@ -196,6 +207,9 @@ def exchange_code_for_credentials(code: str) -> Credentials:
             flow.oauth2session._state = state
         except Exception:  # noqa: BLE001
             pass
+    # Ensure the relaxed-scope behaviour is active even if some other module
+    # imported oauthlib before this env var was first set.
+    os.environ["OAUTHLIB_RELAX_TOKEN_SCOPE"] = "1"
     try:
         flow.fetch_token(code=code)
     except Exception as exc:  # noqa: BLE001
