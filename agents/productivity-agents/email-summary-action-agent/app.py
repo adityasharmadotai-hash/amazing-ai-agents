@@ -20,7 +20,7 @@ import plotly.express as px
 import streamlit as st
 
 import config
-from src import database, exporter
+from src import database, exporter, settings
 from src.insights import InsightsEngine
 from src.pipeline import run_pipeline
 
@@ -61,6 +61,14 @@ def card(label: str, value, gradient: str) -> str:
 # --- sidebar: scan controls --------------------------------------------------
 st.sidebar.title("📬 Email Action Agent")
 st.sidebar.caption("Gmail → AI triage → Google Sheet")
+
+# API key status — nudges the user to the Settings page if it's missing.
+_key_source = settings.get_openai_key_source()
+if _key_source == "missing":
+    st.sidebar.error("No OpenAI key set. Open ⚙️ Settings to add one.")
+else:
+    _label = "Settings" if _key_source == "settings" else ".env"
+    st.sidebar.caption(f"🔑 OpenAI key: configured (via {_label})")
 
 st.sidebar.subheader("Scan settings")
 scope = st.sidebar.radio(
@@ -170,7 +178,9 @@ st.subheader("🧠 AI insights")
 if st.button("Generate daily briefing"):
     with st.spinner("Thinking..."):
         try:
-            ins = InsightsEngine().generate()
+            ins = InsightsEngine(
+                api_key=settings.get_openai_key(), model=settings.get_model()
+            ).generate()
             st.markdown(f"**Daily summary:** {ins['daily_summary']}")
             ic1, ic2 = st.columns(2)
             with ic1:

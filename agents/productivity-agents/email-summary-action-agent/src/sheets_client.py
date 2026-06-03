@@ -16,7 +16,7 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 
 import config
-from src import database
+from src import database, settings
 
 
 class SheetsClient:
@@ -35,7 +35,7 @@ class SheetsClient:
             self.service.spreadsheets()
             .create(
                 body={
-                    "properties": {"title": config.SHEET_TITLE},
+                    "properties": {"title": settings.get_sheet_title()},
                     "sheets": [{"properties": {"title": config.SHEET_TAB}}],
                 },
                 fields="spreadsheetId",

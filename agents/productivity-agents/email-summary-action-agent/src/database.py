@@ -153,3 +153,8 @@ def get_meta(key: str) -> Optional[str]:
     with _conn() as con:
         row = con.execute("SELECT value FROM app_meta WHERE key = ?", (key,)).fetchone()
         return row["value"] if row else None
+
+
+def delete_meta(key: str) -> None:
+    with _conn() as con:
+        con.execute("DELETE FROM app_meta WHERE key = ?", (key,))

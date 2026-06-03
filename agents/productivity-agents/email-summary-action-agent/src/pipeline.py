@@ -15,7 +15,7 @@ import asyncio
 from typing import Optional
 
 import config
-from src import database
+from src import database, settings
 from src.ai_analyzer import AIAnalyzer
 from src.gmail_client import GmailClient, get_credentials
 from src.sheets_client import SheetsClient
@@ -46,8 +46,14 @@ def run_pipeline(
     if not fresh:
         return {"fetched": len(emails), "new": 0, "written_to_sheet": 0}
 
-    # 3. Analyze concurrently
-    analyzer = AIAnalyzer()
+    # 3. Analyze concurrently (key + model come from the Settings page / .env)
+    api_key = settings.get_openai_key()
+    if not api_key:
+        raise RuntimeError(
+            "No OpenAI API key configured. Open the ⚙️ Settings page to add one "
+            "(or set OPENAI_API_KEY in your .env)."
+        )
+    analyzer = AIAnalyzer(api_key=api_key, model=settings.get_model())
     analyzed = asyncio.run(analyzer.analyze_many(fresh))
 
     # 4. Persist locally
