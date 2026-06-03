@@ -1,18 +1,20 @@
 # Secrets & credentials
 .env
 credentials.json
-token.json
+data/token.json
+*.pickle
 
 # Database
-*.db
+data/*.db
 
 # Python
 __pycache__/
 *.pyc
-venv/
 .venv/
+venv/
+.ipynb_checkpoints/
 
-# OS / editor
+# OS / IDE
 .DS_Store
-.idea/
 .vscode/
+.idea/

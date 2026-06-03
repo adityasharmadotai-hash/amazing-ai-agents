@@ -1,1003 +1,1004 @@
 > ⭐ **Star the repo:** https://github.com/adityasharmadotai-hash/amazing-ai-agents
 > 💼 **Follow on LinkedIn:** https://www.linkedin.com/in/aditya-hicounselor/
 > 📺 **Subscribe on YouTube:** https://www.youtube.com/channel/UCPjQtVNUrf7EKrm8ZoqrCAQ
-> 🚀 **Looking for jobs at top AI companies in the U.S.? [Apply here](https://docs.google.com/forms/d/e/1FAIpQLSc3gJssBV3B25EZ3sYA7Qcen9NbtOB_wgQaturfB7lTXuAdLQ/viewform)**
+> 🚀 **Looking for jobs at top AI companies in the U.S.?** [Apply here](https://docs.google.com/forms/d/e/1FAIpQLSc3gJssBV3B25EZ3sYA7Qcen9NbtOB_wgQaturfB7lTXuAdLQ/viewform)
 
 ---
 
-# 🧑‍🏫 Tutorial — Build an Email Summary & Action Items Agent
+# 📬 Build an Email Summary & Action Items Agent — Step by Step
 
-A complete, beginner-friendly, copy-along guide to building an AI agent that reads your Gmail, summarizes it, extracts action items, prioritizes them, and writes everything to a Google Sheet + a beautiful Streamlit dashboard.
-
-> No prior AI experience needed. If you can run `python` and copy-paste, you can build this.
+A complete, beginner-friendly tutorial. By the end you'll have an AI agent that reads your Gmail, figures out what actually needs doing, and drops it all into a Google Sheet and a slick dashboard. No prior AI experience needed — just basic Python and a willingness to copy-paste carefully.
 
 ---
 
-## 📑 Table of Contents
+## Table of contents
 
-1. [What We Are Building (and Why)](#1-what-we-are-building-and-why)
-2. [How It Works (Flow Diagram)](#2-how-it-works-flow-diagram)
-3. [Prerequisites Checklist](#3-prerequisites-checklist)
-4. [Project Setup](#4-project-setup)
-5. [Each File Explained (with full code)](#5-each-file-explained-with-full-code)
-   - [requirements.txt](#51-requirementstxt)
-   - [.env.example](#52-envexample)
-   - [modules/database.py](#53-modulesdatabasepy)
-   - [modules/gmail_client.py](#54-modulesgmail_clientpy)
-   - [modules/analyzer.py](#55-modulesanalyzerpy)
-   - [modules/sheets_client.py](#56-modulessheets_clientpy)
-   - [modules/insights.py](#57-modulesinsightspy)
-   - [modules/exporter.py](#58-modulesexporterpy)
-   - [modules/scheduler.py](#59-modulesschedulerpy)
-   - [app.py](#510-apppy)
-6. [How to Run Locally](#6-how-to-run-locally)
-7. [How to Deploy on Streamlit Cloud](#7-how-to-deploy-on-streamlit-cloud)
-8. [Common Errors and Fixes](#8-common-errors-and-fixes)
-9. [What You Learned](#9-what-you-learned)
-10. [What's Next](#10-whats-next)
-
----
-
-## 1. What We Are Building (and Why)
-
-**The problem:** Your inbox is noisy. Important asks are buried between newsletters and notifications. You re-read emails, forget follow-ups, and lose time every single morning.
-
-**The solution:** An agent that does the triage *for* you. Every morning it:
-
-- Reads your new Gmail messages,
-- Asks an AI model to **summarize**, **extract the action**, and **assign a priority**,
-- Detects **due dates** and the **sender**,
-- Writes a clean row per email into a **Google Sheet** and a local **SQLite** database,
-- Surfaces it all in a **Streamlit dashboard** with metrics, charts, AI insights, and export buttons.
-
-**Why it's a great learning project:** You'll touch OAuth, third-party APIs (Gmail + Sheets), LLM prompting with structured JSON output, a local database, scheduling, and a real UI — the full shape of a production agent, in one repo.
+1. [What we're building (and why)](#1-what-were-building-and-why)
+2. [How it works](#2-how-it-works)
+3. [Prerequisites checklist](#3-prerequisites-checklist)
+4. [Project setup](#4-project-setup)
+5. [The code, file by file](#5-the-code-file-by-file)
+   - [5.1 `config.py` — one place for all settings](#51-configpy)
+   - [5.2 `src/gmail_client.py` — reading your inbox](#52-srcgmail_clientpy)
+   - [5.3 `src/ai_analyzer.py` — the AI brain](#53-srcai_analyzerpy)
+   - [5.4 `src/database.py` — remembering everything](#54-srcdatabasepy)
+   - [5.5 `src/sheets_client.py` — the shareable output](#55-srcsheets_clientpy)
+   - [5.6 `src/insights.py` — the daily briefing](#56-srcinsightspy)
+   - [5.7 `src/exporter.py` — CSV, Excel, PDF](#57-srcexporterpy)
+   - [5.8 `src/pipeline.py` — tying it all together](#58-srcpipelinepy)
+   - [5.9 `src/scheduler.py` — run it every morning](#59-srcschedulerpy)
+   - [5.10 `app.py` — the dashboard](#510-apppy)
+6. [Run it locally](#6-run-it-locally)
+7. [Deploy on Streamlit Cloud](#7-deploy-on-streamlit-cloud)
+8. [Common errors and fixes](#8-common-errors-and-fixes)
+9. [What you learned](#9-what-you-learned)
+10. [What's next](#10-whats-next)
 
 ---
 
-## 2. How It Works (Flow Diagram)
+## 1. What we're building (and why)
 
-```
-        ┌──────────────┐
-        │   Gmail API  │  inbox / unread / last 24h / labels
-        └──────┬───────┘
-               │  raw emails
-               ▼
-        ┌──────────────┐
-        │  Email Fetch │  gmail_client.py
-        └──────┬───────┘
-               │  cleaned messages
-               ▼
-        ┌──────────────┐      ┌──────────────────┐
-        │  AI Analyzer │─────▶│   OpenAI (LLM)   │
-        │  analyzer.py │◀─────│  summary +       │
-        └──────┬───────┘      │  action +        │
-               │              │  priority + dates│
-               │              └──────────────────┘
-               ▼
-   ┌───────────┴────────────┐
-   ▼                        ▼
-┌────────────┐      ┌────────────────┐
-│   SQLite   │      │  Google Sheet  │
-│ (history)  │      │  (live output) │
-└─────┬──────┘      └────────────────┘
-      │
-      ▼
-┌──────────────────────────────────────┐
-│   Streamlit Dashboard                 │
-│   cards · charts · filters · insights │
-│   export CSV / Excel / PDF            │
-└──────────────────────────────────────┘
+**The problem:** Email is a to-do list written by other people, scattered with junk. Finding the three things that actually need a reply means reading everything — and you still might miss a deadline buried in paragraph four.
+
+**The fix:** an agent that does the triage for you. It reads each email and produces:
+
+- a **one-line summary**,
+- the **action item** (or "None"),
+- a **priority** (High / Medium / Low),
+- the **sender** and any **due date**.
+
+Then it writes the results to a Google Sheet, stores them locally so nothing gets analyzed twice, and shows you a dashboard with charts and an AI briefing. You can run it on demand or schedule it every morning.
+
+We're building it the *modular* way — each job lives in its own small file. That's how real production code is organized, and it makes the whole thing easy to understand one piece at a time.
+
+---
+
+## 2. How it works
+
+```text
+        ┌─────────────┐     ┌──────────────┐     ┌──────────────┐     ┌───────────────┐
+        │    Gmail    │ ──> │  AI Analyzer │ ──> │    SQLite    │ ──> │ Google Sheet  │
+        │  fetch mail │     │  (OpenAI)    │     │  dedup +     │     │  shareable    │
+        │             │     │  summarize,  │     │  source of   │     │  output       │
+        │             │     │  prioritize  │     │  truth       │     │               │
+        └─────────────┘     └──────────────┘     └──────┬───────┘     └───────────────┘
+                                                        │
+                                                        v
+                                            ┌───────────────────────┐
+                                            │  Streamlit Dashboard   │
+                                            │  cards · charts ·      │
+                                            │  insights · export     │
+                                            └───────────────────────┘
 ```
 
----
-
-## 3. Prerequisites Checklist
-
-Before writing any code, make sure you have:
-
-- [ ] **Python 3.10+** installed → check with `python --version`
-- [ ] A **Google account** with Gmail
-- [ ] A **Google Cloud project** (free)
-- [ ] **Gmail API** and **Google Sheets API** enabled in that project
-- [ ] An **OAuth 2.0 Client ID** (Desktop app) → downloaded as `credentials.json`
-- [ ] An **OpenAI API key** → from https://platform.openai.com/api-keys
-- [ ] A code editor (VS Code recommended)
-- [ ] Basic comfort with the terminal
-
-> 💡 You only pay for what you use on OpenAI. Summarizing a few dozen emails costs a few cents.
+Read it left to right: **Gmail → AI → database → sheet**, with the **dashboard** sitting on top of the database. The `pipeline.py` file is the conveyor belt that moves data through those first four boxes.
 
 ---
 
-## 4. Project Setup
+## 3. Prerequisites checklist
 
-Create the folder and files:
+- [ ] **Python 3.10+** installed (`python --version` to check)
+- [ ] A **Gmail account** you want to analyze
+- [ ] An **OpenAI account** with an API key — [platform.openai.com](https://platform.openai.com/api-keys)
+- [ ] A **Google Cloud** account (free) — [console.cloud.google.com](https://console.cloud.google.com/)
+- [ ] A code editor (VS Code is great) and a terminal
+- [ ] ~30 minutes
+
+You do **not** need to know machine learning. We're *calling* an AI model, not training one.
+
+---
+
+## 4. Project setup
+
+Create the folder structure first. Everything has a home before we write a line of logic.
 
 ```bash
-mkdir -p email-summary-action-agent/modules
-cd email-summary-action-agent
-touch app.py requirements.txt .env.example
-touch modules/__init__.py modules/database.py modules/gmail_client.py \
-      modules/analyzer.py modules/sheets_client.py modules/insights.py \
-      modules/exporter.py modules/scheduler.py
-```
-
-Create and activate a virtual environment:
-
-```bash
+mkdir email-action-agent && cd email-action-agent
+mkdir src data .streamlit
 python -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
+source venv/bin/activate          # Windows: venv\Scripts\activate
 ```
 
-Now let's fill in each file. We'll go **bottom-up**: small helpers first, then the UI that ties them together.
+Create `requirements.txt`:
 
----
-
-## 5. Each File Explained (with full code)
-
-### 5.1 `requirements.txt`
-
-These are all the libraries the project needs.
-
-```txt
-streamlit==1.39.0
-openai==1.51.0
-google-api-python-client==2.147.0
-google-auth==2.35.0
-google-auth-oauthlib==1.2.1
-gspread==6.1.2
-pandas==2.2.3
-plotly==5.24.1
-python-dotenv==1.0.1
-APScheduler==3.10.4
-openpyxl==3.1.5
-reportlab==4.2.5
+```text
+streamlit>=1.40.0
+openai>=1.40.0
+google-api-python-client>=2.140.0
+google-auth>=2.34.0
+google-auth-oauthlib>=1.2.1
+pandas>=2.2.0
+plotly>=5.24.0
+openpyxl>=3.1.5
+reportlab>=4.2.0
+python-dotenv>=1.0.1
+schedule>=1.2.2
 ```
 
-**Plain English:**
-- `streamlit` → the web dashboard.
-- `openai` → talks to the AI model.
-- `google-*` and `gspread` → Gmail + Google Sheets access.
-- `pandas` / `plotly` → tables and charts.
-- `python-dotenv` → loads secrets from `.env`.
-- `APScheduler` → runs the daily job.
-- `openpyxl` / `reportlab` → Excel and PDF export.
-
-Install:
+Install everything:
 
 ```bash
 pip install -r requirements.txt
 ```
 
----
+Now create `.env.example` (and copy it to `.env`):
 
-### 5.2 `.env.example`
-
-A template for your secrets. Copy it to `.env` and fill in real values. **Never commit `.env`.**
-
-```env
-# OpenAI
+```text
 OPENAI_API_KEY=sk-your-key-here
 OPENAI_MODEL=gpt-4o-mini
-
-# Google
 GOOGLE_CREDENTIALS_FILE=credentials.json
-GOOGLE_TOKEN_FILE=token.json
-GOOGLE_SHEET_NAME=Email Action Items
-
-# App
-DB_PATH=email_agent.db
+GOOGLE_TOKEN_FILE=data/token.json
+SHEET_ID=
+SHEET_TITLE=Email Action Items
+MAX_EMAILS=25
+DEFAULT_LABEL=INBOX
+DAILY_RUN_TIME=08:00
+DB_PATH=data/emails.db
 ```
 
-**Plain English:** Code reads these names with `os.getenv(...)`. Keeping secrets here (instead of hard-coded) is the #1 rule of a safe project.
+```bash
+cp .env.example .env   # then paste your real OpenAI key into .env
+```
+
+> 🔑 **Getting `credentials.json`:** In Google Cloud Console, create a project, enable the **Gmail API** and **Google Sheets API**, set up the OAuth consent screen (External, add yourself as a test user), then create an **OAuth client ID → Desktop app**. Download the JSON, rename it `credentials.json`, and put it in the project root. We'll use it in step 5.2.
+
+Finally, a `.gitignore` so you never commit secrets:
+
+```text
+.env
+credentials.json
+data/token.json
+data/*.db
+__pycache__/
+venv/
+```
 
 ---
 
-### 5.3 `modules/database.py`
+## 5. The code, file by file
 
-The local memory of the agent. SQLite is a zero-setup database stored in a single file. We use it to store every analyzed email, track `Pending`/`Completed` status, and — importantly — avoid analyzing the same email twice.
+We'll go in dependency order — the simplest, most-depended-on files first.
+
+### 5.1 `config.py`
+
+**Plain English:** This is the settings drawer. Instead of hardcoding the model name or file paths in ten different files, we put them *here* and read them everywhere. It also pulls secrets from your `.env` file so they never live in code.
 
 ```python
-"""SQLite storage for analyzed emails."""
-import sqlite3
-from contextlib import contextmanager
-from datetime import datetime
+import os
+from pathlib import Path
+from dotenv import load_dotenv
 
-DB_PATH = "email_agent.db"
+load_dotenv()
 
+# --- Project paths ---
+BASE_DIR = Path(__file__).resolve().parent
+DATA_DIR = BASE_DIR / "data"
+DATA_DIR.mkdir(exist_ok=True)
 
-@contextmanager
-def _conn(db_path: str = DB_PATH):
-    """Open a connection and always close it, even on error."""
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
-    try:
-        yield conn
-        conn.commit()
-    finally:
-        conn.close()
+CREDENTIALS_FILE = os.getenv("GOOGLE_CREDENTIALS_FILE", str(BASE_DIR / "credentials.json"))
+TOKEN_FILE = os.getenv("GOOGLE_TOKEN_FILE", str(DATA_DIR / "token.json"))
+DB_PATH = os.getenv("DB_PATH", str(DATA_DIR / "emails.db"))
 
+# --- Google API scopes (what we're allowed to touch) ---
+SCOPES = [
+    "https://www.googleapis.com/auth/gmail.readonly",
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive.file",
+]
 
-def init_db(db_path: str = DB_PATH) -> None:
-    """Create the table on first run."""
-    with _conn(db_path) as conn:
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS emails (
-                id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                email_id    TEXT UNIQUE,          -- Gmail message id (dedupe key)
-                date        TEXT,
-                sender      TEXT,
-                subject     TEXT,
-                summary     TEXT,
-                action_item TEXT,
-                priority    TEXT,                 -- High / Medium / Low
-                due_date    TEXT,
-                status      TEXT DEFAULT 'Pending',
-                created_at  TEXT
-            )
-            """
-        )
+# --- OpenAI ---
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
+# --- Google Sheet ---
+SHEET_ID = os.getenv("SHEET_ID", "")
+SHEET_TITLE = os.getenv("SHEET_TITLE", "Email Action Items")
+SHEET_TAB = "Inbox Actions"
+SHEET_HEADERS = ["Date", "Sender", "Subject", "Email Summary",
+                 "Action Item", "Priority", "Due Date", "Status"]
 
-def already_processed(email_id: str, db_path: str = DB_PATH) -> bool:
-    """True if we have already analyzed this Gmail message."""
-    with _conn(db_path) as conn:
-        row = conn.execute(
-            "SELECT 1 FROM emails WHERE email_id = ?", (email_id,)
-        ).fetchone()
-        return row is not None
+# --- Fetching defaults ---
+DEFAULT_MAX_EMAILS = int(os.getenv("MAX_EMAILS", "25"))
+DEFAULT_LABEL = os.getenv("DEFAULT_LABEL", "INBOX")
 
-
-def save_email(record: dict, db_path: str = DB_PATH) -> None:
-    """Insert one analyzed email. Ignores duplicates."""
-    with _conn(db_path) as conn:
-        conn.execute(
-            """
-            INSERT OR IGNORE INTO emails
-            (email_id, date, sender, subject, summary, action_item,
-             priority, due_date, status, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                record.get("email_id"),
-                record.get("date"),
-                record.get("sender"),
-                record.get("subject"),
-                record.get("summary"),
-                record.get("action_item"),
-                record.get("priority"),
-                record.get("due_date"),
-                record.get("status", "Pending"),
-                datetime.utcnow().isoformat(),
-            ),
-        )
-
-
-def get_all_emails(db_path: str = DB_PATH) -> list[dict]:
-    """Return every stored email, newest first."""
-    with _conn(db_path) as conn:
-        rows = conn.execute(
-            "SELECT * FROM emails ORDER BY created_at DESC"
-        ).fetchall()
-        return [dict(r) for r in rows]
-
-
-def update_status(row_id: int, status: str, db_path: str = DB_PATH) -> None:
-    """Flip an email between Pending and Completed."""
-    with _conn(db_path) as conn:
-        conn.execute(
-            "UPDATE emails SET status = ? WHERE id = ?", (status, row_id)
-        )
+PRIORITIES = ["High", "Medium", "Low"]
+STATUSES = ["Pending", "Completed"]
 ```
 
 **Key sections explained:**
-- `@contextmanager _conn` → guarantees the database connection is committed and closed, so you never leak file handles.
-- `email_id TEXT UNIQUE` + `INSERT OR IGNORE` → the dedupe trick. Even if you re-run the agent, the same Gmail message is never stored twice.
-- `already_processed()` → lets us skip the (paid) AI call for emails we've seen.
+- `load_dotenv()` reads your `.env` file into environment variables.
+- `SCOPES` is the *permission list* — `gmail.readonly` means we can read but never send or delete mail. Always ask for the least access you need.
+- Everything uses `os.getenv("NAME", "default")`, so the app still runs with sensible defaults even if you forget a setting.
 
 ---
 
-### 5.4 `modules/gmail_client.py`
+### 5.2 `src/gmail_client.py`
 
-This handles **OAuth login** and **fetching emails**. The first time you run it, a browser opens asking you to approve access; after that, a `token.json` is cached so you don't log in every time.
+**Plain English:** This file logs into Gmail and hands back clean email dictionaries. The Gmail API returns deeply nested, base64-encoded payloads — nobody wants to deal with that. This wrapper does the ugly parsing once so the rest of the app gets tidy `{sender, subject, body, date}` objects.
 
 ```python
-"""Gmail OAuth + email fetching."""
-import base64
-import os
-from datetime import datetime, timedelta, timezone
+from __future__ import annotations
+import base64, os, time
+from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
+from typing import Optional
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
-
-# Read-only Gmail access is all we need.
-SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
+import config
 
 
-def get_gmail_service(
-    credentials_file: str = "credentials.json",
-    token_file: str = "token.json",
-):
-    """Authenticate and return a Gmail API client."""
+def get_credentials() -> Credentials:
+    """Run OAuth (or refresh a saved token) and return credentials."""
     creds = None
-    if os.path.exists(token_file):
-        creds = Credentials.from_authorized_user_file(token_file, SCOPES)
-
-    # Refresh or run the browser login flow if needed.
+    if os.path.exists(config.TOKEN_FILE):
+        creds = Credentials.from_authorized_user_file(config.TOKEN_FILE, config.SCOPES)
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
             flow = InstalledAppFlow.from_client_secrets_file(
-                credentials_file, SCOPES
-            )
+                config.CREDENTIALS_FILE, config.SCOPES)
             creds = flow.run_local_server(port=0)
-        with open(token_file, "w") as f:
-            f.write(creds.to_json())
-
-    return build("gmail", "v1", credentials=creds)
-
-
-def _header(headers: list[dict], name: str) -> str:
-    """Pull a single header value (e.g. 'From', 'Subject')."""
-    for h in headers:
-        if h["name"].lower() == name.lower():
-            return h["value"]
-    return ""
+        with open(config.TOKEN_FILE, "w") as token:
+            token.write(creds.to_json())
+    return creds
 
 
-def _extract_body(payload: dict) -> str:
-    """Walk the MIME tree and return plain-text body."""
-    if payload.get("body", {}).get("data"):
-        data = payload["body"]["data"]
-        return base64.urlsafe_b64decode(data).decode("utf-8", "ignore")
+class GmailClient:
+    def __init__(self, creds: Optional[Credentials] = None):
+        self.creds = creds or get_credentials()
+        self.service = build("gmail", "v1", credentials=self.creds)
 
-    for part in payload.get("parts", []):
-        if part.get("mimeType") == "text/plain" and part["body"].get("data"):
-            data = part["body"]["data"]
-            return base64.urlsafe_b64decode(data).decode("utf-8", "ignore")
-        # Nested multipart
-        nested = _extract_body(part)
-        if nested:
-            return nested
-    return ""
+    def list_labels(self) -> list[dict]:
+        return self.service.users().labels().list(userId="me").execute().get("labels", [])
 
+    def fetch_emails(self, max_results=config.DEFAULT_MAX_EMAILS, label=config.DEFAULT_LABEL,
+                     unread_only=False, last_hours=None) -> list[dict]:
+        query_parts = []
+        if unread_only:
+            query_parts.append("is:unread")
+        if last_hours:
+            after = int(time.time()) - last_hours * 3600
+            query_parts.append(f"after:{after}")
+        query = " ".join(query_parts)
 
-def build_query(mode: str = "inbox", label: str | None = None) -> str:
-    """Translate a friendly mode into a Gmail search query."""
-    if mode == "unread":
-        q = "is:unread"
-    elif mode == "last_24h":
-        after = int((datetime.now(timezone.utc) - timedelta(days=1)).timestamp())
-        q = f"after:{after}"
-    else:  # inbox
-        q = "in:inbox"
-    if label:
-        q += f" label:{label}"
-    return q
+        listing = self.service.users().messages().list(
+            userId="me", labelIds=[label] if label else None,
+            q=query or None, maxResults=max_results).execute()
 
+        emails = []
+        for msg in listing.get("messages", []):
+            try:
+                emails.append(self._get_message(msg["id"]))
+            except Exception as exc:
+                print(f"[gmail] skipping {msg['id']}: {exc}")
+        return emails
 
-def fetch_emails(service, mode: str = "inbox",
-                 label: str | None = None, max_results: int = 25) -> list[dict]:
-    """Return a list of cleaned email dicts."""
-    query = build_query(mode, label)
-    resp = service.users().messages().list(
-        userId="me", q=query, maxResults=max_results
-    ).execute()
+    def _get_message(self, message_id: str) -> dict:
+        msg = self.service.users().messages().get(
+            userId="me", id=message_id, format="full").execute()
+        headers = {h["name"].lower(): h["value"] for h in msg["payload"].get("headers", [])}
+        return {
+            "id": message_id,
+            "sender": headers.get("from", "Unknown"),
+            "subject": headers.get("subject", "(no subject)"),
+            "date": self._parse_date(headers.get("date")),
+            "snippet": msg.get("snippet", ""),
+            "body": self._extract_body(msg["payload"]),
+        }
 
-    emails = []
-    for meta in resp.get("messages", []):
-        msg = service.users().messages().get(
-            userId="me", id=meta["id"], format="full"
-        ).execute()
-
-        headers = msg["payload"]["headers"]
-        raw_date = _header(headers, "Date")
+    @staticmethod
+    def _parse_date(raw):
+        if not raw:
+            return datetime.now(timezone.utc).isoformat()
         try:
-            date = parsedate_to_datetime(raw_date).strftime("%Y-%m-%d %H:%M")
+            return parsedate_to_datetime(raw).isoformat()
         except Exception:
-            date = datetime.utcnow().strftime("%Y-%m-%d %H:%M")
+            return datetime.now(timezone.utc).isoformat()
 
-        emails.append({
-            "email_id": meta["id"],
-            "date": date,
-            "sender": _header(headers, "From"),
-            "subject": _header(headers, "Subject") or "(no subject)",
-            "body": _extract_body(msg["payload"])[:4000],  # cap for the LLM
-        })
-    return emails
+    def _extract_body(self, payload: dict) -> str:
+        if payload.get("body", {}).get("data"):
+            return self._decode(payload["body"]["data"])
+        for part in payload.get("parts", []):
+            if part.get("mimeType") == "text/plain" and part.get("body", {}).get("data"):
+                return self._decode(part["body"]["data"])
+            if part.get("parts"):
+                nested = self._extract_body(part)
+                if nested:
+                    return nested
+        return ""
 
-
-def list_labels(service) -> list[str]:
-    """Return the user's Gmail label names."""
-    resp = service.users().labels().list(userId="me").execute()
-    return [l["name"] for l in resp.get("labels", [])]
+    @staticmethod
+    def _decode(data: str) -> str:
+        return base64.urlsafe_b64decode(data).decode("utf-8", errors="ignore")
 ```
 
 **Key sections explained:**
-- `SCOPES = [...gmail.readonly]` → we only request **read** access. Smallest permission = safest.
-- `run_local_server(port=0)` → opens the consent screen in your browser, then caches `token.json`.
-- `build_query()` → converts the dropdown choice (`inbox` / `unread` / `last_24h`) into Gmail's search syntax.
-- `_extract_body()` → emails are MIME trees; this recursively digs out the plain-text part and decodes the base64.
-- `[:4000]` → we truncate the body so we don't send a giant (expensive) prompt to the AI.
+- **`get_credentials()`** is the OAuth dance. The *first* run opens your browser and asks permission; it then saves a `token.json`. Every run after that just loads (and silently refreshes) that token — no more browser pop-ups.
+- **`fetch_emails()`** builds a Gmail *search query*. `is:unread` and `after:<timestamp>` are the same operators you'd type in the Gmail search bar. That's how we support "unread only" and "last 24 hours" with one method.
+- **`_extract_body()`** is recursive because emails are nested (an email can contain parts, which contain parts…). We walk the tree until we find the plain-text version.
+- Notice the `try/except` around each message — **one broken email never crashes the whole scan.**
 
 ---
 
-### 5.5 `modules/analyzer.py`
+### 5.3 `src/ai_analyzer.py`
 
-The brain. It sends each email to OpenAI and asks for **structured JSON** back: summary, action item, priority, and due date. Forcing JSON output makes the result easy to store and display.
+**Plain English:** This is the brain. It sends one email to OpenAI and asks for strict JSON back: summary, action item, priority, due date. The priority *rules* live in the system prompt, so the model knows that a newsletter is Low and a "need this by Friday" is High. It also analyzes emails **concurrently** so a 25-email inbox finishes in seconds.
 
 ```python
-"""AI analysis of a single email using OpenAI."""
-import asyncio
-import json
-import os
-
+from __future__ import annotations
+import asyncio, json
+from typing import Optional
 from openai import AsyncOpenAI, OpenAI
+import config
 
-MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+SYSTEM_PROMPT = """You are an executive assistant that triages email.
+For the email you are given, respond with ONLY a JSON object with exactly these keys:
+  "summary":     a 1-2 sentence plain-English summary
+  "action_item": the single concrete action required, or "None"
+  "priority":    one of "High", "Medium", "Low"
+  "due_date":    an ISO date (YYYY-MM-DD) if a deadline is mentioned, else ""
 
-SYSTEM_PROMPT = """You are an executive email assistant.
-For the email you receive, return STRICT JSON with these keys:
-- "summary": one or two sentences, plain and concise.
-- "action_item": the single required action for the user, or "No action needed".
-- "priority": exactly one of "High", "Medium", "Low".
-- "due_date": an ISO date (YYYY-MM-DD) if a deadline is mentioned, else "".
-
-Priority rules:
-- High  = requires immediate response or action.
-- Medium = can be addressed within a few days.
-- Low   = promotions, newsletters, notifications, FYI emails.
-Return ONLY the JSON object, nothing else.
+Priority rules (follow strictly):
+  High   = requires an immediate response or action
+  Medium = can be addressed within a few days
+  Low    = promotions, newsletters, notifications, receipts, FYI emails
 """
 
 
-def _user_prompt(email: dict) -> str:
-    return (
-        f"From: {email.get('sender')}\n"
-        f"Subject: {email.get('subject')}\n"
-        f"Date: {email.get('date')}\n\n"
-        f"Body:\n{email.get('body', '')}"
-    )
+def _build_user_prompt(email: dict) -> str:
+    body = (email.get("body") or email.get("snippet") or "")[:6000]
+    return (f"From: {email.get('sender','Unknown')}\n"
+            f"Subject: {email.get('subject','')}\n"
+            f"Date: {email.get('date','')}\n\nBody:\n{body}")
 
 
 def _safe_parse(content: str) -> dict:
-    """Parse the model's JSON, falling back gracefully on failure."""
+    """Parse model output defensively, stripping stray code fences."""
+    cleaned = content.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
     try:
-        data = json.loads(content)
+        data = json.loads(cleaned)
     except json.JSONDecodeError:
-        return {
-            "summary": content[:200],
-            "action_item": "Review manually",
-            "priority": "Medium",
-            "due_date": "",
-        }
-    priority = str(data.get("priority", "Medium")).title()
-    if priority not in {"High", "Medium", "Low"}:
-        priority = "Medium"
-    return {
-        "summary": data.get("summary", "").strip(),
-        "action_item": data.get("action_item", "").strip(),
-        "priority": priority,
-        "due_date": data.get("due_date", "").strip(),
-    }
+        return {"summary": cleaned[:300] or "Could not analyze.",
+                "action_item": "None", "priority": "Low", "due_date": ""}
+    priority = str(data.get("priority", "Low")).title()
+    if priority not in config.PRIORITIES:
+        priority = "Low"
+    return {"summary": str(data.get("summary", "")).strip(),
+            "action_item": str(data.get("action_item", "None")).strip() or "None",
+            "priority": priority,
+            "due_date": str(data.get("due_date", "")).strip()}
 
 
-def analyze_email(email: dict) -> dict:
-    """Synchronous analysis of one email."""
-    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-    resp = client.chat.completions.create(
-        model=MODEL,
-        response_format={"type": "json_object"},
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": _user_prompt(email)},
-        ],
-        temperature=0.2,
-    )
-    result = _safe_parse(resp.choices[0].message.content)
-    return {**email, **result, "status": "Pending"}
+class AIAnalyzer:
+    def __init__(self, api_key=None, model=None):
+        key = api_key or config.OPENAI_API_KEY
+        if not key:
+            raise ValueError("OPENAI_API_KEY is not set. Add it to your .env file.")
+        self.model = model or config.OPENAI_MODEL
+        self.client = OpenAI(api_key=key)
+        self.async_client = AsyncOpenAI(api_key=key)
 
+    def analyze(self, email: dict) -> dict:
+        try:
+            resp = self.client.chat.completions.create(
+                model=self.model,
+                messages=[{"role": "system", "content": SYSTEM_PROMPT},
+                          {"role": "user", "content": _build_user_prompt(email)}],
+                temperature=0.2,
+                response_format={"type": "json_object"})
+            return _safe_parse(resp.choices[0].message.content)
+        except Exception as exc:
+            return {"summary": f"Analysis failed: {exc}", "action_item": "None",
+                    "priority": "Low", "due_date": ""}
 
-async def _analyze_one(client: AsyncOpenAI, email: dict) -> dict:
-    resp = await client.chat.completions.create(
-        model=MODEL,
-        response_format={"type": "json_object"},
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": _user_prompt(email)},
-        ],
-        temperature=0.2,
-    )
-    result = _safe_parse(resp.choices[0].message.content)
-    return {**email, **result, "status": "Pending"}
+    async def _analyze_async(self, email, sem):
+        async with sem:
+            try:
+                resp = await self.async_client.chat.completions.create(
+                    model=self.model,
+                    messages=[{"role": "system", "content": SYSTEM_PROMPT},
+                              {"role": "user", "content": _build_user_prompt(email)}],
+                    temperature=0.2,
+                    response_format={"type": "json_object"})
+                return _safe_parse(resp.choices[0].message.content)
+            except Exception as exc:
+                return {"summary": f"Analysis failed: {exc}", "action_item": "None",
+                        "priority": "Low", "due_date": ""}
 
-
-async def analyze_batch(emails: list[dict]) -> list[dict]:
-    """Analyze many emails concurrently — much faster for a full inbox."""
-    client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-    tasks = [_analyze_one(client, e) for e in emails]
-    return await asyncio.gather(*tasks)
+    async def analyze_many(self, emails, concurrency=5):
+        sem = asyncio.Semaphore(concurrency)
+        analyses = await asyncio.gather(*[self._analyze_async(e, sem) for e in emails])
+        return [{**email, **analysis} for email, analysis in zip(emails, analyses)]
 ```
 
 **Key sections explained:**
-- `response_format={"type": "json_object"}` → tells OpenAI to *guarantee* valid JSON, which is the single biggest reliability win.
-- `_safe_parse()` → defensive coding. If the model ever returns junk, we still produce a usable row instead of crashing.
-- `temperature=0.2` → low randomness, because we want consistent, factual summaries.
-- `analyze_batch()` with `asyncio.gather` → this is the **async support** requirement: instead of analyzing emails one-by-one, we fire all requests at once. A 30-email inbox finishes in seconds instead of a minute.
+- **The system prompt is the product.** The quality of your triage depends almost entirely on how clearly you describe the rules here. Notice we *spell out* what High/Medium/Low mean rather than hoping the model guesses.
+- **`response_format={"type": "json_object"}`** tells OpenAI to return valid JSON. We still call `_safe_parse()` as a seatbelt — if the model ever returns junk, we fall back to a safe "Low" instead of crashing.
+- **`analyze_many()`** uses `asyncio.gather` with a `Semaphore(5)`. Translation: fire off up to 5 requests at once instead of waiting for each one in turn. That's the difference between a 5-second scan and a 60-second scan.
+- **`{**email, **analysis}`** merges the original email fields with the AI fields into one combined record.
 
 ---
 
-### 5.6 `modules/sheets_client.py`
+### 5.4 `src/database.py`
 
-Writes results to a real Google Sheet so non-technical teammates can read them anywhere.
+**Plain English:** SQLite is a tiny database that lives in a single file — no server to install. We use it for three things: (1) never analyze the same email twice, (2) power the dashboard counters with fast queries, (3) track which action items are done. The Google Sheet is the *shareable* copy; this is the *source of truth*.
 
 ```python
-"""Google Sheets output."""
-import os
+from __future__ import annotations
+import sqlite3
+from contextlib import contextmanager
+from typing import Iterator, Optional
+import config
 
-import gspread
-from google.oauth2.credentials import Credentials
+SCHEMA = """
+CREATE TABLE IF NOT EXISTS emails (
+    id TEXT PRIMARY KEY, date TEXT, sender TEXT, subject TEXT,
+    summary TEXT, action_item TEXT, priority TEXT, due_date TEXT,
+    status TEXT DEFAULT 'Pending', created_at TEXT DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS app_meta (key TEXT PRIMARY KEY, value TEXT);
+"""
 
-HEADERS = [
-    "Date", "Sender", "Subject", "Email Summary",
-    "Action Item", "Priority", "Status",
-]
-SCOPES = [
-    "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/drive",
-]
-
-
-def get_sheet(sheet_name: str, token_file: str = "token.json"):
-    """Open the sheet by name, creating it (with headers) if missing."""
-    creds = Credentials.from_authorized_user_file(token_file, SCOPES)
-    client = gspread.authorize(creds)
+@contextmanager
+def _conn() -> Iterator[sqlite3.Connection]:
+    con = sqlite3.connect(config.DB_PATH)
+    con.row_factory = sqlite3.Row
     try:
-        sh = client.open(sheet_name)
-    except gspread.SpreadsheetNotFound:
-        sh = client.create(sheet_name)
-    ws = sh.sheet1
-    # Ensure header row exists.
-    if ws.row_values(1) != HEADERS:
-        ws.update("A1", [HEADERS])
-    return ws
+        yield con
+        con.commit()
+    finally:
+        con.close()
 
+def init_db():
+    with _conn() as con:
+        con.executescript(SCHEMA)
 
-def append_rows(ws, records: list[dict]) -> None:
-    """Append analyzed emails to the sheet."""
-    rows = [
-        [
-            r.get("date", ""),
-            r.get("sender", ""),
-            r.get("subject", ""),
-            r.get("summary", ""),
-            r.get("action_item", ""),
-            r.get("priority", ""),
-            r.get("status", "Pending"),
-        ]
-        for r in records
-    ]
-    if rows:
-        ws.append_rows(rows, value_input_option="USER_ENTERED")
+def email_exists(email_id: str) -> bool:
+    with _conn() as con:
+        return con.execute("SELECT 1 FROM emails WHERE id = ?", (email_id,)).fetchone() is not None
+
+def insert_email(record: dict) -> bool:
+    if email_exists(record["id"]):
+        return False
+    with _conn() as con:
+        con.execute("""INSERT INTO emails
+            (id, date, sender, subject, summary, action_item, priority, due_date, status)
+            VALUES (:id,:date,:sender,:subject,:summary,:action_item,:priority,:due_date,:status)""",
+            {"id": record["id"], "date": record.get("date",""), "sender": record.get("sender",""),
+             "subject": record.get("subject",""), "summary": record.get("summary",""),
+             "action_item": record.get("action_item","None"), "priority": record.get("priority","Low"),
+             "due_date": record.get("due_date",""), "status": record.get("status","Pending")})
+    return True
+
+def get_all_emails(priority=None, status=None) -> list[dict]:
+    query, params = "SELECT * FROM emails WHERE 1=1", []
+    if priority and priority != "All":
+        query += " AND priority = ?"; params.append(priority)
+    if status and status != "All":
+        query += " AND status = ?"; params.append(status)
+    query += " ORDER BY date DESC"
+    with _conn() as con:
+        return [dict(r) for r in con.execute(query, params).fetchall()]
+
+def update_status(email_id: str, status: str):
+    with _conn() as con:
+        con.execute("UPDATE emails SET status = ? WHERE id = ?", (status, email_id))
+
+def get_stats() -> dict:
+    with _conn() as con:
+        total = con.execute("SELECT COUNT(*) FROM emails").fetchone()[0]
+        by_priority = {r["priority"]: r["n"] for r in con.execute(
+            "SELECT priority, COUNT(*) n FROM emails GROUP BY priority").fetchall()}
+        by_status = {r["status"]: r["n"] for r in con.execute(
+            "SELECT status, COUNT(*) n FROM emails GROUP BY status").fetchall()}
+    return {"total": total, "high": by_priority.get("High",0), "medium": by_priority.get("Medium",0),
+            "low": by_priority.get("Low",0), "pending": by_status.get("Pending",0),
+            "completed": by_status.get("Completed",0)}
+
+def set_meta(key: str, value: str):
+    with _conn() as con:
+        con.execute("INSERT INTO app_meta (key, value) VALUES (?, ?) "
+                    "ON CONFLICT(key) DO UPDATE SET value = excluded.value", (key, value))
+
+def get_meta(key: str) -> Optional[str]:
+    with _conn() as con:
+        row = con.execute("SELECT value FROM app_meta WHERE key = ?", (key,)).fetchone()
+        return row["value"] if row else None
 ```
 
 **Key sections explained:**
-- We reuse the same `token.json` from Gmail login, but the **Sheets scope** must also be enabled (we'll add it to the SCOPES used at login — see note in [Common Errors](#8-common-errors-and-fixes)).
-- `SpreadsheetNotFound` → first run creates the sheet automatically; later runs reuse it.
-- `append_rows(..., USER_ENTERED)` → Google parses dates/numbers as if you typed them, so they format nicely.
+- **`id TEXT PRIMARY KEY`** uses Gmail's own message ID as the key. Because a primary key must be unique, the database itself guarantees we can't store the same email twice. `email_exists()` lets us check *before* spending an OpenAI call.
+- **The `@contextmanager` `_conn()`** opens a connection, commits, and closes it automatically. You never leak a connection or forget to commit.
+- **Parameterized queries** (`?` and `:name`) — never f-string user data into SQL. This is your defense against SQL injection.
+- **`app_meta`** is a little key/value scratchpad where we stash the created Sheet's ID and the timestamp of the last run.
 
 ---
 
-### 5.7 `modules/insights.py`
+### 5.5 `src/sheets_client.py`
 
-Turns the raw rows into **AI insights**: a daily inbox summary, top urgent emails, missed follow-ups, and recommended next actions.
+**Plain English:** This creates your Google Sheet the first time, writes the header row, remembers the Sheet's ID in the database, and then *appends* new rows every run after that. The Sheet is what you share with a teammate or open on your phone.
 
 ```python
-"""High-level AI insights across all analyzed emails."""
-import os
+from __future__ import annotations
+from typing import Optional
+from google.oauth2.credentials import Credentials
+from googleapiclient.discovery import build
+import config
+from src import database
 
+class SheetsClient:
+    def __init__(self, creds: Credentials):
+        self.creds = creds
+        self.service = build("sheets", "v4", credentials=creds)
+
+    def get_or_create_sheet(self) -> str:
+        sheet_id = config.SHEET_ID or database.get_meta("sheet_id")
+        if sheet_id:
+            return sheet_id
+        spreadsheet = self.service.spreadsheets().create(
+            body={"properties": {"title": config.SHEET_TITLE},
+                  "sheets": [{"properties": {"title": config.SHEET_TAB}}]},
+            fields="spreadsheetId").execute()
+        sheet_id = spreadsheet["spreadsheetId"]
+        database.set_meta("sheet_id", sheet_id)
+        self._write_headers(sheet_id)
+        return sheet_id
+
+    def _write_headers(self, sheet_id: str):
+        self.service.spreadsheets().values().update(
+            spreadsheetId=sheet_id, range=f"{config.SHEET_TAB}!A1",
+            valueInputOption="RAW", body={"values": [config.SHEET_HEADERS]}).execute()
+
+    def append_rows(self, records: list[dict]) -> int:
+        if not records:
+            return 0
+        sheet_id = self.get_or_create_sheet()
+        rows = [[r.get("date",""), r.get("sender",""), r.get("subject",""), r.get("summary",""),
+                 r.get("action_item","None"), r.get("priority","Low"),
+                 r.get("due_date",""), r.get("status","Pending")] for r in records]
+        self.service.spreadsheets().values().append(
+            spreadsheetId=sheet_id, range=f"{config.SHEET_TAB}!A1",
+            valueInputOption="USER_ENTERED", insertDataOption="INSERT_ROWS",
+            body={"values": rows}).execute()
+        return len(rows)
+
+    def sheet_url(self, sheet_id: Optional[str] = None) -> str:
+        sheet_id = sheet_id or self.get_or_create_sheet()
+        return f"https://docs.google.com/spreadsheets/d/{sheet_id}"
+```
+
+**Key sections explained:**
+- **`get_or_create_sheet()`** checks three places for an existing Sheet ID (your `.env`, then the database) before creating a new one. That's why running the app daily keeps appending to the *same* sheet instead of spawning dozens.
+- **`append`** with `insertDataOption="INSERT_ROWS"` adds to the bottom without overwriting anything.
+- **`valueInputOption="USER_ENTERED"`** means Google parses dates and numbers like a human typed them, so your Date column behaves like real dates.
+
+---
+
+### 5.6 `src/insights.py`
+
+**Plain English:** Per-email analysis tells you about *one* email. This file zooms out and looks at the *whole* inbox at once — one OpenAI call that returns a daily briefing: a summary, the top urgent items, likely missed follow-ups, and recommended next actions.
+
+```python
+from __future__ import annotations
+import json
+from typing import Optional
 from openai import OpenAI
+import config
+from src import database
 
+INSIGHTS_PROMPT = """You are a chief-of-staff reviewing a person's analyzed inbox.
+Given the JSON list of emails, respond with ONLY a JSON object with these keys:
+  "daily_summary":      2-3 sentences on the state of the inbox today
+  "top_urgent":         array of up to 5 strings, each "Sender — short reason"
+  "missed_followups":   array of strings for items that look overdue or stale
+  "recommended_actions": array of up to 5 short imperative next steps
+Be specific and concise. If a section has nothing, return an empty array.
+"""
 
-def quick_stats(emails: list[dict]) -> dict:
-    """Pure-Python counts for the dashboard cards (no AI cost)."""
-    return {
-        "total": len(emails),
-        "high": sum(e["priority"] == "High" for e in emails),
-        "medium": sum(e["priority"] == "Medium" for e in emails),
-        "low": sum(e["priority"] == "Low" for e in emails),
-        "pending": sum(e["status"] == "Pending" for e in emails),
-        "completed": sum(e["status"] == "Completed" for e in emails),
-    }
+class InsightsEngine:
+    def __init__(self, api_key=None, model=None):
+        self.client = OpenAI(api_key=api_key or config.OPENAI_API_KEY)
+        self.model = model or config.OPENAI_MODEL
 
-
-def top_urgent(emails: list[dict], limit: int = 5) -> list[dict]:
-    """The most urgent open items."""
-    return [
-        e for e in emails
-        if e["priority"] == "High" and e["status"] == "Pending"
-    ][:limit]
-
-
-def daily_summary(emails: list[dict]) -> str:
-    """One paragraph AI overview of the whole inbox."""
-    if not emails:
-        return "No emails analyzed yet."
-
-    lines = [
-        f"- [{e['priority']}] {e['subject']} — {e['action_item']}"
-        for e in emails[:40]
-    ]
-    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-    resp = client.chat.completions.create(
-        model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
-        messages=[
-            {"role": "system", "content":
-             "You are a chief-of-staff. Write a short, motivating morning "
-             "briefing (4-6 sentences) covering the most urgent items, any "
-             "likely missed follow-ups, and recommended next actions."},
-            {"role": "user", "content": "\n".join(lines)},
-        ],
-        temperature=0.4,
-    )
-    return resp.choices[0].message.content.strip()
+    def generate(self) -> dict:
+        emails = database.get_all_emails()
+        if not emails:
+            return {"daily_summary": "No emails analyzed yet. Run a scan to get started.",
+                    "top_urgent": [], "missed_followups": [], "recommended_actions": []}
+        compact = [{"sender": e["sender"], "subject": e["subject"], "summary": e["summary"],
+                    "action_item": e["action_item"], "priority": e["priority"],
+                    "due_date": e["due_date"], "status": e["status"]} for e in emails[:60]]
+        try:
+            resp = self.client.chat.completions.create(
+                model=self.model,
+                messages=[{"role": "system", "content": INSIGHTS_PROMPT},
+                          {"role": "user", "content": json.dumps(compact)}],
+                temperature=0.3, response_format={"type": "json_object"})
+            return json.loads(resp.choices[0].message.content)
+        except Exception as exc:
+            return {"daily_summary": f"Could not generate insights: {exc}",
+                    "top_urgent": [], "missed_followups": [], "recommended_actions": []}
 ```
 
 **Key sections explained:**
-- `quick_stats()` is plain Python — instant and free. Use AI only where it adds value.
-- `daily_summary()` feeds the model a compact bullet list (not full bodies) to keep it cheap and fast, then asks for a human "morning briefing."
+- We **read from SQLite, not Gmail** — the data's already analyzed, so insights cost exactly one API call no matter how big your inbox is.
+- We send a **`compact`** version of each row and cap it at 60 emails to keep the prompt small and cheap.
+- Same defensive pattern: empty inbox → a friendly message; an error → a safe empty result instead of a crash.
 
 ---
 
-### 5.8 `modules/exporter.py`
+### 5.7 `src/exporter.py`
 
-One function per format: CSV, Excel, PDF. Each returns raw bytes so Streamlit's download button can serve them directly.
+**Plain English:** Three functions that turn your data into a downloadable CSV, Excel file, or PDF. Each returns raw bytes so Streamlit's download button can serve them directly — no temp files on disk.
 
 ```python
-"""Export analyzed emails to CSV / Excel / PDF."""
+from __future__ import annotations
 import io
-
 import pandas as pd
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import landscape, letter
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
+from src import database
 
-COLUMNS = ["date", "sender", "subject", "summary",
-           "action_item", "priority", "status"]
+EXPORT_COLUMNS = ["date","sender","subject","summary","action_item","priority","due_date","status"]
+PRETTY = {"date":"Date","sender":"Sender","subject":"Subject","summary":"Email Summary",
+          "action_item":"Action Item","priority":"Priority","due_date":"Due Date","status":"Status"}
 
+def _frame() -> pd.DataFrame:
+    df = pd.DataFrame(database.get_all_emails())
+    if df.empty:
+        df = pd.DataFrame(columns=EXPORT_COLUMNS)
+    df = df[[c for c in EXPORT_COLUMNS if c in df.columns]]
+    return df.rename(columns=PRETTY)
 
-def _frame(emails: list[dict]) -> pd.DataFrame:
-    df = pd.DataFrame(emails)
-    cols = [c for c in COLUMNS if c in df.columns]
-    return df[cols] if cols else df
+def to_csv() -> bytes:
+    return _frame().to_csv(index=False).encode("utf-8")
 
-
-def to_csv(emails: list[dict]) -> bytes:
-    return _frame(emails).to_csv(index=False).encode("utf-8")
-
-
-def to_excel(emails: list[dict]) -> bytes:
+def to_excel() -> bytes:
     buf = io.BytesIO()
     with pd.ExcelWriter(buf, engine="openpyxl") as writer:
-        _frame(emails).to_excel(writer, index=False, sheet_name="Emails")
+        _frame().to_excel(writer, index=False, sheet_name="Action Items")
     return buf.getvalue()
 
-
-def to_pdf(emails: list[dict]) -> bytes:
+def to_pdf() -> bytes:
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+    df = _frame()
     buf = io.BytesIO()
-    doc = SimpleDocTemplate(buf, pagesize=landscape(letter))
-    df = _frame(emails)
-    data = [list(df.columns)] + df.astype(str).values.tolist()
+    doc = SimpleDocTemplate(buf, pagesize=landscape(A4), title="Email Action Items")
+    styles = getSampleStyleSheet()
+    elements = [Paragraph("Email Summary & Action Items", styles["Title"]), Spacer(1, 12)]
+    cols = [c for c in ["Date","Sender","Subject","Action Item","Priority","Status"] if c in df.columns]
+    data = [cols] + [[str(row.get(c,""))[:60] for c in cols] for _, row in df.iterrows()]
     table = Table(data, repeatRows=1)
     table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#4F46E5")),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ("FONTSIZE", (0, 0), (-1, -1), 7),
-        ("GRID", (0, 0), (-1, -1), 0.25, colors.grey),
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-    ]))
-    doc.build([table])
+        ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#4F46E5")),
+        ("TEXTCOLOR",(0,0),(-1,0),colors.white),
+        ("FONTSIZE",(0,0),(-1,-1),8),
+        ("GRID",(0,0),(-1,-1),0.25,colors.grey),
+        ("ROWBACKGROUNDS",(0,1),(-1,-1),[colors.white, colors.HexColor("#F3F4F6")]),
+        ("VALIGN",(0,0),(-1,-1),"TOP")]))
+    elements.append(table)
+    doc.build(elements)
     return buf.getvalue()
 ```
 
 **Key sections explained:**
-- Everything goes through `io.BytesIO()` (an in-memory file) so we never write temp files to disk — perfect for a web app.
-- `_frame()` keeps only the columns we care about, in a fixed order.
+- **`_frame()`** is shared by all three exporters — pull from the DB once, rename columns to pretty labels, done. (DRY: Don't Repeat Yourself.)
+- **`io.BytesIO()`** is an in-memory file. We write the Excel/PDF into it and hand back the bytes — nothing touches your disk.
+- The PDF trims long fields to 60 characters so the table stays readable on a landscape page.
 
 ---
 
-### 5.9 `modules/scheduler.py`
+### 5.8 `src/pipeline.py`
 
-Runs the whole pipeline automatically every morning.
+**Plain English:** The conductor. It runs the whole flow in order — fetch from Gmail, skip what we've seen, analyze the rest, save to SQLite, mirror to the Sheet — and returns a tiny report. Both the dashboard button *and* the daily scheduler call this exact function, so they can never behave differently.
 
 ```python
-"""Daily automation with APScheduler."""
+from __future__ import annotations
 import asyncio
+from typing import Optional
+import config
+from src import database
+from src.ai_analyzer import AIAnalyzer
+from src.gmail_client import GmailClient, get_credentials
+from src.sheets_client import SheetsClient
 
-from apscheduler.schedulers.background import BackgroundScheduler
-
-from . import analyzer, database, gmail_client, sheets_client
-
-
-def run_pipeline(mode: str = "last_24h", sheet_name: str = "Email Action Items"):
-    """Fetch -> skip seen -> analyze -> store -> push to Sheet."""
+def run_pipeline(max_emails=config.DEFAULT_MAX_EMAILS, label=config.DEFAULT_LABEL,
+                 unread_only=False, last_hours=None, push_to_sheet=True) -> dict:
     database.init_db()
-    service = gmail_client.get_gmail_service()
-    emails = gmail_client.fetch_emails(service, mode=mode)
+    creds = get_credentials()
 
-    fresh = [e for e in emails if not database.already_processed(e["email_id"])]
+    # 1. Fetch
+    emails = GmailClient(creds).fetch_emails(
+        max_results=max_emails, label=label, unread_only=unread_only, last_hours=last_hours)
+
+    # 2. Skip anything already analyzed (cheap dedupe BEFORE paying OpenAI)
+    fresh = [e for e in emails if not database.email_exists(e["id"])]
     if not fresh:
-        return []
+        return {"fetched": len(emails), "new": 0, "written_to_sheet": 0}
 
-    analyzed = asyncio.run(analyzer.analyze_batch(fresh))
+    # 3. Analyze concurrently
+    analyzed = asyncio.run(AIAnalyzer().analyze_many(fresh))
+
+    # 4. Persist locally
+    saved = []
     for record in analyzed:
-        database.save_email(record)
+        record["status"] = "Pending"
+        if database.insert_email(record):
+            saved.append(record)
 
-    ws = sheets_client.get_sheet(sheet_name)
-    sheets_client.append_rows(ws, analyzed)
-    return analyzed
+    # 5. Mirror to Google Sheet
+    written = 0
+    if push_to_sheet and saved:
+        written = SheetsClient(creds).append_rows(saved)
 
+    database.set_meta("last_run", _now())
+    return {"fetched": len(emails), "new": len(saved), "written_to_sheet": written}
 
-def start_daily(hour: int = 7, minute: int = 0):
-    """Start a background job that runs every morning at HH:MM."""
-    scheduler = BackgroundScheduler()
-    scheduler.add_job(run_pipeline, "cron", hour=hour, minute=minute)
-    scheduler.start()
-    return scheduler
+def _now() -> str:
+    from datetime import datetime, timezone
+    return datetime.now(timezone.utc).isoformat()
+
+if __name__ == "__main__":
+    print(f"Daily run complete: {run_pipeline(last_hours=24)}")
 ```
 
 **Key sections explained:**
-- `run_pipeline()` is the single source of truth — the dashboard's "Analyze" button and the scheduler both call it.
-- `already_processed()` filter → only **new** emails cost AI time/money.
-- `cron` trigger at 07:00 → that's the "run every morning" requirement.
+- The **numbered comments** *are* the flow diagram in code form. Read them top to bottom and you understand the whole app.
+- **Dedup happens at step 2, before step 3.** That ordering is deliberate — it means you only ever pay OpenAI for genuinely new emails.
+- The **`if __name__ == "__main__"`** block lets you run `python -m src.pipeline` directly from cron. One file, two entry points.
+
+---
+
+### 5.9 `src/scheduler.py`
+
+**Plain English:** Want it to run by itself every morning? This keeps a small process alive and triggers the pipeline at a set time. (For production, a system cron job calling `python -m src.pipeline` is usually more reliable — but this is the simplest thing that works.)
+
+```python
+from __future__ import annotations
+import os, time
+import schedule
+from src.pipeline import run_pipeline
+
+RUN_AT = os.getenv("DAILY_RUN_TIME", "08:00")  # 24h local time
+
+def job():
+    print("[scheduler] running daily pipeline...")
+    print(f"[scheduler] done: {run_pipeline(last_hours=24)}")
+
+def main():
+    schedule.every().day.at(RUN_AT).do(job)
+    print(f"[scheduler] started. Runs daily at {RUN_AT}. Ctrl+C to stop.")
+    while True:
+        schedule.run_pending()
+        time.sleep(30)
+
+if __name__ == "__main__":
+    main()
+```
+
+**Key sections explained:**
+- `schedule.every().day.at("08:00")` reads almost like English.
+- The `while True` loop checks every 30 seconds whether it's time to run. The OS keeps the process alive; the loop keeps it watching the clock.
 
 ---
 
 ### 5.10 `app.py`
 
-The Streamlit dashboard that ties it all together: connect, analyze, filter, view charts, read AI insights, toggle status, and export.
+**Plain English:** The dashboard you actually look at. Sidebar = controls (what to scan + export buttons). Main area = analytics cards, two charts, the AI briefing, and a filterable table where you can flip an item to "Completed." Run it with `streamlit run app.py`.
 
 ```python
-"""Email Summary & Action Items Agent — Streamlit dashboard."""
-import asyncio
-
+from __future__ import annotations
 import pandas as pd
 import plotly.express as px
 import streamlit as st
-from dotenv import load_dotenv
+import config
+from src import database, exporter
+from src.insights import InsightsEngine
+from src.pipeline import run_pipeline
 
-from modules import (analyzer, database, exporter, gmail_client,
-                     insights, sheets_client)
-
-load_dotenv()
+st.set_page_config(page_title="Email Action Agent", page_icon="📬", layout="wide")
 database.init_db()
 
-st.set_page_config(page_title="Email Action Agent",
-                   page_icon="📧", layout="wide")
+st.markdown("""<style>
+.metric-card{background:linear-gradient(135deg,#4F46E5,#7C3AED);padding:1.1rem 1.3rem;
+border-radius:14px;color:white;} .metric-card h2{margin:0;font-size:2rem;}
+.metric-card p{margin:0;opacity:.85;font-size:.85rem;}</style>""", unsafe_allow_html=True)
 
-# ---------- Sidebar: connection & controls ----------
-st.sidebar.title("📧 Email Action Agent")
-mode = st.sidebar.selectbox("Fetch mode", ["last_24h", "unread", "inbox"])
-max_results = st.sidebar.slider("Max emails", 5, 50, 20)
+def card(label, value, gradient):
+    return (f'<div class="metric-card" style="background:{gradient}">'
+            f'<h2>{value}</h2><p>{label}</p></div>')
 
-if "service" not in st.session_state:
-    st.session_state.service = None
+# --- sidebar: scan controls ---
+st.sidebar.title("📬 Email Action Agent")
+scope = st.sidebar.radio("What to scan", ["Last 24 hours", "Unread only", "Whole inbox"])
+label = st.sidebar.text_input("Label / folder", value=config.DEFAULT_LABEL)
+max_emails = st.sidebar.slider("Max emails", 5, 100, config.DEFAULT_MAX_EMAILS, step=5)
+push_sheet = st.sidebar.checkbox("Also write to Google Sheet", value=True)
 
-if st.sidebar.button("🔐 Connect Gmail"):
-    try:
-        st.session_state.service = gmail_client.get_gmail_service()
-        st.sidebar.success("Connected!")
-    except Exception as e:
-        st.sidebar.error(f"Auth failed: {e}")
+if st.sidebar.button("▶ Run scan", use_container_width=True, type="primary"):
+    with st.spinner("Fetching and analyzing emails..."):
+        try:
+            report = run_pipeline(max_emails=max_emails, label=label.strip() or config.DEFAULT_LABEL,
+                unread_only=(scope == "Unread only"),
+                last_hours=24 if scope == "Last 24 hours" else None, push_to_sheet=push_sheet)
+            st.sidebar.success(f"Fetched {report['fetched']} · {report['new']} new · "
+                               f"{report['written_to_sheet']} → sheet")
+        except FileNotFoundError:
+            st.sidebar.error("credentials.json not found. See the README for OAuth setup.")
+        except Exception as exc:
+            st.sidebar.error(f"Scan failed: {exc}")
 
-label = None
-if st.session_state.service:
-    labels = gmail_client.list_labels(st.session_state.service)
-    label = st.sidebar.selectbox("Label (optional)", ["(none)"] + labels)
-    label = None if label == "(none)" else label
+# --- sidebar: export ---
+st.sidebar.subheader("Export")
+c1, c2, c3 = st.sidebar.columns(3)
+c1.download_button("CSV", exporter.to_csv(), "action_items.csv", "text/csv")
+c2.download_button("Excel", exporter.to_excel(), "action_items.xlsx",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+c3.download_button("PDF", exporter.to_pdf(), "action_items.pdf", "application/pdf")
 
-if st.sidebar.button("⚡ Analyze Emails") and st.session_state.service:
-    with st.spinner("Fetching and analyzing..."):
-        raw = gmail_client.fetch_emails(
-            st.session_state.service, mode=mode,
-            label=label, max_results=max_results)
-        fresh = [e for e in raw
-                 if not database.already_processed(e["email_id"])]
-        if fresh:
-            analyzed = asyncio.run(analyzer.analyze_batch(fresh))
-            for r in analyzed:
-                database.save_email(r)
-            try:
-                ws = sheets_client.get_sheet(
-                    st.secrets.get("GOOGLE_SHEET_NAME", "Email Action Items"))
-                sheets_client.append_rows(ws, analyzed)
-            except Exception as e:
-                st.warning(f"Saved locally; Sheets sync skipped: {e}")
-        st.success(f"Analyzed {len(fresh)} new emails.")
+# --- analytics cards ---
+st.title("Inbox Action Dashboard")
+stats = database.get_stats()
+cols = st.columns(6)
+gradients = ["linear-gradient(135deg,#4F46E5,#7C3AED)","linear-gradient(135deg,#DC2626,#F87171)",
+    "linear-gradient(135deg,#D97706,#FBBF24)","linear-gradient(135deg,#059669,#34D399)",
+    "linear-gradient(135deg,#2563EB,#60A5FA)","linear-gradient(135deg,#475569,#94A3B8)"]
+labels = [("Total analyzed",stats["total"]),("High priority",stats["high"]),
+    ("Medium priority",stats["medium"]),("Low priority",stats["low"]),
+    ("Pending",stats["pending"]),("Completed",stats["completed"])]
+for col,(lbl,val),grad in zip(cols,labels,gradients):
+    col.markdown(card(lbl,val,grad), unsafe_allow_html=True)
 
-# ---------- Load data ----------
-emails = database.get_all_emails()
+# --- charts ---
+left, right = st.columns(2)
+if stats["total"]:
+    prio_df = pd.DataFrame({"Priority":["High","Medium","Low"],
+        "Count":[stats["high"],stats["medium"],stats["low"]]})
+    fig1 = px.bar(prio_df, x="Priority", y="Count", color="Priority",
+        color_discrete_map={"High":"#DC2626","Medium":"#D97706","Low":"#64748B"},
+        title="Emails by priority")
+    fig1.update_layout(showlegend=False, height=320)
+    left.plotly_chart(fig1, use_container_width=True)
+    status_df = pd.DataFrame({"Status":["Pending","Completed"],
+        "Count":[stats["pending"],stats["completed"]]})
+    fig2 = px.pie(status_df, names="Status", values="Count", hole=0.55,
+        color="Status", color_discrete_map={"Pending":"#F59E0B","Completed":"#10B981"},
+        title="Action status")
+    right.plotly_chart(fig2, use_container_width=True)
+else:
+    st.info("No data yet — run a scan from the sidebar.")
 
-st.title("📧 Email Summary & Action Items")
+# --- AI insights ---
+st.subheader("🧠 AI insights")
+if st.button("Generate daily briefing"):
+    with st.spinner("Thinking..."):
+        ins = InsightsEngine().generate()
+        st.markdown(f"**Daily summary:** {ins['daily_summary']}")
+        ic1, ic2 = st.columns(2)
+        ic1.markdown("**🔥 Top urgent**")
+        ic1.write("\n".join(f"- {x}" for x in ins["top_urgent"]) or "_None_")
+        ic1.markdown("**⏰ Missed follow-ups**")
+        ic1.write("\n".join(f"- {x}" for x in ins["missed_followups"]) or "_None_")
+        ic2.markdown("**✅ Recommended next actions**")
+        ic2.write("\n".join(f"- {x}" for x in ins["recommended_actions"]) or "_None_")
 
-if not emails:
-    st.info("Connect Gmail and click **Analyze Emails** to get started.")
-    st.stop()
-
-# ---------- Metric cards ----------
-stats = insights.quick_stats(emails)
-c1, c2, c3, c4, c5, c6 = st.columns(6)
-c1.metric("Total", stats["total"])
-c2.metric("🔴 High", stats["high"])
-c3.metric("🟡 Medium", stats["medium"])
-c4.metric("🟢 Low", stats["low"])
-c5.metric("⏳ Pending", stats["pending"])
-c6.metric("✅ Completed", stats["completed"])
-
-# ---------- AI insights ----------
-with st.expander("🧠 Daily AI Briefing", expanded=True):
-    if st.button("Generate briefing"):
-        st.write(insights.daily_summary(emails))
-    st.subheader("🔥 Top urgent")
-    for e in insights.top_urgent(emails):
-        st.markdown(f"- **{e['subject']}** — {e['action_item']}")
-
-# ---------- Charts ----------
-df = pd.DataFrame(emails)
-g1, g2 = st.columns(2)
-with g1:
-    fig = px.pie(df, names="priority", title="Priority distribution",
-                 color="priority",
-                 color_discrete_map={"High": "#EF4444",
-                                     "Medium": "#F59E0B",
-                                     "Low": "#10B981"})
-    st.plotly_chart(fig, use_container_width=True)
-with g2:
-    fig2 = px.histogram(df, x="status", title="Status overview", color="status")
-    st.plotly_chart(fig2, use_container_width=True)
-
-# ---------- Filters + table ----------
-st.subheader("📋 Action Items")
+# --- filterable, editable table ---
+st.subheader("📋 Action items")
 f1, f2 = st.columns(2)
-prio = f1.multiselect("Priority", ["High", "Medium", "Low"],
-                      default=["High", "Medium", "Low"])
-stat = f2.multiselect("Status", ["Pending", "Completed"],
-                      default=["Pending", "Completed"])
-view = df[df["priority"].isin(prio) & df["status"].isin(stat)]
-st.dataframe(view[["date", "sender", "subject", "summary",
-                   "action_item", "priority", "status"]],
-             use_container_width=True, hide_index=True)
-
-# ---------- Mark complete ----------
-with st.expander("✅ Update status"):
-    row_id = st.number_input("Email id", min_value=1, step=1)
-    new_status = st.selectbox("Status", ["Completed", "Pending"])
-    if st.button("Update"):
-        database.update_status(int(row_id), new_status)
-        st.success("Updated — refresh to see changes.")
-
-# ---------- Export ----------
-st.subheader("⬇️ Export")
-e1, e2, e3 = st.columns(3)
-e1.download_button("CSV", exporter.to_csv(emails), "emails.csv", "text/csv")
-e2.download_button("Excel", exporter.to_excel(emails), "emails.xlsx")
-e3.download_button("PDF", exporter.to_pdf(emails), "emails.pdf",
-                   "application/pdf")
+prio_filter = f1.selectbox("Priority", ["All"] + config.PRIORITIES)
+status_filter = f2.selectbox("Status", ["All"] + config.STATUSES)
+rows = database.get_all_emails(priority=prio_filter, status=status_filter)
+if rows:
+    df = pd.DataFrame(rows)[["date","sender","subject","summary","action_item",
+                             "priority","due_date","status","id"]]
+    edited = st.data_editor(df, hide_index=True, use_container_width=True,
+        column_config={"id": None,
+            "status": st.column_config.SelectboxColumn("Status", options=config.STATUSES)})
+    if st.button("💾 Save status changes"):
+        for _, row in edited.iterrows():
+            database.update_status(row["id"], row["status"])
+        st.success("Saved."); st.rerun()
+else:
+    st.caption("No emails match the current filters.")
 ```
 
 **Key sections explained:**
-- `st.session_state.service` → keeps your Gmail connection alive across button clicks (Streamlit re-runs the whole script on every interaction).
-- The **Analyze** button mirrors `run_pipeline()`: fetch → filter new → `analyze_batch` → save → push to Sheets, with a graceful `try/except` so a Sheets hiccup never loses your local data.
-- **Metric cards**, **Plotly charts**, **multiselect filters**, and **download buttons** give you the modern dashboard the spec asked for.
+- **`st.set_page_config(layout="wide")`** gives us the full screen for cards and charts.
+- The **cards** are just styled HTML injected with `st.markdown(..., unsafe_allow_html=True)`. The `card()` helper keeps it tidy.
+- **`st.data_editor`** is the magic widget — it renders the table *and* lets the user change the Status dropdown inline. We hide the `id` column (the user doesn't care) but keep it in the dataframe so we know which row to update.
+- Clicking **Save** writes each row's status back to SQLite and calls `st.rerun()` to refresh the numbers.
 
 ---
 
-## 6. How to Run Locally
+## 6. Run it locally
 
 ```bash
-# 1. From the project folder, with venv active:
-pip install -r requirements.txt
-
-# 2. Add credentials.json (from Google Cloud) to this folder
-# 3. Copy env template and fill it in
-cp .env.example .env        # then edit .env
-
-# 4. Launch
+# from the project root, with your venv active
 streamlit run app.py
 ```
 
-Then in the browser (`http://localhost:8501`):
-1. Click **🔐 Connect Gmail** → approve in the popup.
-2. Pick a fetch mode and click **⚡ Analyze Emails**.
-3. Watch the cards, charts, and table populate. Check your Google Sheet too!
+1. Your browser opens at `http://localhost:8501`.
+2. In the sidebar, pick **Last 24 hours** and click **▶ Run scan**.
+3. The *first* scan opens a Google consent screen — approve Gmail + Sheets access.
+4. Watch the cards fill in, then click **Generate daily briefing** for the AI summary.
+5. Check your Google Drive — there's a new **Email Action Items** sheet waiting.
 
-To run the **daily automation** without the UI:
+To run the daily automation instead:
 
-```python
-from modules.scheduler import run_pipeline
-run_pipeline(mode="last_24h")
+```bash
+python -m src.scheduler        # keeps running, fires at DAILY_RUN_TIME
+# or, one-shot for cron:
+python -m src.pipeline
 ```
 
 ---
 
-## 7. How to Deploy on Streamlit Cloud
+## 7. Deploy on Streamlit Cloud
 
-1. Push your code to a **public or private GitHub repo**.
-2. Go to [share.streamlit.io](https://share.streamlit.io) → **New app**.
-3. Pick your repo/branch, set **Main file path** to `app.py`.
-4. Under **Advanced settings → Secrets**, paste:
-
+1. Push your code to GitHub. (Your `.gitignore` keeps `.env`, `credentials.json`, and the DB out — double-check before pushing.)
+2. Go to [share.streamlit.io](https://share.streamlit.io) → **New app** → pick your repo and set the main file to `app.py`.
+3. Open **Settings → Secrets** and add:
    ```toml
    OPENAI_API_KEY = "sk-..."
-   OPENAI_MODEL = "gpt-4o-mini"
-   GOOGLE_SHEET_NAME = "Email Action Items"
+   SHEET_TITLE = "Email Action Items"
    ```
+4. **Google auth on a server:** the interactive desktop OAuth flow needs a browser, which a hosted app doesn't have. For deployment, switch to a **Google service account**: create one in Cloud Console, download its JSON key, store it as a Streamlit secret, and *share your target Google Sheet with the service account's email*. Then the app reads/writes that sheet headlessly. (Keep the desktop OAuth flow for local development — it's simpler there.)
+5. Deploy. Streamlit gives you a public URL.
 
-5. Click **Deploy**.
-
-> ⚠️ **About Gmail OAuth in the cloud:** the interactive browser login (`run_local_server`) works on your laptop but **not** on a headless server. For production you have two clean options:
-> - **Service Account (recommended):** create one in Google Cloud, share the target Google Sheet with its email, and store its JSON in Streamlit secrets. Use it for the **Sheets** side and run the **Gmail fetch + scheduler** on a small always-on machine (your laptop, a Raspberry Pi, or a cheap VM).
-> - **Keep Gmail local:** run the analysis locally (where the OAuth popup works), and deploy only the **read-only dashboard** on Streamlit Cloud, pointed at the shared Google Sheet.
+> 💡 For a fully automated cloud setup, pair a small always-on host (or a scheduled **GitHub Action**) running `python -m src.pipeline` daily with the Streamlit app as your read-only dashboard.
 
 ---
 
-## 8. Common Errors and Fixes
+## 8. Common errors and fixes
 
-| Error | Cause | Fix |
-|-------|-------|-----|
-| `FileNotFoundError: credentials.json` | OAuth file missing | Download it from Google Cloud Console → place in project folder |
-| `access_denied` during login | App not verified / you're not a test user | Add your email under **OAuth consent screen → Test users** |
-| `insufficient permissions` on Sheets | Gmail token lacks Sheets scope | Add the Sheets + Drive scopes to `SCOPES` in `gmail_client.py`, then delete `token.json` and re-login |
-| `openai.AuthenticationError` | Bad/missing API key | Check `OPENAI_API_KEY` in `.env` |
-| `RateLimitError` | Too many parallel requests | Lower `max_results`, or add a small `asyncio.sleep` between batches |
-| Same emails analyzed again | Deleted `email_agent.db` | The DB is the dedupe memory — keep it |
-| `JSONDecodeError` | Model returned non-JSON | Already handled by `_safe_parse`; ensure `response_format` is set |
-| Streamlit "connection lost" on long runs | Big inbox blocking the UI | Lower `max_results`; async batch already speeds this up |
-
-> 🔑 **The #1 gotcha:** Gmail and Sheets need **different scopes**. When you first log in, the `token.json` only stores the scopes you requested. If you add Sheets later, you must delete `token.json` and authorize again so the new scope is granted.
-
----
-
-## 9. What You Learned
-
-By finishing this tutorial you now know how to:
-
-- ✅ Authenticate with **Google OAuth** and cache tokens safely
-- ✅ Fetch and clean **Gmail messages** (inbox, unread, last 24h, labels)
-- ✅ Prompt an **LLM for structured JSON** and parse it defensively
-- ✅ Run AI calls **concurrently with `asyncio`** for speed
-- ✅ Persist data in **SQLite** and deduplicate work
-- ✅ Write results to a live **Google Sheet**
-- ✅ Build a **modern Streamlit dashboard** with cards, charts, filters, and exports
-- ✅ Schedule a **daily automation** job
-- ✅ Generate **AI insights** (briefings, urgent items, next actions)
-- ✅ Export to **CSV / Excel / PDF**
-
-That's the complete anatomy of a production AI agent. 🎉
+| Error | Likely cause | Fix |
+|-------|-------------|-----|
+| `FileNotFoundError: credentials.json` | OAuth file not downloaded / wrong name | Download the **Desktop** OAuth client JSON and save it as `credentials.json` in the project root |
+| `OPENAI_API_KEY is not set` | `.env` missing or key not pasted | `cp .env.example .env` and paste your real key |
+| Browser doesn't open on first run / `redirect_uri_mismatch` | Wrong OAuth client type | Use OAuth client type **Desktop app**, not Web |
+| `403 access_denied` during consent | Your email isn't a test user | Add yourself under **OAuth consent screen → Test users** |
+| `insufficientPermissions` / scope error | Token cached with old scopes | Delete `data/token.json` and re-run to re-authorize |
+| `HttpError 429` (OpenAI or Google) | Rate limit hit | Lower the **Max emails** slider; the async `concurrency` is already capped at 5 |
+| Empty dashboard after a scan | All emails already in the DB | That's dedup working — try a wider scope or a label with new mail |
+| Sheet not updating | "Also write to Google Sheet" unchecked, or wrong `SHEET_ID` | Tick the box; clear `SHEET_ID` in `.env` to auto-create a fresh sheet |
+| `ModuleNotFoundError` | venv not active / deps not installed | Activate the venv and `pip install -r requirements.txt` |
 
 ---
 
-## 10. What's Next
+## 9. What you learned
 
-Ideas to extend the project:
+By building this, you picked up a stack of genuinely reusable skills:
 
-- 🔔 **Notifications:** post the daily briefing to Slack or Telegram.
-- ✍️ **Draft replies:** add a button that drafts a response to each High-priority email.
-- 🧩 **Multi-account:** support several Gmail accounts in one dashboard.
-- 🗃️ **Vector search:** embed emails and let users ask "what did Finance ask me last week?"
-- 📈 **Trends:** chart inbox volume and response time over weeks.
-- ☁️ **Full cloud:** move to a Service Account + Cloud Run + Cloud Scheduler for true hands-off automation.
-- 🔐 **Encryption:** encrypt the SQLite DB at rest for sensitive inboxes.
+- **Google OAuth** — authorizing an app to read Gmail and write Sheets, with scopes and token refresh.
+- **Calling an LLM for structured output** — system prompts, JSON mode, and defensive parsing so bad output never crashes you.
+- **Async Python** — `asyncio.gather` + a semaphore to run many API calls concurrently.
+- **SQLite as a source of truth** — primary-key dedup, parameterized queries, and clean connection handling.
+- **Modular architecture** — one job per file, with a single `pipeline.py` orchestrating them.
+- **Streamlit dashboards** — cards, Plotly charts, an editable data table, and download buttons.
+- **Automation** — turning a script into a daily job.
+
+That's the real shape of a production AI agent: *fetch → reason → store → present → automate.*
 
 ---
 
-> ⭐ **Star the repo:** https://github.com/adityasharmadotai-hash/amazing-ai-agents
-> 💼 **Follow on LinkedIn:** https://www.linkedin.com/in/aditya-hicounselor/
-> 📺 **Subscribe on YouTube:** https://www.youtube.com/channel/UCPjQtVNUrf7EKrm8ZoqrCAQ
-> 🚀 **Looking for jobs at top AI companies in the U.S.? [Apply here](https://docs.google.com/forms/d/e/1FAIpQLSc3gJssBV3B25EZ3sYA7Qcen9NbtOB_wgQaturfB7lTXuAdLQ/viewform)**
+## 10. What's next
 
-Happy building! If this helped, please ⭐ the repo and share it.
+Ideas to extend it (great portfolio additions):
+
+- **Outlook / IMAP support** — add another client alongside `gmail_client.py`.
+- **Auto-draft replies** — for High-priority emails, have the model draft a response you can approve.
+- **Weekly digest** — email yourself a Friday summary using the insights engine.
+- **Local model** — swap OpenAI for an open model via Ollama to cut costs to zero.
+- **Smart labels** — write the assigned priority back to Gmail as a label.
+- **Snooze + reminders** — add a "Snoozed" status and a follow-up nudge.
+
+---
+
+> ⭐ If this tutorial helped, **[star the repo](https://github.com/adityasharmadotai-hash/amazing-ai-agents)** and **[follow on LinkedIn](https://www.linkedin.com/in/aditya-hicounselor/)** — I share a new free AI agent build regularly.
+>
+> 🚀 **Looking for jobs at top AI companies in the U.S.?** [Apply here](https://docs.google.com/forms/d/e/1FAIpQLSc3gJssBV3B25EZ3sYA7Qcen9NbtOB_wgQaturfB7lTXuAdLQ/viewform)
