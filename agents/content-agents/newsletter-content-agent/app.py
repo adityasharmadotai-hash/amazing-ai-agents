@@ -7,6 +7,14 @@ A Streamlit app that researches recent news and generates a full newsletter
 Run:  streamlit run app.py
 """
 
+import os
+import sys
+
+# When this app is launched from a nested path (e.g. Streamlit Cloud runs from
+# the repo root, not the app folder), the directory containing `modules/` is not
+# automatically on sys.path. Add it explicitly so local imports always resolve.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 import streamlit as st
 
 from modules import database as db
