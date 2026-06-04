@@ -15,9 +15,6 @@
 
 Your inbox is a to-do list someone else wrote — and it's a mess. Real action items hide between newsletters, receipts, and "just looping you in" threads. By the time you've read everything, you've spent 40 minutes and still aren't sure what actually needs a reply.
 
-<img width="1786" height="809" alt="image" src="https://github.com/user-attachments/assets/92652c14-6994-4e49-88a6-76230b5fe4dd" />
-
-
 This agent fixes that. It connects to Gmail, pulls your recent or unread emails, and runs each one through an LLM that produces:
 
 - a **one-line summary** of what the email is about,
