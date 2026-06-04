@@ -1,0 +1,15 @@
+# Local database (contains API keys & history)
+newsletter.db
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+env/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# OS
+.DS_Store

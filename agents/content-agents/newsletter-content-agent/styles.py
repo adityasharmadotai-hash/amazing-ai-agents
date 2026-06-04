@@ -1,110 +1,140 @@
 """
-Custom CSS for a distinctive dark-mode Streamlit UI.
-
-Aesthetic direction: "editorial dark" — an ink-black canvas, a single electric
-violet accent, a serif display face (Fraunces) paired with a clean grotesque
-body face (Sora). Card surfaces float on subtle elevation with a faint violet
-glow. The look is intentionally not the default Streamlit theme.
+modules/styles.py
+-----------------
+Custom CSS for a clean, modern dark UI + a clipboard copy button.
 """
 
-CUSTOM_CSS = """
+import json
+import streamlit as st
+import streamlit.components.v1 as components
+
+CSS = """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Sora:wght@300;400;500;600;700&display=swap');
+    /* ---- Layout & typography ---- */
+    .block-container { padding-top: 2.2rem; max-width: 980px; }
+    html, body, [class*="css"] { font-family: 'Inter', 'Segoe UI', sans-serif; }
 
-:root {
-  --bg: #0c0b10;
-  --surface: #16151d;
-  --surface-2: #1e1d28;
-  --border: #2a2935;
-  --accent: #8b7cff;
-  --accent-2: #6c5ce7;
-  --text: #ece9f5;
-  --muted: #8f8ba3;
-  --good: #3ddc97;
-  --warn: #ffb86b;
-}
+    h1, h2, h3 { letter-spacing: -0.01em; }
 
-.stApp { background: radial-gradient(1200px 600px at 80% -10%, #1a1330 0%, var(--bg) 55%); }
-html, body, [class*="css"], .stMarkdown, p, span, label { font-family: 'Sora', sans-serif; color: var(--text); }
+    /* ---- Hero header ---- */
+    .app-hero {
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+        padding: 1.6rem 1.8rem;
+        border-radius: 16px;
+        margin-bottom: 1.4rem;
+        box-shadow: 0 10px 30px rgba(99,102,241,0.25);
+    }
+    .app-hero h1 { color: #fff; margin: 0; font-size: 1.7rem; font-weight: 750; }
+    .app-hero p  { color: rgba(255,255,255,0.85); margin: 0.3rem 0 0; font-size: 0.95rem; }
 
-h1, h2, h3 { font-family: 'Fraunces', serif !important; color: var(--text) !important; letter-spacing: -0.02em; }
-h1 { font-weight: 900 !important; }
+    /* ---- Metric / stat cards ---- */
+    .stat-card {
+        background: #1a1d28;
+        border: 1px solid #262a38;
+        border-radius: 14px;
+        padding: 1.1rem 1.2rem;
+        text-align: center;
+    }
+    .stat-card .num   { font-size: 1.9rem; font-weight: 750; color: #818cf8; }
+    .stat-card .label { font-size: 0.8rem; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.05em; }
 
-section[data-testid="stSidebar"] {
-  background: linear-gradient(180deg, #110f18 0%, #0a0910 100%);
-  border-right: 1px solid var(--border);
-}
-section[data-testid="stSidebar"] * { color: var(--text); }
+    /* ---- Section card ---- */
+    .section-card {
+        background: #1a1d28;
+        border: 1px solid #262a38;
+        border-radius: 14px;
+        padding: 1.3rem 1.5rem;
+        margin-bottom: 1rem;
+    }
 
-.block-container { padding-top: 2.2rem; max-width: 1180px; }
+    /* ---- Buttons ---- */
+    .stButton > button {
+        border-radius: 10px;
+        border: none;
+        font-weight: 600;
+        padding: 0.55rem 1.1rem;
+    }
+    div[data-testid="stForm"] .stButton > button,
+    .stButton > button[kind="primary"] {
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        color: #fff;
+    }
 
-/* Brand block */
-.brand {
-  font-family: 'Fraunces', serif; font-weight: 900; font-size: 30px;
-  background: linear-gradient(92deg, #fff 10%, var(--accent) 90%);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  margin-bottom: 0;
-}
-.brand-sub { color: var(--muted); font-size: 12.5px; letter-spacing: .14em; text-transform: uppercase; margin-top: -2px; }
+    /* ---- Article chip ---- */
+    .article-chip {
+        background: #14161f;
+        border: 1px solid #262a38;
+        border-left: 3px solid #6366f1;
+        border-radius: 10px;
+        padding: 0.7rem 0.9rem;
+        margin-bottom: 0.55rem;
+    }
+    .article-chip .t { font-weight: 600; color: #e5e7eb; font-size: 0.92rem; }
+    .article-chip .m { color: #9ca3af; font-size: 0.78rem; margin-top: 0.2rem; }
 
-/* Metric / stat cards */
-.stat-card {
-  background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
-  padding: 18px 20px; position: relative; overflow: hidden;
-}
-.stat-card::after {
-  content:''; position:absolute; inset:0; border-radius:16px;
-  background: radial-gradient(420px 120px at 100% 0%, rgba(139,124,255,.14), transparent 60%);
-  pointer-events:none;
-}
-.stat-value { font-family:'Fraunces',serif; font-size: 34px; font-weight: 900; line-height:1; }
-.stat-label { color: var(--muted); font-size: 12.5px; text-transform: uppercase; letter-spacing:.1em; margin-top:8px; }
+    /* ---- Preview surface ---- */
+    .preview-surface {
+        background: #15171f;
+        border: 1px solid #262a38;
+        border-radius: 14px;
+        padding: 1.6rem 2rem;
+    }
 
-/* Generic surface panel */
-.panel {
-  background: var(--surface); border:1px solid var(--border); border-radius:16px;
-  padding: 22px 24px; margin-bottom: 16px;
-}
+    /* ---- Sidebar tweaks ---- */
+    section[data-testid="stSidebar"] { background: #14161f; }
+    .sidebar-brand { font-size: 1.15rem; font-weight: 750; color: #e5e7eb; padding: 0.2rem 0 0.6rem; }
+    .sidebar-brand span { color: #818cf8; }
 
-.tag {
-  display:inline-block; padding: 3px 11px; border-radius: 999px; font-size: 11.5px;
-  background: rgba(139,124,255,.14); color: var(--accent); border:1px solid rgba(139,124,255,.3);
-  margin-right:6px; letter-spacing:.03em;
-}
-.tag.good { background: rgba(61,220,151,.12); color: var(--good); border-color: rgba(61,220,151,.3);}
-.tag.warn { background: rgba(255,184,107,.12); color: var(--warn); border-color: rgba(255,184,107,.3);}
-
-.item-row {
-  border-bottom:1px solid var(--border); padding:12px 0;
-}
-.item-title { font-weight:600; font-size:15px; }
-.item-meta { color: var(--muted); font-size:12.5px; margin-top:3px; }
-
-/* Buttons */
-.stButton > button {
-  background: var(--accent-2); color:#fff; border:0; border-radius:10px;
-  font-family:'Sora',sans-serif; font-weight:600; padding:.5rem 1.1rem;
-  transition: transform .08s ease, box-shadow .2s ease;
-}
-.stButton > button:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(108,92,231,.35); }
-
-/* Inputs */
-.stTextInput input, .stTextArea textarea, .stSelectbox div[data-baseweb="select"] > div {
-  background: var(--surface-2) !important; color: var(--text) !important;
-  border:1px solid var(--border) !important; border-radius:10px !important;
-}
-
-/* Tabs */
-.stTabs [data-baseweb="tab"] { font-family:'Sora',sans-serif; color: var(--muted); }
-.stTabs [aria-selected="true"] { color: var(--accent) !important; }
-
-/* Progress / divider */
-hr { border-color: var(--border); }
-.small-muted { color: var(--muted); font-size: 12.5px; }
-.kicker { color: var(--accent); font-size:12px; letter-spacing:.16em; text-transform:uppercase; font-weight:600; }
+    /* hide default streamlit chrome */
+    #MainMenu, footer { visibility: hidden; }
 </style>
 """
 
 
-def stat_card(value, label) -> str:
-    return f'<div class="stat-card"><div class="stat-value">{value}</div><div class="stat-label">{label}</div></div>'
+def inject():
+    """Inject global CSS. Call once near the top of the app."""
+    st.markdown(CSS, unsafe_allow_html=True)
+
+
+def hero(title: str, subtitle: str = ""):
+    st.markdown(
+        f'<div class="app-hero"><h1>{title}</h1>'
+        f'<p>{subtitle}</p></div>',
+        unsafe_allow_html=True,
+    )
+
+
+def stat_card(num, label):
+    return (
+        f'<div class="stat-card"><div class="num">{num}</div>'
+        f'<div class="label">{label}</div></div>'
+    )
+
+
+def copy_button(text: str, label: str = "📋 Copy to clipboard"):
+    """Render a JS-powered copy-to-clipboard button via components.html."""
+    payload = json.dumps(text)
+    components.html(
+        f"""
+        <button id="copybtn" style="
+            background: linear-gradient(135deg,#6366f1,#8b5cf6);
+            color:#fff;border:none;border-radius:10px;
+            padding:0.6rem 1.1rem;font-weight:600;cursor:pointer;
+            font-family:'Inter',sans-serif;font-size:0.9rem;width:100%;">
+            {label}
+        </button>
+        <script>
+            const btn = document.getElementById("copybtn");
+            btn.addEventListener("click", async () => {{
+                try {{
+                    await navigator.clipboard.writeText({payload});
+                    btn.innerText = "✅ Copied!";
+                    setTimeout(() => btn.innerText = "{label}", 1800);
+                }} catch (e) {{
+                    btn.innerText = "⚠️ Press Ctrl/Cmd+C";
+                }}
+            }});
+        </script>
+        """,
+        height=56,
+    )
