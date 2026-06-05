@@ -29,6 +29,8 @@ You give it a **topic**, an **audience**, a **writing style**, and a **length**.
 
 It's built with Streamlit, so the whole thing runs as a clean web app you can use locally or deploy publicly.
 
+<img width="1812" height="720" alt="image" src="https://github.com/user-attachments/assets/9096ef73-bd0e-43cb-aec5-1b97536aa39f" />
+
 ---
 
 ## ✨ Features
