@@ -4,6 +4,7 @@ Monitors competitors across web, pricing, social media, hiring, and product laun
 """
 
 import os
+import sys
 import json
 import hashlib
 from datetime import datetime, timedelta
@@ -11,11 +12,18 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from database import Database
-from ai_analysis import CompetitorAnalyzer
-from scraper import WebScraper, PricingScraper, HiringTracker
-from alerts import AlertManager
 import pytz
+
+# Try to import local modules, with graceful fallback
+try:
+    from database import Database
+    from ai_analysis import CompetitorAnalyzer
+    from scraper import WebScraper, PricingScraper, HiringTracker
+    from alerts import AlertManager
+except ImportError as e:
+    st.error(f"⚠️ Missing module: {str(e)}")
+    st.info("Make sure all .py files are in the same directory as app.py")
+    st.stop()
 
 # ==================== PAGE CONFIG ====================
 st.set_page_config(
@@ -76,15 +84,23 @@ st.markdown("""
 @st.cache_resource
 def init_components():
     """Initialize all components"""
-    db = Database("competitors.db")
-    analyzer = CompetitorAnalyzer()
-    scraper = WebScraper()
-    pricing_scraper = PricingScraper()
-    hiring_tracker = HiringTracker()
-    alert_manager = AlertManager(db)
-    return db, analyzer, scraper, pricing_scraper, hiring_tracker, alert_manager
+    try:
+        db = Database("competitors.db")
+        analyzer = CompetitorAnalyzer()
+        scraper = WebScraper()
+        pricing_scraper = PricingScraper()
+        hiring_tracker = HiringTracker()
+        alert_manager = AlertManager(db)
+        return db, analyzer, scraper, pricing_scraper, hiring_tracker, alert_manager
+    except Exception as e:
+        st.error(f"Failed to initialize components: {str(e)}")
+        return None, None, None, None, None, None
 
 db, analyzer, scraper, pricing_scraper, hiring_tracker, alert_manager = init_components()
+
+if db is None:
+    st.error("Application failed to initialize. Please check your configuration.")
+    st.stop()
 
 # ==================== SIDEBAR ====================
 with st.sidebar:
@@ -100,9 +116,12 @@ with st.sidebar:
         
         if st.form_submit_button("➕ Add Competitor"):
             if comp_name and comp_website:
-                db.add_competitor(comp_name, comp_website, comp_linkedin, comp_twitter)
-                st.success(f"✅ Added {comp_name}")
-                st.rerun()
+                try:
+                    db.add_competitor(comp_name, comp_website, comp_linkedin, comp_twitter)
+                    st.success(f"✅ Added {comp_name}")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Failed to add competitor: {str(e)}")
             else:
                 st.error("Please fill in required fields")
     
@@ -139,16 +158,23 @@ with col1:
     st.markdown('<h1 class="header-title">🔍 Competitor Intelligence</h1>', unsafe_allow_html=True)
 
 with col2:
-    st.metric("Competitors Tracked", len(db.get_competitors()))
+    try:
+        competitors = db.get_competitors()
+        st.metric("Competitors Tracked", len(competitors) if competitors else 0)
+    except Exception as e:
+        st.metric("Competitors Tracked", "Error")
 
 with col3:
-    last_scan = db.get_last_scan_time()
-    if last_scan:
-        time_ago = datetime.now(pytz.UTC) - last_scan
-        hours_ago = time_ago.total_seconds() / 3600
-        st.metric("Last Scan", f"{int(hours_ago)}h ago" if hours_ago < 24 else "1d+ ago")
-    else:
-        st.metric("Last Scan", "Never")
+    try:
+        last_scan = db.get_last_scan_time()
+        if last_scan:
+            time_ago = datetime.now(pytz.UTC) - last_scan
+            hours_ago = time_ago.total_seconds() / 3600
+            st.metric("Last Scan", f"{int(hours_ago)}h ago" if hours_ago < 24 else "1d+ ago")
+        else:
+            st.metric("Last Scan", "Never")
+    except Exception as e:
+        st.metric("Last Scan", "Error")
 
 # ==================== TABS ====================
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
@@ -164,316 +190,399 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
 with tab1:
     st.markdown("## Executive Summary")
     
-    competitors = db.get_competitors()
-    
-    if not competitors:
-        st.info("👈 Add competitors from the sidebar to get started")
-    else:
-        # Key metrics
-        col1, col2, col3, col4 = st.columns(4)
+    try:
+        competitors = db.get_competitors()
         
-        with col1:
-            active_changes = len(db.get_recent_changes(days=7))
-            st.metric("🔴 Changes (7d)", active_changes)
-        
-        with col2:
-            price_changes = len(db.get_price_changes())
-            st.metric("💲 Price Changes", price_changes)
-        
-        with col3:
-            job_openings = len(db.get_all_job_openings())
-            st.metric("📋 Job Openings", job_openings)
-        
-        with col4:
-            product_launches = len(db.get_product_launches())
-            st.metric("🚀 New Products", product_launches)
-        
-        st.divider()
-        
-        # Recent activity
-        st.markdown("### 📈 Recent Activity")
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("#### Latest Changes")
-            recent_changes = db.get_recent_changes(days=7)
-            if recent_changes:
-                changes_df = pd.DataFrame(recent_changes)
-                changes_df['detected_at'] = pd.to_datetime(changes_df['detected_at']).dt.strftime('%Y-%m-%d %H:%M')
-                st.dataframe(
-                    changes_df[['competitor_name', 'change_type', 'description', 'detected_at']],
-                    use_container_width=True,
-                    hide_index=True
-                )
-            else:
-                st.info("No recent changes detected")
-        
-        with col2:
-            st.markdown("#### Competitor Health")
-            health_data = []
-            for comp in competitors:
-                comp_id = comp['id']
-                changes = len(db.get_competitor_changes(comp_id, days=30))
-                health_data.append({
-                    'Competitor': comp['name'],
-                    'Activity (30d)': changes
-                })
-            
-            if health_data:
-                health_df = pd.DataFrame(health_data)
-                fig = px.bar(
-                    health_df,
-                    x='Competitor',
-                    y='Activity (30d)',
-                    color='Activity (30d)',
-                    color_continuous_scale='Viridis'
-                )
-                fig.update_layout(showlegend=False, height=300)
-                st.plotly_chart(fig, use_container_width=True)
-        
-        st.divider()
-        
-        # Alerts
-        st.markdown("### 🔔 Active Alerts")
-        alerts = db.get_all_alerts()
-        if alerts:
-            for alert in alerts[:5]:
-                if alert['severity'] == 'high':
-                    st.markdown(f'<div class="alert-box">⚠️ **{alert["competitor_name"]}**: {alert["description"]}</div>', unsafe_allow_html=True)
-                else:
-                    st.markdown(f'<div class="success-box">ℹ️ **{alert["competitor_name"]}**: {alert["description"]}</div>', unsafe_allow_html=True)
+        if not competitors:
+            st.info("👈 Add competitors from the sidebar to get started")
         else:
-            st.success("✅ No alerts at this time")
+            # Key metrics
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                try:
+                    active_changes = len(db.get_recent_changes(days=7))
+                    st.metric("🔴 Changes (7d)", active_changes)
+                except:
+                    st.metric("🔴 Changes (7d)", "N/A")
+            
+            with col2:
+                try:
+                    price_changes = len(db.get_price_changes())
+                    st.metric("💲 Price Changes", price_changes)
+                except:
+                    st.metric("💲 Price Changes", "N/A")
+            
+            with col3:
+                try:
+                    job_openings = len(db.get_all_job_openings())
+                    st.metric("📋 Job Openings", job_openings)
+                except:
+                    st.metric("📋 Job Openings", "N/A")
+            
+            with col4:
+                try:
+                    product_launches = len(db.get_product_launches())
+                    st.metric("🚀 New Products", product_launches)
+                except:
+                    st.metric("🚀 New Products", "N/A")
+            
+            st.divider()
+            
+            # Recent activity
+            st.markdown("### 📈 Recent Activity")
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown("#### Latest Changes")
+                try:
+                    recent_changes = db.get_recent_changes(days=7)
+                    if recent_changes:
+                        changes_df = pd.DataFrame(recent_changes)
+                        changes_df['detected_at'] = pd.to_datetime(changes_df['detected_at']).dt.strftime('%Y-%m-%d %H:%M')
+                        st.dataframe(
+                            changes_df[['competitor_name', 'change_type', 'description', 'detected_at']],
+                            use_container_width=True,
+                            hide_index=True
+                        )
+                    else:
+                        st.info("No recent changes detected")
+                except Exception as e:
+                    st.info("Unable to load recent changes")
+            
+            with col2:
+                st.markdown("#### Competitor Health")
+                try:
+                    health_data = []
+                    for comp in competitors:
+                        comp_id = comp['id']
+                        changes = len(db.get_competitor_changes(comp_id, days=30))
+                        health_data.append({
+                            'Competitor': comp['name'],
+                            'Activity (30d)': changes
+                        })
+                    
+                    if health_data:
+                        health_df = pd.DataFrame(health_data)
+                        fig = px.bar(
+                            health_df,
+                            x='Competitor',
+                            y='Activity (30d)',
+                            color='Activity (30d)',
+                            color_continuous_scale='Viridis'
+                        )
+                        fig.update_layout(showlegend=False, height=300)
+                        st.plotly_chart(fig, use_container_width=True)
+                except Exception as e:
+                    st.info("Unable to load health metrics")
+            
+            st.divider()
+            
+            # Alerts
+            st.markdown("### 🔔 Active Alerts")
+            try:
+                alerts = db.get_all_alerts()
+                if alerts:
+                    for alert in alerts[:5]:
+                        if alert['severity'] == 'high':
+                            st.markdown(f'<div class="alert-box">⚠️ **{alert["competitor_name"]}**: {alert["description"]}</div>', unsafe_allow_html=True)
+                        else:
+                            st.markdown(f'<div class="success-box">ℹ️ **{alert["competitor_name"]}**: {alert["description"]}</div>', unsafe_allow_html=True)
+                else:
+                    st.success("✅ No alerts at this time")
+            except Exception as e:
+                st.info("Unable to load alerts")
+    
+    except Exception as e:
+        st.error(f"Dashboard error: {str(e)}")
 
 # ==================== TAB 2: WEBSITE MONITORING ====================
 with tab2:
     st.markdown("## Website Monitoring")
     st.write("Track website changes, new features, and content updates")
     
-    col1, col2 = st.columns([3, 1])
-    
-    with col1:
-        selected_competitor = st.selectbox(
-            "Select Competitor",
-            [c['name'] for c in competitors] if competitors else []
-        )
-    
-    with col2:
-        if st.button("🔄 Scan Now"):
-            with st.spinner("Scanning website..."):
+    try:
+        competitors = db.get_competitors()
+        
+        col1, col2 = st.columns([3, 1])
+        
+        with col1:
+            if competitors:
+                selected_competitor = st.selectbox(
+                    "Select Competitor",
+                    [c['name'] for c in competitors]
+                )
+            else:
+                st.warning("No competitors added yet")
+                selected_competitor = None
+        
+        with col2:
+            if st.button("🔄 Scan Now"):
                 if selected_competitor:
-                    comp = next((c for c in competitors if c['name'] == selected_competitor), None)
-                    if comp:
+                    with st.spinner("Scanning website..."):
                         try:
-                            website_data = scraper.scrape_website(comp['website_url'])
-                            analysis = analyzer.analyze_website_changes(website_data, comp['name'])
-                            db.add_change(comp['id'], 'website_update', analysis)
-                            st.success("✅ Website scan complete")
+                            comp = next((c for c in competitors if c['name'] == selected_competitor), None)
+                            if comp and scraper:
+                                website_data = scraper.scrape_website(comp['website_url'])
+                                if website_data and analyzer:
+                                    analysis = analyzer.analyze_website_changes(website_data, comp['name'])
+                                    db.add_change(comp['id'], 'website_update', analysis)
+                                    st.success("✅ Website scan complete")
+                                else:
+                                    st.error("Failed to scan website")
                         except Exception as e:
                             st.error(f"Scan failed: {str(e)}")
+        
+        st.divider()
+        
+        # Website monitoring results
+        if selected_competitor and competitors:
+            comp = next((c for c in competitors if c['name'] == selected_competitor), None)
+            if comp:
+                try:
+                    changes = db.get_competitor_changes(comp['id'], days=30)
+                    website_changes = [c for c in changes if c['change_type'] == 'website_update']
+                    
+                    if website_changes:
+                        for change in website_changes[:10]:
+                            with st.expander(f"📄 {change['detected_at'][:10]} - Website Update"):
+                                st.write(change['description'])
+                                
+                                if analyzer:
+                                    with st.spinner("Analyzing..."):
+                                        try:
+                                            ai_insight = analyzer.generate_insight(change['description'])
+                                            st.markdown("**🤖 AI Analysis:**")
+                                            st.write(ai_insight)
+                                        except Exception as e:
+                                            st.info("AI analysis unavailable")
+                    else:
+                        st.info("No website changes detected yet")
+                except Exception as e:
+                    st.error(f"Error loading changes: {str(e)}")
     
-    st.divider()
-    
-    # Website monitoring results
-    if selected_competitor:
-        comp = next((c for c in competitors if c['name'] == selected_competitor), None)
-        if comp:
-            changes = db.get_competitor_changes(comp['id'], days=30)
-            website_changes = [c for c in changes if c['change_type'] == 'website_update']
-            
-            if website_changes:
-                for change in website_changes[:10]:
-                    with st.expander(f"📄 {change['detected_at'][:10]} - Website Update"):
-                        st.write(change['description'])
-                        
-                        # AI Analysis
-                        with st.spinner("Analyzing..."):
-                            ai_insight = analyzer.generate_insight(change['description'])
-                            st.markdown("**🤖 AI Analysis:**")
-                            st.write(ai_insight)
-            else:
-                st.info("No website changes detected yet")
+    except Exception as e:
+        st.error(f"Website monitoring error: {str(e)}")
 
 # ==================== TAB 3: PRICING INTELLIGENCE ====================
 with tab3:
     st.markdown("## Pricing Intelligence")
     st.write("Monitor pricing changes, plans, and offers")
     
-    col1, col2, col3 = st.columns([2, 1, 1])
-    
-    with col1:
-        pricing_competitor = st.selectbox(
-            "Select Competitor",
-            [c['name'] for c in competitors] if competitors else [],
-            key="pricing_select"
-        )
-    
-    with col2:
-        if st.button("💰 Check Pricing"):
-            with st.spinner("Checking pricing..."):
-                if pricing_competitor:
-                    comp = next((c for c in competitors if c['name'] == pricing_competitor), None)
-                    if comp:
+    try:
+        competitors = db.get_competitors()
+        
+        col1, col2, col3 = st.columns([2, 1, 1])
+        
+        with col1:
+            if competitors:
+                pricing_competitor = st.selectbox(
+                    "Select Competitor",
+                    [c['name'] for c in competitors],
+                    key="pricing_select"
+                )
+            else:
+                st.warning("No competitors added")
+                pricing_competitor = None
+        
+        with col2:
+            if st.button("💰 Check Pricing"):
+                if pricing_competitor and competitors:
+                    with st.spinner("Checking pricing..."):
                         try:
-                            pricing_data = pricing_scraper.get_pricing(comp['website_url'])
-                            db.add_price_change(comp['id'], json.dumps(pricing_data))
-                            st.success("✅ Pricing updated")
+                            comp = next((c for c in competitors if c['name'] == pricing_competitor), None)
+                            if comp and pricing_scraper:
+                                pricing_data = pricing_scraper.get_pricing(comp['website_url'])
+                                db.add_price_change(comp['id'], json.dumps(pricing_data))
+                                st.success("✅ Pricing updated")
                         except Exception as e:
                             st.error(f"Failed: {str(e)}")
-    
-    with col3:
-        if st.button("📊 Generate Report"):
-            st.info("Report generation in progress...")
-    
-    st.divider()
-    
-    # Pricing history
-    if pricing_competitor:
-        comp = next((c for c in competitors if c['name'] == pricing_competitor), None)
-        if comp:
-            price_history = db.get_competitor_price_history(comp['id'])
-            
-            if price_history:
-                st.markdown("### Pricing History")
-                
-                # Display latest pricing
-                latest = price_history[0]
-                st.json(json.loads(latest['pricing_data']))
-                
-                # Pricing timeline
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.markdown("### 📈 Pricing Changes Timeline")
-                    timeline_data = []
-                    for entry in price_history:
-                        timeline_data.append({
-                            'Date': entry['detected_at'][:10],
-                            'Status': '💾 Recorded'
-                        })
+        
+        with col3:
+            if st.button("📊 Generate Report"):
+                st.info("Report generation in progress...")
+        
+        st.divider()
+        
+        # Pricing history
+        if pricing_competitor and competitors:
+            comp = next((c for c in competitors if c['name'] == pricing_competitor), None)
+            if comp:
+                try:
+                    price_history = db.get_competitor_price_history(comp['id'])
                     
-                    if timeline_data:
-                        timeline_df = pd.DataFrame(timeline_data)
-                        st.dataframe(timeline_df, use_container_width=True, hide_index=True)
-            else:
-                st.info("No pricing data recorded yet. Click 'Check Pricing' to start tracking.")
+                    if price_history:
+                        st.markdown("### Pricing History")
+                        
+                        # Display latest pricing
+                        latest = price_history[0]
+                        st.json(json.loads(latest['pricing_data']))
+                        
+                        # Pricing timeline
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.markdown("### 📈 Pricing Changes Timeline")
+                            timeline_data = []
+                            for entry in price_history:
+                                timeline_data.append({
+                                    'Date': entry['detected_at'][:10],
+                                    'Status': '💾 Recorded'
+                                })
+                            
+                            if timeline_data:
+                                timeline_df = pd.DataFrame(timeline_data)
+                                st.dataframe(timeline_df, use_container_width=True, hide_index=True)
+                    else:
+                        st.info("No pricing data recorded yet. Click 'Check Pricing' to start tracking.")
+                except Exception as e:
+                    st.error(f"Error loading pricing: {str(e)}")
+    
+    except Exception as e:
+        st.error(f"Pricing intelligence error: {str(e)}")
 
 # ==================== TAB 4: HIRING ACTIVITY ====================
 with tab4:
     st.markdown("## Hiring Activity Tracking")
     st.write("Monitor job postings and hiring trends")
     
-    col1, col2 = st.columns([3, 1])
-    
-    with col1:
-        hiring_competitor = st.selectbox(
-            "Select Competitor",
-            [c['name'] for c in competitors] if competitors else [],
-            key="hiring_select"
-        )
-    
-    with col2:
-        if st.button("👥 Scan Jobs"):
-            with st.spinner("Scanning job postings..."):
-                if hiring_competitor:
-                    comp = next((c for c in competitors if c['name'] == hiring_competitor), None)
-                    if comp:
+    try:
+        competitors = db.get_competitors()
+        
+        col1, col2 = st.columns([3, 1])
+        
+        with col1:
+            if competitors:
+                hiring_competitor = st.selectbox(
+                    "Select Competitor",
+                    [c['name'] for c in competitors],
+                    key="hiring_select"
+                )
+            else:
+                st.warning("No competitors added")
+                hiring_competitor = None
+        
+        with col2:
+            if st.button("👥 Scan Jobs"):
+                if hiring_competitor and competitors:
+                    with st.spinner("Scanning job postings..."):
                         try:
-                            jobs = hiring_tracker.get_job_postings(comp['name'])
-                            for job in jobs:
-                                db.add_job_opening(comp['id'], job['title'], job['department'], job.get('description', ''))
-                            st.success(f"✅ Found {len(jobs)} job openings")
+                            comp = next((c for c in competitors if c['name'] == hiring_competitor), None)
+                            if comp and hiring_tracker:
+                                jobs = hiring_tracker.get_job_postings(comp['name'])
+                                for job in jobs:
+                                    db.add_job_opening(comp['id'], job['title'], job['department'], job.get('description', ''))
+                                st.success(f"✅ Found {len(jobs)} job openings")
                         except Exception as e:
                             st.error(f"Failed: {str(e)}")
+        
+        st.divider()
+        
+        # Job listings
+        if hiring_competitor and competitors:
+            comp = next((c for c in competitors if c['name'] == hiring_competitor), None)
+            if comp:
+                try:
+                    jobs = db.get_competitor_job_openings(comp['id'])
+                    
+                    if jobs:
+                        st.markdown("### Active Job Openings")
+                        
+                        # Department breakdown
+                        dept_data = {}
+                        for job in jobs:
+                            dept = job['department'] or 'Other'
+                            dept_data[dept] = dept_data.get(dept, 0) + 1
+                        
+                        col1, col2 = st.columns(2)
+                        
+                        with col1:
+                            fig = px.pie(
+                                values=list(dept_data.values()),
+                                names=list(dept_data.keys()),
+                                title="Openings by Department"
+                            )
+                            st.plotly_chart(fig, use_container_width=True)
+                        
+                        with col2:
+                            st.markdown("### Job Titles")
+                            job_titles = pd.DataFrame([
+                                {'Title': j['title'], 'Department': j['department'] or 'N/A'}
+                                for j in jobs[:10]
+                            ])
+                            st.dataframe(job_titles, use_container_width=True, hide_index=True)
+                    else:
+                        st.info("No job openings tracked yet")
+                except Exception as e:
+                    st.error(f"Error loading jobs: {str(e)}")
     
-    st.divider()
-    
-    # Job listings
-    if hiring_competitor:
-        comp = next((c for c in competitors if c['name'] == hiring_competitor), None)
-        if comp:
-            jobs = db.get_competitor_job_openings(comp['id'])
-            
-            if jobs:
-                st.markdown("### Active Job Openings")
-                
-                # Department breakdown
-                dept_data = {}
-                for job in jobs:
-                    dept = job['department'] or 'Other'
-                    dept_data[dept] = dept_data.get(dept, 0) + 1
-                
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    fig = px.pie(
-                        values=list(dept_data.values()),
-                        names=list(dept_data.keys()),
-                        title="Openings by Department"
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
-                
-                with col2:
-                    st.markdown("### Job Titles")
-                    job_titles = pd.DataFrame([
-                        {'Title': j['title'], 'Department': j['department'] or 'N/A'}
-                        for j in jobs[:10]
-                    ])
-                    st.dataframe(job_titles, use_container_width=True, hide_index=True)
-            else:
-                st.info("No job openings tracked yet")
+    except Exception as e:
+        st.error(f"Hiring activity error: {str(e)}")
 
 # ==================== TAB 5: PRODUCT LAUNCHES ====================
 with tab5:
     st.markdown("## Product Launch Tracker")
     st.write("Detect new features, products, and announcements")
     
-    col1, col2 = st.columns([3, 1])
-    
-    with col1:
-        product_competitor = st.selectbox(
-            "Select Competitor",
-            [c['name'] for c in competitors] if competitors else [],
-            key="product_select"
-        )
-    
-    with col2:
-        if st.button("🚀 Check Launches"):
-            with st.spinner("Checking for product launches..."):
-                if product_competitor:
-                    comp = next((c for c in competitors if c['name'] == product_competitor), None)
-                    if comp:
+    try:
+        competitors = db.get_competitors()
+        
+        col1, col2 = st.columns([3, 1])
+        
+        with col1:
+            if competitors:
+                product_competitor = st.selectbox(
+                    "Select Competitor",
+                    [c['name'] for c in competitors],
+                    key="product_select"
+                )
+            else:
+                st.warning("No competitors added")
+                product_competitor = None
+        
+        with col2:
+            if st.button("🚀 Check Launches"):
+                if product_competitor and competitors:
+                    with st.spinner("Checking for product launches..."):
                         try:
-                            launches = analyzer.detect_product_launches(comp['name'])
-                            for launch in launches:
-                                db.add_product_launch(
-                                    comp['id'],
-                                    launch.get('name'),
-                                    launch.get('description'),
-                                    launch.get('url')
-                                )
-                            st.success(f"✅ Found {len(launches)} product launches")
+                            comp = next((c for c in competitors if c['name'] == product_competitor), None)
+                            if comp and analyzer:
+                                launches = analyzer.detect_product_launches(comp['name'])
+                                for launch in launches:
+                                    db.add_product_launch(
+                                        comp['id'],
+                                        launch.get('name'),
+                                        launch.get('description'),
+                                        launch.get('url')
+                                    )
+                                st.success(f"✅ Found {len(launches)} product launches")
                         except Exception as e:
                             st.error(f"Failed: {str(e)}")
+        
+        st.divider()
+        
+        # Product launches
+        if product_competitor and competitors:
+            comp = next((c for c in competitors if c['name'] == product_competitor), None)
+            if comp:
+                try:
+                    launches = db.get_competitor_product_launches(comp['id'])
+                    
+                    if launches:
+                        st.markdown("### Recent Product Launches")
+                        
+                        for launch in launches:
+                            with st.expander(f"🎉 {launch['product_name']} ({launch['announced_at'][:10]})"):
+                                st.write(launch['description'] or "No description available")
+                                if launch['url']:
+                                    st.link_button("View Product", launch['url'])
+                    else:
+                        st.info("No product launches tracked yet")
+                except Exception as e:
+                    st.error(f"Error loading launches: {str(e)}")
     
-    st.divider()
-    
-    # Product launches
-    if product_competitor:
-        comp = next((c for c in competitors if c['name'] == product_competitor), None)
-        if comp:
-            launches = db.get_competitor_product_launches(comp['id'])
-            
-            if launches:
-                st.markdown("### Recent Product Launches")
-                
-                for launch in launches:
-                    with st.expander(f"🎉 {launch['product_name']} ({launch['announced_at'][:10]})"):
-                        st.write(launch['description'] or "No description available")
-                        if launch['url']:
-                            st.link_button("View Product", launch['url'])
-            else:
-                st.info("No product launches tracked yet")
+    except Exception as e:
+        st.error(f"Product launches error: {str(e)}")
 
 # ==================== TAB 6: ALERTS & REPORTS ====================
 with tab6:
@@ -521,19 +630,22 @@ with tab6:
     
     # Alert history
     st.markdown("### Alert History")
-    alerts = db.get_all_alerts()
-    
-    if alerts:
-        alerts_df = pd.DataFrame(alerts)
-        alerts_df['triggered_at'] = pd.to_datetime(alerts_df['triggered_at']).dt.strftime('%Y-%m-%d %H:%M')
+    try:
+        alerts = db.get_all_alerts()
         
-        st.dataframe(
-            alerts_df[['competitor_name', 'description', 'severity', 'triggered_at']],
-            use_container_width=True,
-            hide_index=True
-        )
-    else:
-        st.info("No alerts yet")
+        if alerts:
+            alerts_df = pd.DataFrame(alerts)
+            alerts_df['triggered_at'] = pd.to_datetime(alerts_df['triggered_at']).dt.strftime('%Y-%m-%d %H:%M')
+            
+            st.dataframe(
+                alerts_df[['competitor_name', 'description', 'severity', 'triggered_at']],
+                use_container_width=True,
+                hide_index=True
+            )
+        else:
+            st.info("No alerts yet")
+    except Exception as e:
+        st.error(f"Error loading alerts: {str(e)}")
 
 # ==================== FOOTER ====================
 st.divider()
