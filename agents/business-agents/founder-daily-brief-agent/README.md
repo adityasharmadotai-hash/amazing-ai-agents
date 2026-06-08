@@ -36,6 +36,12 @@ and resolve Northwind's stale-dashboard issue before it hits their board prep.
 
 > 💡 **Runs with zero setup.** Rich demo data is seeded on first launch, and every AI feature has a deterministic rule-based fallback — so the dashboard is fully usable even without an OpenAI key. Add a key to upgrade the briefs and answers to GPT-4o quality.
 
+<img width="1903" height="780" alt="image" src="https://github.com/user-attachments/assets/c5246871-997d-47cd-9bb9-a228ce014ebb" />
+
+---
+
+<img width="1858" height="813" alt="image" src="https://github.com/user-attachments/assets/fba1a38f-780d-4da3-943c-d58a38dc718a" />
+
 ---
 
 ## ✨ Features
