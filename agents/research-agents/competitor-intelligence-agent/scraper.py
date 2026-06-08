@@ -75,7 +75,8 @@ class WebScraper:
             })
         
         # Check for heading changes (indicates new sections)
-        new_headings = set(current_data['headings']) - set(previous_data.get('headings', []))\n        if new_headings:
+        new_headings = set(current_data['headings']) - set(previous_data.get('headings', []))
+        if new_headings:
             changes.append({
                 'type': 'new_sections',
                 'severity': 'medium',
@@ -216,7 +217,7 @@ class HiringTracker:
         return jobs
     
     def _get_linkedin_jobs(self, company_name):
-        \"\"\"Mock LinkedIn jobs extraction\"\"\"
+        """Mock LinkedIn jobs extraction"""
         # In production, use LinkedIn API or web scraping
         # This is a placeholder that returns sample data
         return [
@@ -237,15 +238,15 @@ class HiringTracker:
         ]
     
     def _get_builtin_jobs(self, company_name):
-        \"\"\"Mock BuiltIn jobs extraction\"\"\"
+        """Mock BuiltIn jobs extraction"""
         return []
     
     def _get_angellist_jobs(self, company_name):
-        \"\"\"Mock AngelList jobs extraction\"\"\"
+        """Mock AngelList jobs extraction"""
         return []
     
     def detect_hiring_intensity(self, job_count, previous_count):
-        \"\"\"Determine hiring activity level\"\"\"
+        """Determine hiring activity level"""
         if job_count > previous_count * 1.5:
             return 'high'
         elif job_count > previous_count * 1.1:
@@ -255,13 +256,13 @@ class HiringTracker:
 
 
 class SocialMediaMonitor:
-    """Monitor social media activity\"\"\"
+    """Monitor social media activity"""
     
     def __init__(self):
         self.session = requests.Session()
     
     def get_twitter_activity(self, handle):
-        \"\"\"Get Twitter activity\"\"\"
+        """Get Twitter activity"""
         # Placeholder - requires Twitter API
         return {
             'recent_tweets': [],
@@ -270,7 +271,7 @@ class SocialMediaMonitor:
         }
     
     def get_linkedin_activity(self, company_url):
-        \"\"\"Get LinkedIn activity\"\"\"
+        """Get LinkedIn activity"""
         # Placeholder - requires LinkedIn API or scraping
         return {
             'recent_posts': [],
@@ -279,7 +280,7 @@ class SocialMediaMonitor:
         }
     
     def get_github_activity(self, username):
-        \"\"\"Get GitHub activity\"\"\"
+        """Get GitHub activity"""
         try:
             response = self.session.get(f'https://api.github.com/users/{username}')
             if response.status_code == 200:
@@ -296,10 +297,10 @@ class SocialMediaMonitor:
 
 
 class NewsMonitor:
-    """Monitor news mentions of competitors\"\"\"
+    """Monitor news mentions of competitors"""
     
     def get_news_mentions(self, company_name):
-        \"\"\"Get news mentions (placeholder)\"\"\"
+        """Get news mentions (placeholder)"""
         # In production, integrate with news APIs:
         # - NewsAPI
         # - Google News RSS
@@ -310,7 +311,7 @@ class NewsMonitor:
         }
     
     def get_crunchbase_updates(self, company_name):
-        \"\"\"Get Crunchbase updates\"\"\"
+        """Get Crunchbase updates"""
         # Requires Crunchbase API key
         return {
             'funding': [],
