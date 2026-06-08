@@ -102,6 +102,31 @@ if db is None:
     st.error("Application failed to initialize. Please check your configuration.")
     st.stop()
 
+# ==================== API KEY RESOLUTION ====================
+def resolve_openai_key():
+    """Resolve the OpenAI key: runtime Settings override > st.secrets > env var."""
+    if st.session_state.get("openai_api_key"):
+        return st.session_state["openai_api_key"]
+    try:
+        if "OPENAI_API_KEY" in st.secrets:
+            return st.secrets["OPENAI_API_KEY"]
+    except Exception:
+        pass
+    return os.getenv("OPENAI_API_KEY", "")
+
+
+def resolve_openai_model():
+    """Resolve the model: runtime Settings override > env var > default."""
+    return st.session_state.get("openai_model") or os.getenv("OPENAI_MODEL", "gpt-4o")
+
+
+# Apply the resolved config to the (cached) analyzer on every run so a key
+# entered on the Settings tab — or set via st.secrets — takes effect immediately.
+if analyzer is not None:
+    _key, _model = resolve_openai_key(), resolve_openai_model()
+    if _key != (analyzer.api_key or "") or _model != analyzer.model:
+        analyzer.configure(api_key=_key or None, model=_model)
+
 # ==================== SIDEBAR ====================
 with st.sidebar:
     st.markdown("### ⚙️ Configuration")
@@ -144,12 +169,13 @@ with st.sidebar:
     
     st.divider()
     
-    # API Configuration
-    st.subheader("🔑 API Keys")
-    openai_key = st.text_input("OpenAI API Key", type="password", value=os.getenv("OPENAI_API_KEY", ""))
-    
-    if st.button("💾 Save Settings"):
-        st.success("Settings saved!")
+    # API Configuration status
+    st.subheader("🔑 OpenAI Connection")
+    if analyzer and analyzer.client:
+        st.success(f"✅ Connected ({analyzer.model})")
+    else:
+        st.warning("⚠️ No API key configured")
+    st.caption("Configure your key on the **⚙️ Settings** tab.")
 
 # ==================== MAIN DASHBOARD ====================
 col1, col2, col3 = st.columns([2, 1, 1])
@@ -177,13 +203,14 @@ with col3:
         st.metric("Last Scan", "Error")
 
 # ==================== TABS ====================
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "📊 Dashboard",
     "🌐 Website Monitoring",
     "💰 Pricing Intelligence",
     "👥 Hiring Activity",
     "🚀 Product Launches",
-    "📧 Alerts & Reports"
+    "📧 Alerts & Reports",
+    "⚙️ Settings"
 ])
 
 # ==================== TAB 1: DASHBOARD ====================
@@ -646,6 +673,102 @@ with tab6:
             st.info("No alerts yet")
     except Exception as e:
         st.error(f"Error loading alerts: {str(e)}")
+
+# ==================== TAB 7: SETTINGS ====================
+with tab7:
+    st.markdown("## ⚙️ Configuration")
+    st.write("Configure API access and application settings. Settings apply for the current session.")
+
+    # ---- OpenAI configuration ----
+    st.markdown("### 🔑 OpenAI API")
+
+    current_key = resolve_openai_key()
+    if analyzer and analyzer.client:
+        st.success(f"✅ OpenAI is connected using model **{analyzer.model}**")
+    elif current_key:
+        st.warning("A key is set but the client could not be initialized. Verify the key is valid.")
+    else:
+        st.info("No OpenAI API key configured yet. Add one below to enable AI analysis.")
+
+    with st.form("openai_settings"):
+        key_input = st.text_input(
+            "OpenAI API Key",
+            type="password",
+            value=st.session_state.get("openai_api_key", ""),
+            placeholder="sk-...",
+            help="Your key is kept in this session only and is never written to disk.",
+        )
+
+        model_options = ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo"]
+        current_model = resolve_openai_model()
+        if current_model not in model_options:
+            model_options.insert(0, current_model)
+        model_input = st.selectbox(
+            "Model",
+            model_options,
+            index=model_options.index(current_model),
+            help="The OpenAI model used for all AI analysis.",
+        )
+
+        col_a, col_b = st.columns(2)
+        with col_a:
+            save_clicked = st.form_submit_button("💾 Save & Connect")
+        with col_b:
+            test_clicked = st.form_submit_button("🧪 Test Connection")
+
+        if save_clicked:
+            st.session_state["openai_api_key"] = key_input.strip()
+            st.session_state["openai_model"] = model_input
+            ok = analyzer.configure(api_key=key_input.strip() or None, model=model_input)
+            if ok:
+                st.success("✅ Settings saved and OpenAI connected.")
+            else:
+                st.error("Saved, but no valid key was provided — AI features will use fallback analysis.")
+
+        if test_clicked:
+            test_key = key_input.strip() or current_key
+            if not test_key:
+                st.error("Enter an API key first.")
+            else:
+                with st.spinner("Testing connection..."):
+                    try:
+                        analyzer.configure(api_key=test_key, model=model_input)
+                        result = analyzer.generate_insight("Test connectivity ping.")
+                        st.success("✅ Connection works.")
+                        st.caption(f"Sample response: {result[:160]}")
+                    except Exception as e:
+                        st.error(f"Connection failed: {str(e)}")
+
+    st.caption(
+        "💡 On Streamlit Cloud you can instead set `OPENAI_API_KEY` under "
+        "**App → Settings → Secrets** so the key persists across restarts."
+    )
+
+    st.divider()
+
+    # ---- Alert configuration ----
+    st.markdown("### 📧 Alerts")
+    alert_email_setting = st.text_input(
+        "Default Alert Email",
+        value=st.session_state.get("alert_email", os.getenv("ALERT_EMAIL", "")),
+        placeholder="alerts@yourcompany.com",
+    )
+    if st.button("💾 Save Alert Email"):
+        st.session_state["alert_email"] = alert_email_setting.strip()
+        st.success("✅ Alert email saved.")
+
+    st.divider()
+
+    # ---- Diagnostics ----
+    st.markdown("### 🩺 Diagnostics")
+    diag_col1, diag_col2 = st.columns(2)
+    with diag_col1:
+        st.metric("OpenAI", "Connected" if (analyzer and analyzer.client) else "Not configured")
+    with diag_col2:
+        try:
+            st.metric("Database", "OK" if db else "Error")
+        except Exception:
+            st.metric("Database", "Error")
 
 # ==================== FOOTER ====================
 st.divider()
