@@ -27,11 +27,17 @@ def _ensure_dir() -> None:
 
 @contextmanager
 def get_conn():
-    """Yield a SQLite connection with row access by column name."""
+    """Yield a SQLite connection with row access by column name.
+
+    Notes for Streamlit Cloud: WAL journal mode is intentionally NOT used — it
+    relies on shared-memory files that fail with OperationalError on overlay /
+    networked filesystems. A busy_timeout lets short, concurrent writes from
+    Streamlit reruns wait briefly for the lock instead of erroring immediately.
+    """
     _ensure_dir()
-    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+    conn = sqlite3.connect(DB_PATH, check_same_thread=False, timeout=30)
     conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL;")
+    conn.execute("PRAGMA busy_timeout=5000;")
     try:
         yield conn
         conn.commit()

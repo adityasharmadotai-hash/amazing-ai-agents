@@ -10,6 +10,7 @@ never hard-coding a secret.
 from __future__ import annotations
 
 import os
+import tempfile
 
 try:
     from dotenv import load_dotenv
@@ -20,18 +21,20 @@ except Exception:  # python-dotenv not installed yet
 
 import streamlit as st
 
-# ── Model catalogue (Claude) ─────────────────────────────────────────────────────
+# ── Model catalogue (OpenAI) ─────────────────────────────────────────────────────
 MODELS = {
-    "claude-opus-4-8": "Claude Opus 4.8 — most capable (best quality)",
-    "claude-sonnet-4-6": "Claude Sonnet 4.6 — balanced speed / cost",
-    "claude-haiku-4-5": "Claude Haiku 4.5 — fastest / cheapest (bulk scanning)",
+    "gpt-4o": "GPT-4o — most capable (best quality)",
+    "gpt-4o-mini": "GPT-4o mini — fast / cheap (bulk scanning)",
+    "gpt-4.1-mini": "GPT-4.1 mini — balanced speed / cost",
 }
-DEFAULT_MODEL = "claude-opus-4-8"
+DEFAULT_MODEL = "gpt-4o-mini"
 
-# Where the SQLite database lives. Override with LINKEDIN_AGENT_DB if needed.
+# Where the SQLite database lives. Defaults to a writable temp directory so it
+# works on Streamlit Cloud, where the mounted repo path is not a reliable place
+# to write. Override with the LINKEDIN_AGENT_DB env var if you want it elsewhere.
 DB_PATH = os.environ.get(
     "LINKEDIN_AGENT_DB",
-    os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "linkedin_agent.db"),
+    os.path.join(tempfile.gettempdir(), "linkedin_opportunity_agent", "linkedin_agent.db"),
 )
 
 
@@ -47,15 +50,19 @@ def _secret(name: str, default: str = "") -> str:
 
 # ── API key ──────────────────────────────────────────────────────────────────────
 def get_api_key() -> str:
-    """Resolve the Anthropic API key (session → secrets → env)."""
+    """Resolve the OpenAI API key (session → secrets → env).
+
+    Accepts either OPENAI_API_KEY (preferred) or the legacy ANTHROPIC_API_KEY
+    secret name so existing deployments keep working.
+    """
     sk = st.session_state.get("api_key", "").strip()
     if sk:
         return sk
-    return _secret("ANTHROPIC_API_KEY", "").strip()
+    return (_secret("OPENAI_API_KEY", "") or _secret("ANTHROPIC_API_KEY", "")).strip()
 
 
 def get_model() -> str:
-    """Resolve the Claude model to use for analysis."""
+    """Resolve the OpenAI model to use for analysis."""
     m = st.session_state.get("model", "").strip()
     if m in MODELS:
         return m

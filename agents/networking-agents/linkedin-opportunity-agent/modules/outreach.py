@@ -2,7 +2,7 @@
 outreach.py — AI Outreach Assistant.
 
 Generates connection requests, personalised first messages, follow-ups, and
-networking introductions for a given opportunity. Uses Claude when configured,
+networking introductions for a given opportunity. Uses OpenAI when configured,
 otherwise falls back to high-quality templates so the feature always works.
 """
 

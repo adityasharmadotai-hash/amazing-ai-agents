@@ -8,14 +8,14 @@ from modules import config, database as db, monitor, ui
 ui.hero("Settings", "Configure the agent: API key, what to monitor, outreach identity, and alerts.")
 
 # ── AI configuration ─────────────────────────────────────────────────────────────
-st.markdown("<div class='section-title'>🔑 AI / Claude API</div>", unsafe_allow_html=True)
+st.markdown("<div class='section-title'>🔑 AI / OpenAI API</div>", unsafe_allow_html=True)
 a1, a2 = st.columns([2, 1])
 with a1:
     key = st.text_input(
-        "Anthropic API key",
+        "OpenAI API key",
         value=st.session_state.get("api_key", ""),
         type="password",
-        placeholder="sk-ant-…  (or set ANTHROPIC_API_KEY in Streamlit secrets)",
+        placeholder="sk-…  (or set OPENAI_API_KEY in Streamlit secrets)",
         help="Stored only in this session — never written to disk. On Streamlit Cloud, "
              "prefer Settings → Secrets.",
     )

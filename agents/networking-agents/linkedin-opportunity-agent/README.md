@@ -22,7 +22,7 @@ It detects, scores, explains, and drafts outreach for:
 |---|---------|--------------|
 | 1 | **LinkedIn monitoring** | Track profiles, company pages, keywords, industries & job titles |
 | 2 | **Opportunity detection** | Classifies each post into one of 7 opportunity types from explicit signals |
-| 3 | **AI analysis** | Summary · why it matters · recommended action · confidence score (Claude) |
+| 3 | **AI analysis** | Summary · why it matters · recommended action · confidence score (OpenAI) |
 | 4 | **Lead scoring** | High / Medium / Low based on relevance, engagement, industry match & buying intent |
 | 5 | **Daily opportunity feed** | "Today's Opportunities", ranked by score |
 | 6 | **AI outreach assistant** | Connection requests, first messages, follow-ups & intros — one-click sequences |
@@ -43,16 +43,16 @@ streamlit run app.py
 ```
 
 The app launches fully populated with realistic demo data — **no API key
-required**. Without a key it runs a deterministic keyword/signal engine; add a
-Claude API key for nuanced AI analysis and outreach.
+required**. Without a key it runs a deterministic keyword/signal engine; add an
+OpenAI API key for nuanced AI analysis and outreach.
 
-### Add your Claude API key (optional but recommended)
+### Add your OpenAI API key (optional but recommended)
 
-- **Locally:** copy `.env.example` → `.env` and set `ANTHROPIC_API_KEY`, **or**
+- **Locally:** copy `.env.example` → `.env` and set `OPENAI_API_KEY`, **or**
   paste the key on the in-app **Settings** page (stored only in your session).
-- **Streamlit Cloud:** add `ANTHROPIC_API_KEY` under **Settings → Secrets**.
+- **Streamlit Cloud:** add `OPENAI_API_KEY` under **Settings → Secrets**.
 
-Get a key at <https://console.anthropic.com>.
+Get a key at <https://platform.openai.com/api-keys>.
 
 ---
 
@@ -63,9 +63,9 @@ Get a key at <https://console.anthropic.com>.
 3. Add your secrets:
 
    ```toml
-   ANTHROPIC_API_KEY = "sk-ant-..."
+   OPENAI_API_KEY = "sk-..."
    # optional:
-   LINKEDIN_AGENT_MODEL = "claude-haiku-4-5"   # cheaper bulk scanning
+   LINKEDIN_AGENT_MODEL = "gpt-4o-mini"   # cheaper bulk scanning
    ```
 
 4. Deploy. The SQLite database is created (and demo-seeded) automatically.
@@ -115,7 +115,7 @@ pages/
 modules/
   config.py                 # Secret/setting resolution (session → secrets → env)
   database.py               # SQLite persistence layer
-  ai.py                     # Claude wrapper (sync + async) with JSON parsing
+  ai.py                     # OpenAI wrapper (sync + async) with JSON parsing
   detector.py               # Opportunity detection + lead scoring (AI + fallback)
   monitor.py                # Ingestion + async scan pipeline (pluggable source)
   samples.py                # Realistic demo posts / profiles / companies
@@ -126,7 +126,7 @@ modules/
   ui.py                     # Shared styles & components
 ```
 
-**Tech:** Python · Streamlit · Claude (Anthropic) API · SQLite · async ·
+**Tech:** Python · Streamlit · OpenAI API · SQLite · async ·
 modular architecture · graceful fallback · environment-variable config.
 
 ---

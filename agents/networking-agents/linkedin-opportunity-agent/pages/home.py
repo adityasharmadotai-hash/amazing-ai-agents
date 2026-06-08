@@ -19,7 +19,7 @@ with c1:
 with c2:
     limit = st.selectbox("Posts per scan", [6, 12, 20, 30], index=1, label_visibility="collapsed")
 with c3:
-    st.caption(f"Engine: **{'Claude' if config.ai_enabled() else 'Keyword fallback'}**")
+    st.caption(f"Engine: **{'OpenAI' if config.ai_enabled() else 'Keyword fallback'}**")
 
 if scan:
     with st.spinner("Fetching posts and analysing opportunities…"):

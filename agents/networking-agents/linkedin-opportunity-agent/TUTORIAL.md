@@ -20,15 +20,15 @@ The app has two engines:
 
 - **Keyword engine (default):** deterministic signal matching. Free, instant,
   no key required. Great for trying things out.
-- **Claude engine:** nuanced analysis and outreach. Add a key to enable it.
+- **OpenAI engine:** nuanced analysis and outreach. Add a key to enable it.
 
-To enable Claude, go to **⚙️ Settings → AI / Claude API** and paste your
-`sk-ant-...` key (or set `ANTHROPIC_API_KEY` in your environment / Streamlit
+To enable AI, go to **⚙️ Settings → AI / OpenAI API** and paste your
+`sk-...` key (or set `OPENAI_API_KEY` in your environment / Streamlit
 secrets). Pick a model:
 
-- `claude-opus-4-8` — highest quality
-- `claude-sonnet-4-6` — balanced
-- `claude-haiku-4-5` — fastest / cheapest for bulk scanning
+- `gpt-4o` — highest quality
+- `gpt-4.1-mini` — balanced
+- `gpt-4o-mini` — fastest / cheapest for bulk scanning (default)
 
 The sidebar shows a green ✅ when AI is active.
 
@@ -45,7 +45,7 @@ Optionally add **monitored profiles** and **company pages** you want to watch.
 Back on **🏠 Home**, click **🔍 Scan LinkedIn now**. The agent:
 
 1. Fetches new posts from the active source,
-2. Analyses each one (Claude runs them concurrently via async),
+2. Analyses each one (OpenAI runs them concurrently via async),
 3. Detects the opportunity type, writes a summary, explains why it matters,
    recommends an action, and assigns a **0-100 score**.
 

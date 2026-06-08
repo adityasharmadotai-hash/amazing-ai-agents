@@ -33,7 +33,7 @@ with right:
         format_func=lambda k: outreach.MESSAGE_KINDS[k],
         horizontal=False,
     )
-    engine = "Claude" if config.ai_enabled() else "smart templates"
+    engine = "OpenAI" if config.ai_enabled() else "smart templates"
     if st.button(f"✨ Generate with {engine}", type="primary", use_container_width=True):
         with st.spinner("Drafting…"):
             msg = outreach.generate_message(opp, kind, sender_name, sender_role)

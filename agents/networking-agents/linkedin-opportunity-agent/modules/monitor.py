@@ -97,7 +97,7 @@ def ingest_manual_post(
 
 # ── Async analysis of many posts ─────────────────────────────────────────────────
 async def _ai_analyze_many(posts: list[dict], keywords: list[str], industries: list[str]):
-    """Analyse posts concurrently with Claude. Returns list of (post, result|None).
+    """Analyse posts concurrently with OpenAI. Returns list of (post, result|None).
 
     A bounded semaphore keeps concurrency sane; any per-post failure falls back to
     the deterministic engine rather than dropping the post.
@@ -108,7 +108,7 @@ async def _ai_analyze_many(posts: list[dict], keywords: list[str], industries: l
         system, user = detector.build_ai_prompt(post, keywords, industries)
         async with sem:
             try:
-                text = await ai.complete_async(system, user, max_tokens=700)
+                text = await ai.complete_async(system, user, max_tokens=700, json_mode=True)
                 data = ai.parse_json(text)
                 result = detector.normalise_ai_response(data, post)
             except Exception:
@@ -119,7 +119,7 @@ async def _ai_analyze_many(posts: list[dict], keywords: list[str], industries: l
 
 
 def _analyze_all(posts: list[dict], keywords: list[str], industries: list[str]):
-    """Analyse a batch, using async Claude calls when configured, else sync rules."""
+    """Analyse a batch, using async OpenAI calls when configured, else sync rules."""
     if ai.is_configured():
         try:
             return asyncio.run(_ai_analyze_many(posts, keywords, industries))
@@ -178,5 +178,5 @@ def run_scan(keywords: list[str], industries: list[str], limit: int = 12) -> dic
         "high": high,
         "medium": medium,
         "low": low,
-        "engine": "Claude" if ai.is_configured() else "Keyword fallback",
+        "engine": "OpenAI" if ai.is_configured() else "Keyword fallback",
     }

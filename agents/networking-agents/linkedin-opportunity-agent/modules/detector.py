@@ -2,7 +2,7 @@
 detector.py — Opportunity detection, AI analysis & lead scoring.
 
 Two engines:
-  • AI engine (Claude) — nuanced analysis returning summary, type, rationale,
+  • AI engine (OpenAI) — nuanced analysis returning summary, type, rationale,
     recommended action and a confidence score.
   • Fallback engine — deterministic keyword/signal matching used when no API key
     is configured, so the product is fully functional with zero cost.
@@ -188,7 +188,7 @@ def _truncate(text: str, n: int) -> str:
     return text if len(text) <= n else text[: n - 1].rstrip() + "…"
 
 
-# ── AI engine (Claude) ───────────────────────────────────────────────────────────
+# ── AI engine (OpenAI) ───────────────────────────────────────────────────────────
 _AI_SYSTEM = """You are an expert B2B sales, recruiting and networking analyst.
 You read a single LinkedIn post and decide whether it represents a high-value
 OPPORTUNITY for the user, then analyse it.
@@ -216,7 +216,7 @@ If the post is not a genuine opportunity, set is_opportunity to false."""
 
 
 def ai_analyze(post: dict, keywords: list[str], industries: list[str]) -> dict | None:
-    """Claude-powered analysis. Returns None when the post is genuinely not an
+    """OpenAI-powered analysis. Returns None when the post is genuinely not an
     opportunity. Raises on an API/parse error so the caller can fall back to the
     deterministic engine instead of silently dropping the post."""
     user = _build_user_prompt(post, keywords, industries)
@@ -273,7 +273,7 @@ def _normalise_ai(data: dict, post: dict) -> dict | None:
 def analyze_post(post: dict, keywords: list[str], industries: list[str]) -> dict | None:
     """Analyse one post with the best available engine.
 
-    With a key configured we trust Claude's verdict (a returned None means "not
+    With a key configured we trust OpenAI's verdict (a returned None means "not
     an opportunity"). Only if the API call itself errors do we fall back to the
     deterministic engine, so no post is silently dropped on a transient failure.
     """
