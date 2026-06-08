@@ -1,0 +1,21 @@
+# Secrets & local config
+.env
+.streamlit/secrets.toml
+
+# Database (regenerated on first run)
+*.db
+*.sqlite
+*.sqlite3
+data/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
