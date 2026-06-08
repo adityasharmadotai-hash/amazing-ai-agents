@@ -96,6 +96,7 @@ html,body,[class*="css"]{ font-family:'Inter',sans-serif; }
 from modules import connectors as cx
 from modules import brief as bf
 from modules import ai
+from modules import gmail_connector as gc
 from modules.storage import init_profile, get_profile, update_profile, get_connections, toggle_connection
 
 init_profile()
@@ -270,6 +271,24 @@ if page == "☀️ Daily Brief":
 # ══════════════════════════════════════════════════════════════════════════════
 elif page == "📧 Inbox":
     st.markdown('<div class="page-hdr"><h1>📧 Inbox</h1><p>Gmail — important emails, follow-ups, and priority triage</p></div>', unsafe_allow_html=True)
+
+    # Live vs demo banner + sync
+    lb1, lb2 = st.columns([4, 1])
+    with lb1:
+        if cx.emails_are_live():
+            st.markdown('<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:8px 14px;font-size:13px;color:#15803d;">🟢 <strong>Live Gmail</strong> — showing your real inbox.</div>', unsafe_allow_html=True)
+        elif gc.is_authenticated():
+            st.markdown('<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:8px 14px;font-size:13px;color:#1d4ed8;">🔵 Gmail connected — click <strong>Sync</strong> to load your real inbox.</div>', unsafe_allow_html=True)
+        else:
+            st.markdown('<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:8px 14px;font-size:13px;color:#92400e;">🟡 <strong>Demo data</strong> — connect Gmail in 🔑 Settings to use your real inbox.</div>', unsafe_allow_html=True)
+    with lb2:
+        if gc.is_authenticated():
+            if st.button("🔄 Sync Gmail", use_container_width=True, type="primary"):
+                with st.spinner("Fetching & triaging your inbox..."):
+                    ok, msg = cx.sync_gmail()
+                (st.success if ok else st.error)(msg)
+                if ok:
+                    st.rerun()
 
     emails = cx.get_emails()
     k1, k2, k3, k4 = st.columns(4)
@@ -778,14 +797,64 @@ elif page == "🔑 Settings":
                 st.rerun()
 
     with s2:
-        st.markdown('<div class="sec-hdr">🔌 Connections</div>', unsafe_allow_html=True)
+        # ── Real Gmail integration ──────────────────────────────────────────
+        st.markdown('<div class="sec-hdr">📧 Connect Gmail (Live)</div>', unsafe_allow_html=True)
+        if not gc.gmail_available():
+            st.warning("Google libraries not installed. Run:\n\n`pip install google-auth google-auth-oauthlib google-api-python-client`")
+        elif cx.emails_are_live():
+            st.success("🟢 Gmail is connected and synced — your Inbox shows real mail.")
+            gb1, gb2 = st.columns(2)
+            with gb1:
+                if st.button("🔄 Re-sync", use_container_width=True):
+                    with st.spinner("Syncing..."):
+                        ok, msg = cx.sync_gmail()
+                    (st.success if ok else st.error)(msg)
+                    st.rerun()
+            with gb2:
+                if st.button("🔌 Disconnect", use_container_width=True):
+                    gc.disconnect()
+                    cx.reset_demo_data()
+                    st.rerun()
+        elif gc.is_authenticated():
+            st.info("🔵 Authenticated. Pull your inbox now:")
+            if st.button("📥 Sync my Gmail", type="primary", use_container_width=True):
+                with st.spinner("Fetching & triaging..."):
+                    ok, msg = cx.sync_gmail()
+                (st.success if ok else st.error)(msg)
+                if ok:
+                    st.rerun()
+            if st.button("🔌 Disconnect", use_container_width=True):
+                gc.disconnect()
+                st.rerun()
+        else:
+            st.markdown("""<div style="font-size:12px;color:#475569;line-height:1.7;">
+            <strong>1.</strong> In <a href="https://console.cloud.google.com" target="_blank">Google Cloud Console</a>: new project → enable <strong>Gmail API</strong>.<br>
+            <strong>2.</strong> Create an OAuth client ID (type: <strong>Desktop app</strong>) → download <code>credentials.json</code>.<br>
+            <strong>3.</strong> Upload it below and click Connect (a Google sign-in opens in your browser).</div>""", unsafe_allow_html=True)
+            cred_file = st.file_uploader("Upload credentials.json", type=["json"], key="gmail_creds")
+            if cred_file is not None:
+                gc.save_credentials_file(cred_file.read())
+                st.success("credentials.json saved.")
+            if gc.has_credentials():
+                if st.button("🔗 Connect Gmail", type="primary", use_container_width=True):
+                    with st.spinner("A browser window will open for Google sign-in..."):
+                        ok, msg = gc.connect()
+                    (st.success if ok else st.error)(msg)
+                    if ok:
+                        st.rerun()
+            st.caption("🔒 Read-only access. credentials.json & token.json stay on your machine (git-ignored).")
+
+        # ── Other connectors (still demo) ───────────────────────────────────
+        st.markdown('<div class="sec-hdr">🔌 Other Connections</div>', unsafe_allow_html=True)
         conns = get_connections()
         for name in conns:
+            if name == "Gmail":
+                continue  # handled by the live section above
             cur = conns[name]
             new = st.toggle(name, value=cur, key=f"conn_{name}")
             if new != cur:
                 toggle_connection(name, new)
-        st.caption("Demo data is active for connected tools. Wire real OAuth in modules/connectors.py.")
+        st.caption("These still use demo data. Wire real APIs in modules/connectors.py (same pattern as Gmail).")
 
         st.markdown('<div class="sec-hdr">📦 Demo Data</div>', unsafe_allow_html=True)
         if st.button("🔄 Reset demo data", use_container_width=True):

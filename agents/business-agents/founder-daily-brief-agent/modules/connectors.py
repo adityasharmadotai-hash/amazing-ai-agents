@@ -218,9 +218,42 @@ def init_connectors():
 
 def reset_demo_data():
     for k in ("emails", "meetings", "tasks", "slack", "revenue", "seeded",
-              "last_brief", "last_insights", "chat_history"):
+              "last_brief", "last_insights", "chat_history", "gmail_live"):
         st.session_state.pop(k, None)
     init_connectors()
+
+
+def emails_are_live() -> bool:
+    return bool(st.session_state.get("gmail_live"))
+
+
+def sync_gmail(max_results: int = 15, query: str = "newer_than:7d") -> tuple:
+    """Pull real Gmail, AI-classify it, and replace the email store.
+
+    Returns (ok: bool, message: str). Imports are local to avoid a circular
+    import (brief.py imports this module).
+    """
+    from . import gmail_connector as gc
+    from . import brief as bf
+
+    if not gc.is_authenticated():
+        return False, "Not connected to Gmail. Connect it in Settings first."
+    try:
+        raw = gc.fetch_emails(max_results=max_results, query=query)
+        init_connectors()
+        if not raw:
+            st.session_state.gmail_live = True
+            st.session_state.emails = []
+            return True, "Connected — no matching emails in that window."
+        classified = bf.classify_emails(raw)
+        st.session_state.emails = classified
+        st.session_state.gmail_live = True
+        # invalidate cached AI outputs so the brief reflects real mail
+        st.session_state.pop("last_brief", None)
+        st.session_state.pop("last_insights", None)
+        return True, f"Synced {len(classified)} emails from Gmail."
+    except Exception as e:
+        return False, f"Sync failed: {e}"
 
 
 # ══════════════════════════════════════════════════════════════════════════════

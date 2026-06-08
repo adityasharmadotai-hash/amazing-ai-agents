@@ -59,6 +59,60 @@ def _context_for_ai(ctx: dict) -> str:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# EMAIL TRIAGE  (used by the real Gmail connector)
+# ══════════════════════════════════════════════════════════════════════════════
+
+def classify_emails(emails: list) -> list:
+    """Tag each email with priority / category / needs_followup / is_issue.
+
+    Uses GPT-4o when a key is configured (one batched call for all emails),
+    otherwise falls back to keyword heuristics. Mutates and returns the list.
+    """
+    if not emails:
+        return emails
+
+    if ai.is_configured():
+        try:
+            items = [{"i": idx, "from": e["sender"], "subject": e["subject"],
+                      "snippet": e["snippet"][:200]} for idx, e in enumerate(emails)]
+            system = ("You triage a startup founder's inbox. Be decisive. "
+                      "Return ONLY valid JSON.")
+            user = f"""Classify each email below. Categories: Customer, Sales, Team, Finance, Personal, Newsletter.
+Mark is_issue=true only for customer problems/outages/complaints. Mark needs_followup=true if the founder must reply or act.
+
+Return EXACTLY: {{"results":[{{"i":0,"priority":"high|medium|low","category":"...","needs_followup":true,"is_issue":false}}]}}
+
+Emails:
+{json.dumps(items, indent=2)}"""
+            data = ai.complete_json(system, user, tokens=1500, temperature=0.2)
+            by_i = {r.get("i"): r for r in data.get("results", [])}
+            for idx, e in enumerate(emails):
+                r = by_i.get(idx, {})
+                e["priority"] = r.get("priority", e["priority"])
+                e["category"] = r.get("category", e["category"])
+                e["needs_followup"] = bool(r.get("needs_followup", e["needs_followup"]))
+                e["is_issue"] = bool(r.get("is_issue", e["is_issue"]))
+            return emails
+        except Exception:
+            pass
+
+    # Heuristic fallback — no API key
+    for e in emails:
+        text = (e["subject"] + " " + e["snippet"]).lower()
+        if any(w in text for w in ["urgent", "asap", "down", "broken", "outage",
+                                   "issue", "error", "stale", "p1", "not working"]):
+            e["priority"], e["is_issue"], e["needs_followup"] = "high", True, True
+            e["category"] = "Customer"
+        elif any(w in text for w in ["invoice", "overdue", "payment", "renew", "receipt"]):
+            e["priority"], e["needs_followup"], e["category"] = "medium", True, "Finance"
+        elif any(w in text for w in ["proposal", "quote", "demo", "pricing", "interested", "partnership"]):
+            e["priority"], e["needs_followup"], e["category"] = "high", True, "Sales"
+        elif any(w in text for w in ["newsletter", "digest", "unsubscribe", "weekly"]):
+            e["priority"], e["category"] = "low", "Newsletter"
+    return emails
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # DAILY BRIEF
 # ══════════════════════════════════════════════════════════════════════════════
 

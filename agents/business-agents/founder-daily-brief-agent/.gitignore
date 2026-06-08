@@ -4,3 +4,7 @@ __pycache__/
 venv/
 .streamlit/secrets.toml
 .DS_Store
+
+# Gmail / Google OAuth secrets — never commit these
+credentials.json
+token.json
