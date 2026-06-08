@@ -24,6 +24,8 @@ You add a competitor (name + website), and the app:
 
 The result: a single pane of glass for competitive intelligence, instead of a dozen browser tabs and a spreadsheet.
 
+<img width="1810" height="660" alt="image" src="https://github.com/user-attachments/assets/d4f8fa3a-152a-415b-af65-53625f28e8a1" />
+
 ---
 
 ## ✨ Features
