@@ -40,6 +40,10 @@ and resolve Northwind's stale-dashboard issue before it hits their board prep.
 
 ---
 
+<img width="1858" height="813" alt="image" src="https://github.com/user-attachments/assets/fba1a38f-780d-4da3-943c-d58a38dc718a" />
+
+---
+
 ## ✨ Features
 
 | # | Feature | Description |
