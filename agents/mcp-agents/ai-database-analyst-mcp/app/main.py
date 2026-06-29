@@ -32,9 +32,29 @@ def _load_css() -> None:
             st.markdown(f"<style>{fh.read()}</style>", unsafe_allow_html=True)
 
 
+def _ensure_sample_db(settings) -> None:
+    """Create the bundled SQLite sample DB on first run if it is missing.
+
+    The sample database is git-ignored, so on a fresh deploy (e.g. Streamlit
+    Cloud) it won't exist. Generate it on demand so the demo works out of the box.
+    """
+    if settings.db_type.lower() != "sqlite":
+        return
+    db_path = settings.db_name
+    if not db_path or db_path == ":memory:" or os.path.exists(db_path):
+        return
+    try:
+        from scripts.create_sample_db import create_sample_db
+
+        create_sample_db(db_path)
+    except Exception:  # noqa: BLE001 - never block startup on sample-data creation
+        pass
+
+
 def main() -> None:
     settings = get_settings()
     configure_logging(log_dir=settings.log_dir, level=settings.log_level)
+    _ensure_sample_db(settings)
 
     st.set_page_config(
         page_title="AI Database Analyst",
