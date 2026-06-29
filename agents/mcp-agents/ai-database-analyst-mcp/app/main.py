@@ -90,6 +90,7 @@ def main() -> None:
     )
 
 
-# Streamlit executes this module as "__main__"; calling main() at import time
-# keeps a single, predictable entry point.
-main()
+if __name__ == "__main__":
+    # Runs when launched via `streamlit run app/main.py`. The streamlit_app.py
+    # wrapper imports and calls main() directly instead.
+    main()

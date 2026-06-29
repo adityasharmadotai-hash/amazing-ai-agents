@@ -11,11 +11,31 @@ from core.config import AppSettings
 from services.report_service import ReportService
 
 
+def _has_api_key(settings: AppSettings) -> bool:
+    """True if a Gemini key is available from secrets/.env or the session."""
+    if settings.has_gemini_key():
+        return True
+    return bool(st.session_state.get("gemini_api_key_override", "").strip())
+
+
 def render_settings(settings: AppSettings) -> None:
     """Render the settings expander and apply changes to the live context."""
     ctx: Optional[AnalystContext] = st.session_state.get("ctx")
+    key_ready = _has_api_key(settings)
 
-    with st.expander("⚙️ Settings", expanded=False):
+    # Open the panel automatically until a working API key is configured so new
+    # users (and cloud deploys) can find where to paste it.
+    with st.expander("⚙️ Settings — API Key & Preferences", expanded=not key_ready):
+        if not key_ready:
+            st.warning(
+                "No Gemini API key detected. Paste your key below (or add "
+                "`GEMINI_API_KEY` to the app's secrets) to enable AI features. "
+                "Get one at https://aistudio.google.com/app/apikey",
+                icon="🔑",
+            )
+        else:
+            st.success("Gemini API key detected — AI features are enabled.", icon="✅")
+
         col1, col2 = st.columns(2)
 
         with col1:
@@ -24,8 +44,8 @@ def render_settings(settings: AppSettings) -> None:
                 "Gemini API Key",
                 type="password",
                 value="",
-                placeholder="Leave blank to use .env value",
-                help="Stored only in this session; never written to disk.",
+                placeholder="Paste your Gemini API key here",
+                help="Stored only in this browser session; never written to disk.",
             )
             model = st.text_input("Model", value=settings.gemini_model)
             temperature = st.slider("Temperature", 0.0, 1.5, float(settings.gemini_temperature), 0.05)
