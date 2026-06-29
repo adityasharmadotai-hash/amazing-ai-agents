@@ -1,231 +1,207 @@
+<!-- ===================== COMMUNITY LINKS ===================== -->
+> ⭐ **Star the repo:** https://github.com/adityasharmadotai-hash/amazing-ai-agents
+> 💼 **Follow on LinkedIn:** https://www.linkedin.com/in/aditya-hicounselor/
+> 📺 **Subscribe on YouTube:** https://www.youtube.com/channel/UCPjQtVNUrf7EKrm8ZoqrCAQ
+> 🚀 **Looking for jobs at top AI companies in the U.S.? Apply here:** https://docs.google.com/forms/d/e/1FAIpQLSc3gJssBV3B25EZ3sYA7Qcen9NbtOB_wgQaturfB7lTXuAdLQ/viewform
+<!-- ========================================================== -->
+
+---
+
 # 🧠 AI Database Analyst — MCP Agent
 
-Chat with your SQL database in plain English. The AI Database Analyst inspects
-your schema, understands table relationships, generates **safe, optimised SQL**,
-executes it, explains the results, builds interactive charts and exports
-professional reports — all wired together through a **Model Context Protocol
-(MCP)** tool layer and powered by **Google Gemini**.
+> Chat with any SQL database in plain English — the AI inspects your schema, writes safe optimised SQL, runs it, explains the results, charts them, and exports reports.
 
-🔗 **Live demo:** <https://amazing-ai-agents.streamlit.app/>
-📖 **Hands-on guide:** [Tutorial.md](Tutorial.md)
+🔗 **Live demo:** https://amazing-ai-agents.streamlit.app/
+📖 **Step-by-step tutorial:** [TUTORIAL.md](https://github.com/adityasharmadotai-hash/docs-reader-rag-agent/blob/main/TUTORIAL.md) · (local copy: [TUTORIAL.md](TUTORIAL.md))
 
-> Read-only by default. Destructive statements are blocked unless you explicitly
-> enable write mode.
+---
+
+## 📌 Overview
+
+Most people who need answers from a database can't write SQL — and even those who
+can lose time hand-writing joins, remembering column names, and building charts.
+
+**AI Database Analyst** removes that barrier. You connect a database, ask a
+question like *"top 20 customers by revenue"*, and the agent:
+
+1. reads your schema and figures out the relevant tables and relationships,
+2. generates a correct, dialect-aware SQL query,
+3. checks it against a safety guard (read-only by default),
+4. executes it, then explains the results, draws the best chart, and offers
+   one-click CSV / Excel / PDF / Markdown / JSON exports.
+
+Every capability is also exposed as a **Model Context Protocol (MCP)** tool, so the
+same schema reader, SQL executor, chart generator, etc. can be called
+programmatically by other agents.
+
+**The problem it solves:** turning natural-language questions into trustworthy,
+explained, visualised database insights — safely, for both non-technical users
+and busy analysts.
 
 ---
 
 ## ✨ Features
 
-- **Natural-language → SQL** with automatic schema inspection and relationship
-  discovery.
-- **Safe execution**: read-only by default; `DROP`/`DELETE`/`UPDATE`/`TRUNCATE`/
-  `ALTER`/`INSERT` are blocked unless write mode is enabled. Parameterised
-  queries, identifier validation, multi-statement injection protection.
-- **MCP tool layer** — 10 independently-callable tools (schema, table, column,
-  index, relationship, statistics, SQL executor, CSV/PDF export, chart
-  generator), served over JSON-RPC stdio.
-- **Auto visualisation** — Plotly bar / line / pie / scatter / area / histogram /
-  heatmap, with automatic chart-type selection.
-- **AI insights & reports** — executive summaries, key metrics, recommendations,
-  anomalies and opportunities.
-- **SQL optimisation** — index suggestions, JOIN/`SELECT *` warnings, query
-  simplification hints and live execution-plan reading.
-- **Exports** — CSV, Excel, JSON, Markdown and PDF.
-- **Multi-database** — SQLite, MySQL, PostgreSQL and DuckDB, with connection
-  pooling, validation, timeouts and automatic reconnect.
-- **Resilient AI** — auto-falls back to a supported Gemini model if the
-  configured one is unavailable for your key.
-- **Session memory** — conversation history, previous SQL/results, schema cache,
-  saved queries and recent connections.
-- **Modern dashboard** — dark mode, responsive layout, metric cards.
+- 💬 **Natural language → SQL** with automatic schema + relationship discovery.
+- 🛡️ **Safe by default** — read-only mode blocks `DROP`/`DELETE`/`UPDATE`/`TRUNCATE`/`ALTER`/`INSERT`; parameterised queries; multi-statement injection guard.
+- 🧩 **10 MCP tools** — schema, table, column, index, relationship, statistics, SQL executor, CSV export, PDF export, chart generator (each independently callable over JSON-RPC).
+- 📊 **Auto charts** — bar / line / pie / scatter / area / histogram / heatmap via interactive Plotly, with automatic chart-type selection.
+- 🧠 **AI insights & reports** — executive summary, key metrics, recommendations, anomalies, opportunities.
+- ⚡ **SQL optimisation** — index suggestions, `SELECT *` / JOIN warnings, query simplification, live execution-plan reading.
+- 📦 **Exports** — CSV, Excel, JSON, Markdown, PDF.
+- 🗄️ **Multi-database** — SQLite, MySQL, PostgreSQL, DuckDB, with pooling, validation, timeouts and auto-reconnect.
+- ♻️ **Resilient AI** — auto-falls back to a supported Gemini model if the configured one is unavailable.
+- 🧵 **Session memory** — conversation history, previous SQL/results, schema cache, saved queries, recent connections.
+- 🌙 **Modern dashboard** — dark mode, responsive layout, metric cards.
 
 ---
 
-## 🏗 Architecture
+## 🔄 How it works
+
+```mermaid
+flowchart LR
+    U[👤 User question] --> AG[🤖 DatabaseAnalystAgent]
+    AG --> SC[(🗂️ Schema cache)]
+    AG --> LLM[✨ Gemini: plan + SQL]
+    LLM --> G[🛡️ SafeSQLGuard]
+    G -->|blocked write| X[⚠️ Confirm / write mode]
+    G -->|allowed| R[🗄️ Repository executes]
+    R --> S[🛠️ Services]
+    S --> INS[🧠 Insights]
+    S --> CH[📊 Chart]
+    S --> OPT[⚡ Optimisation]
+    S --> EXP[📦 Export]
+    INS & CH & OPT & EXP --> UI[🖥️ Results UI]
+```
+
+**Plain English:** your question goes to the agent → the agent gives Gemini your
+schema and gets back a query plan + SQL → the safety guard validates it → the
+repository runs it → services turn the rows into insights, a chart, optimisation
+tips and downloadable reports → the UI shows it all. The same steps are available
+as standalone MCP tools.
+
+---
+
+## 🧰 Tech stack
+
+| Layer | Technology | Why |
+|---|---|---|
+| UI | **Streamlit** | Fast, Python-native dashboards |
+| LLM | **Google Gemini** (`google-generativeai`) | Natural-language → SQL & insights |
+| Tool protocol | **Model Context Protocol (MCP)** | Independently-callable, typed tools |
+| ORM / DB access | **SQLAlchemy 2** | One API across SQLite/MySQL/PostgreSQL/DuckDB |
+| Drivers | **PyMySQL, psycopg2-binary, duckdb-engine** | Backend connectivity |
+| Data | **pandas** | Result wrangling & stats |
+| Charts | **Plotly** | Interactive visualisations |
+| Validation | **Pydantic v2 / pydantic-settings** | Typed config & models |
+| Exports | **openpyxl, XlsxWriter, reportlab** | Excel & PDF generation |
+| SQL safety | **sqlparse** | Statement parsing & classification |
+| Resilience | **tenacity** | Retry on transient LLM errors |
+| Tests | **pytest** | Offline test suite (no API key) |
+
+---
+
+## 📂 File structure
 
 ```
 ai-database-analyst-mcp/
-├── streamlit_app.py         # Streamlit Cloud entry point (next to requirements)
-├── run.py                   # Local launcher / dual-mode entry point
-├── app/                     # Streamlit UI
-│   ├── main.py              # builds the page (header, sidebar, settings, chat)
-│   ├── context.py           # dependency-injection container (AnalystContext)
-│   └── components/          # sidebar, chat, results, charts, settings
-├── core/                    # config, models, exceptions, logging, session memory
-├── agents/                  # Gemini client + DatabaseAnalystAgent (orchestrator)
-├── mcp/                     # MCP tool registry, tools, JSON-RPC stdio server
-├── database/                # connection mgr, repository, schema inspector, safe SQL
-├── services/                # chart, export, optimisation, query, report services
-├── utils/                   # SQL/format/validation helpers
-├── prompts/                 # LLM prompt templates
-├── scripts/                 # sample database generator
-├── tests/                   # pytest suite (no API key required)
+├── streamlit_app.py          # Streamlit Cloud entry point (next to requirements.txt)
+├── run.py                    # Local launcher / dual-mode entry point
+├── app/                      # Streamlit UI
+│   ├── main.py               # page assembly (header, sidebar, settings, chat)
+│   ├── context.py            # dependency-injection container (AnalystContext)
+│   └── components/           # sidebar, chat, results, charts, settings_panel
+├── core/                     # config, models, exceptions, logging, session memory
+├── agents/                   # gemini_client + database_analyst (the orchestrator)
+├── mcp/                      # registry, tools (10), JSON-RPC stdio server
+├── database/                 # connection, repository, schema_inspector, safe_sql
+├── services/                 # chart, export, optimization, query, report
+├── utils/                    # sql/format/validation helpers
+├── prompts/                  # LLM prompt templates
+├── scripts/                  # create_sample_db.py
+├── tests/                    # pytest suite + fixtures
+├── static/styles.css         # custom dark theme
 ├── exports/  logs/  sample_data/
-├── requirements.txt   requirements-dev.txt   .env.example   pytest.ini
+├── requirements.txt          # runtime deps (loose pins, wheel-friendly)
+├── requirements-dev.txt      # pytest etc.
+├── .env.example   pytest.ini   README.md   TUTORIAL.md
 ```
-
-**Request flow:** `Chat UI → DatabaseAnalystAgent → Gemini (plan + SQL) →
-SafeSQLGuard → Repository (execute) → Services (insights / charts / optimise /
-export) → Results UI`. The same capabilities are exposed as MCP tools through the
-registry and the stdio server.
 
 ---
 
-## 🚀 Installation (local)
+## 🚀 Getting started
 
-Requires **Python 3.11+** (tested on 3.11–3.13).
+> Requires **Python 3.11+** (tested on 3.11–3.13).
 
 ```bash
-cd agents/mcp-agents/ai-database-analyst-mcp
+# 1. Clone
+git clone https://github.com/adityasharmadotai-hash/amazing-ai-agents.git
+cd amazing-ai-agents/agents/mcp-agents/ai-database-analyst-mcp
 
-# 1. Create & activate a virtual environment
+# 2. Create & activate a virtual environment
 python -m venv .venv
-# Windows:
-.venv\Scripts\activate
-# macOS/Linux:
-source .venv/bin/activate
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
 
-# 2. Install dependencies
+# 3. Install dependencies
 pip install -r requirements.txt
 
-# 3. Configure environment
-cp .env.example .env        # Windows: copy .env.example .env
-#  → edit .env and set GEMINI_API_KEY
+# 4. Configure your key
+cp .env.example .env               # Windows: copy .env.example .env
+#   → open .env and set GEMINI_API_KEY (get one at https://aistudio.google.com/app/apikey)
 
-# 4. (optional) create the sample database — the app also auto-creates it
-python scripts/create_sample_db.py
+# 5. Run
+python run.py
 ```
 
-Get a Gemini API key from <https://aistudio.google.com/app/apikey>.
+Open <http://localhost:8501>. The SQLite sample database is created automatically
+on first launch — just click **Connect** in the sidebar and ask a question.
+
+You can also paste your API key directly into the in-app **⚙️ Settings** panel
+(it opens automatically until a key is detected).
 
 ---
 
-## ▶️ Running (local)
-
-```bash
-python run.py                  # ensures sample DB + launches Streamlit
-# or:
-streamlit run streamlit_app.py
-# or:
-streamlit run app/main.py
-```
-
-Open <http://localhost:8501>, paste your API key in the **Settings** panel (it
-auto-opens until a key is found), connect from the sidebar (the SQLite sample DB
-is pre-filled), and start asking questions.
-
----
-
-## ☁️ Deploying to Streamlit Community Cloud
+## ☁️ Deployment (Streamlit Community Cloud)
 
 1. Push this repo to GitHub.
-2. On <https://share.streamlit.io>, create an app pointing at
-   **Main file path:** `agents/mcp-agents/ai-database-analyst-mcp/streamlit_app.py`
-   (the launcher `run.py` also works as an entry point).
-3. **Settings → Secrets**, add your key:
+2. Go to <https://share.streamlit.io> → **Create app** → pick your repo/branch.
+3. Set **Main file path** to:
+   ```
+   agents/mcp-agents/ai-database-analyst-mcp/streamlit_app.py
+   ```
+4. Under **Advanced settings → Secrets**, add:
    ```toml
    GEMINI_API_KEY = "your-key-here"
    ```
-   (You can also paste the key into the in-app Settings panel.)
-4. Deploy. The sample SQLite database is created automatically on first run.
+5. Click **Deploy**. The sample database is generated automatically on first run.
 
-> If the build fails, the only source-build-risky packages are `psycopg2-binary`
-> and `duckdb`. If you only need the SQLite demo, comment those two lines out of
+> **Build fails?** The only source-build-risky packages are `psycopg2-binary` and
+> `duckdb`. For a SQLite-only demo you can safely comment those two lines out of
 > `requirements.txt`.
 
 ---
 
-## ⚙️ Configuration
+## 🤝 Contributing
 
-All configuration lives in `.env` (see `.env.example`) or Streamlit secrets.
+Contributions are welcome!
 
-| Variable | Description | Default |
-|---|---|---|
-| `GEMINI_API_KEY` | Google Gemini API key | _required for AI_ |
-| `GEMINI_MODEL` | Model name | `gemini-2.0-flash` |
-| `READ_ONLY_MODE` | Block write statements | `true` |
-| `DB_TYPE` | `sqlite` / `mysql` / `postgresql` / `duckdb` | `sqlite` |
-| `DB_NAME` | DB name or file path | `sample_data/northwind.db` |
-| `MAX_RESULT_ROWS` | Row cap per query | `10000` |
-| `QUERY_TIMEOUT` | Per-query timeout (s) | `30` |
+1. Fork the repo and create a feature branch: `git checkout -b feature/my-improvement`
+2. Install dev deps: `pip install -r requirements-dev.txt`
+3. Make your changes and **run the tests**: `pytest`
+4. Keep the style consistent (type hints, docstrings, Pydantic models).
+5. Open a Pull Request describing what and why.
 
-The API key, model, temperature, max tokens, chart theme, auto-explain /
-auto-chart toggles and **write mode** can also be changed at runtime in the
-**⚙️ Settings** panel.
-
----
-
-## 🔌 MCP server (standalone)
-
-The same capabilities are available as MCP tools over JSON-RPC (stdio):
-
-```bash
-python -m mcp.server
-```
-
-```json
-{"jsonrpc":"2.0","id":1,"method":"tools/list"}
-{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"sql_executor","arguments":{"sql":"SELECT COUNT(*) FROM customers"}}}
-```
-
-Available tools: `schema_reader`, `table_inspector`, `column_inspector`,
-`sql_executor`, `index_inspector`, `relationship_analyzer`,
-`statistics_collector`, `csv_export`, `pdf_export`, `chart_generator`.
-
----
-
-## 💬 Example questions
-
-- Show today's sales
-- Top 20 customers by revenue
-- Revenue by month
-- Find duplicate users
-- Users inactive for 90 days
-- Most profitable products
-- Average order value
-- Employee performance
-- Compare last month vs this month
-- Which tables contain email?
-- Explain this SQL / Optimize this query / Find missing indexes
-
-See [Tutorial.md](Tutorial.md) for a guided walkthrough.
-
----
-
-## 🧪 Testing
-
-The suite runs entirely on an in-memory SQLite database — **no API key or
-network required**.
-
-```bash
-pip install -r requirements-dev.txt
-pytest                 # run all tests
-pytest --cov           # with coverage
-```
-
----
-
-## 🖼 Screenshots
-
-> _Placeholder — add screenshots of the dashboard, chat, charts and reports here._
-
-| Dashboard | Chat & SQL | Charts & Reports |
-|---|---|---|
-| _screenshot_ | _screenshot_ | _screenshot_ |
-
----
-
-## 🔒 Security
-
-- Passwords are never logged or written to disk; they live in the environment /
-  session only and are URL-encoded into connection strings.
-- All user values are bound as parameters; identifiers are validated against a
-  strict pattern.
-- Read-only mode + a defence-in-depth keyword scan block destructive SQL.
-- Multi-statement payloads containing writes are rejected (injection guard).
+Please don't commit secrets — the `.gitignore` excludes `.env`, logs and exports.
 
 ---
 
 ## 📄 License
 
-MIT License. Provided as-is for educational and internal use.
+Released under the **MIT License**. Provided as-is for educational and internal use.
+
+---
+
+## 📖 Tutorial
+
+New here? Follow the full, beginner-friendly walkthrough:
+**[TUTORIAL.md](https://github.com/adityasharmadotai-hash/docs-reader-rag-agent/blob/main/TUTORIAL.md)** (local copy: [TUTORIAL.md](TUTORIAL.md)).
