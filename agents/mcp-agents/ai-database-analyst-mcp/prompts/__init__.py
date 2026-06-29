@@ -1,0 +1,19 @@
+"""Prompt templates used by the AI agent."""
+
+from prompts.templates import (
+    CHART_RECOMMENDATION_PROMPT,
+    INSIGHTS_PROMPT,
+    REPORT_PROMPT,
+    SQL_EXPLAIN_PROMPT,
+    SQL_GENERATION_PROMPT,
+    SYSTEM_PROMPT,
+)
+
+__all__ = [
+    "SYSTEM_PROMPT",
+    "SQL_GENERATION_PROMPT",
+    "SQL_EXPLAIN_PROMPT",
+    "INSIGHTS_PROMPT",
+    "CHART_RECOMMENDATION_PROMPT",
+    "REPORT_PROMPT",
+]
