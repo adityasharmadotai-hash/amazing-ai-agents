@@ -47,7 +47,20 @@ def render_settings(settings: AppSettings) -> None:
                 placeholder="Paste your Gemini API key here",
                 help="Stored only in this browser session; never written to disk.",
             )
-            model = st.text_input("Model", value=settings.gemini_model)
+            model_choices = [
+                "gemini-2.0-flash",
+                "gemini-2.5-flash",
+                "gemini-2.5-pro",
+                "gemini-flash-latest",
+            ]
+            if settings.gemini_model not in model_choices:
+                model_choices.insert(0, settings.gemini_model)
+            model = st.selectbox(
+                "Model",
+                model_choices,
+                index=model_choices.index(settings.gemini_model),
+                help="If a model is unavailable for your key, the app auto-falls back to a supported one.",
+            )
             temperature = st.slider("Temperature", 0.0, 1.5, float(settings.gemini_temperature), 0.05)
             max_tokens = st.number_input(
                 "Max Tokens", min_value=256, max_value=32768, value=int(settings.gemini_max_tokens), step=256
