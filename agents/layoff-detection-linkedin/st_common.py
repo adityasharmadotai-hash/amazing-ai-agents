@@ -235,8 +235,10 @@ CONFIG_KEYS: list[dict] = [
         "group": "Tuning",
         "secret": False,
         "required": False,
-        "help": "Restrict results to US-based candidates.",
-        "steps": ["`true` keeps only US leads; `false` keeps everyone."],
+        "help": "Shortcut for US-only. Default is **false** (worldwide). For finer "
+                "control use **Target locations** above, which overrides this.",
+        "steps": ["`false` (default) keeps candidates worldwide; `true` keeps only "
+                  "US leads."],
     },
     {
         "key": "LOCATION_INCLUDE_UNKNOWN",

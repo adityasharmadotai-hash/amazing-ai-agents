@@ -93,10 +93,17 @@ with st.form("settings"):
             current = st_common.current_value(key)
             label = f["label"] + ("  ·  *required*" if f.get("required") else "")
             if f.get("multiline"):
+                # Pre-fill with the *active* values (defaults included) so the box
+                # is never confusingly blank. Clearing it still resets to defaults.
+                prefill = current
+                if not current and key == "LINKEDIN_QUERIES":
+                    prefill = "\n".join(config.LINKEDIN_QUERIES)
+                elif not current and key == "TARGET_TITLES":
+                    prefill = ", ".join(config.TARGET_TITLES)
                 overrides[key] = st.text_area(
-                    label, value=current, help=f["help"],
-                    placeholder="Leave blank to use the built-in defaults.",
-                    height=140, key=f"in_{key}",
+                    label, value=prefill, help=f["help"],
+                    placeholder="Clear this box to reset to the built-in defaults.",
+                    height=160, key=f"in_{key}",
                 )
             else:
                 overrides[key] = st.text_input(
@@ -137,7 +144,7 @@ _DEFAULTS = {
     "GEMINI_MODEL": "gemini-2.5-flash",
     "LINKEDIN_RECENCY": "w",
     "LINKEDIN_RESULTS_PER_Q": "20",
-    "LAYOFF_US_ONLY": "true",
+    "LAYOFF_US_ONLY": "false",
     "LOCATION_INCLUDE_UNKNOWN": "true",
     "ENRICH_LOCATION": "true",
 }

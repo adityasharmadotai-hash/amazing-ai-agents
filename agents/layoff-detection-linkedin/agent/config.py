@@ -62,7 +62,9 @@ SERPAPI_COST_PER_SEARCH = _float("SERPAPI_COST_PER_SEARCH", 0.01)  # $/search
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 LINKEDIN_RECENCY = os.getenv("LINKEDIN_RECENCY", "w")
 LINKEDIN_RESULTS_PER_Q = _int("LINKEDIN_RESULTS_PER_Q", 20)
-LAYOFF_US_ONLY = _bool("LAYOFF_US_ONLY", True)
+# Default OFF = worldwide (no location filter), so scans return leads out of the
+# box. Set true (or use TARGET_LOCATIONS) to restrict to specific countries.
+LAYOFF_US_ONLY = _bool("LAYOFF_US_ONLY", False)
 SCAN_INTERVAL_HOURS = _int("SCAN_INTERVAL_HOURS", 4)
 
 def _parse_list(raw: str) -> list[str]:
