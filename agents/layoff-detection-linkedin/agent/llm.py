@@ -1,22 +1,36 @@
 """Shared Gemini helper.
 
 Both the news and LinkedIn extractors call `complete_json()` here, so there is
-exactly one place that talks to the LLM. This is the module that replaced the
-silent OpenAI no-op (missing OPENAI_API_KEY) with a working Gemini call.
+exactly one place that talks to the LLM.
+
+IMPORTANT: `google.generativeai` is imported LAZILY (inside functions), not at
+module top. It pulls in grpcio/protobuf (C extensions) whose import at Streamlit
+app startup was segfaulting the Cloud health check. Deferring the import until
+the first actual Gemini call keeps startup light and crash-free — nothing here
+runs until the user triggers a scan.
 """
 from __future__ import annotations
 
 import json
 import logging
 
-import google.generativeai as genai
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from . import config
 
 log = logging.getLogger(__name__)
 
+_genai = None          # cached google.generativeai module (lazy)
 _configured = False
+
+
+def _get_genai():
+    """Import google.generativeai on first use (see module docstring)."""
+    global _genai
+    if _genai is None:
+        import google.generativeai as genai  # noqa: PLC0415 — intentional lazy import
+        _genai = genai
+    return _genai
 
 
 def _ensure_configured() -> None:
@@ -25,11 +39,11 @@ def _ensure_configured() -> None:
         return
     if not config.GEMINI_API_KEY:
         raise RuntimeError(
-            "GEMINI_API_KEY is not set. Add it to .env (get one at "
+            "GEMINI_API_KEY is not set. Add it on the Settings page (get one at "
             "https://aistudio.google.com) — both News and LinkedIn extraction "
             "depend on it."
         )
-    genai.configure(api_key=config.GEMINI_API_KEY)
+    _get_genai().configure(api_key=config.GEMINI_API_KEY)
     _configured = True
 
 
@@ -50,6 +64,7 @@ def complete_json(system: str, user: str) -> dict | list:
     Raises on repeated failure (tenacity retries transient errors 3x).
     """
     _ensure_configured()
+    genai = _get_genai()
     model = genai.GenerativeModel(
         config.GEMINI_MODEL,
         system_instruction=system,
