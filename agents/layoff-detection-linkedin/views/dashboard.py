@@ -85,6 +85,36 @@ if scan_clicked:
         with st.expander("📜 Scan log"):
             st.code(logs or "(no output)", language="text")
 
+# ── What this scan looks for (active targeting, always visible) ────────────
+with st.container(border=True):
+    st.markdown(
+        f"##### 🔎 What this scan looks for "
+        f"<span style='font-size:13px;font-weight:500;color:#6b7280'>"
+        f"— {len(config.LINKEDIN_QUERIES)} "
+        f"keyword{'s' if len(config.LINKEDIN_QUERIES) != 1 else ''} · "
+        f"{len(config.TARGET_TITLES)} role{'s' if len(config.TARGET_TITLES) != 1 else ''} · "
+        f"{locs}</span>",
+        unsafe_allow_html=True,
+    )
+    kw_col, role_col = st.columns(2)
+    with kw_col:
+        st.markdown("**🔑 Search keywords / queries**")
+        for q in config.LINKEDIN_QUERIES:
+            st.markdown(f"- `{q}`")
+    with role_col:
+        st.markdown("**🎯 Target roles**")
+        st.markdown(
+            " ".join(
+                f"<span style='display:inline-block;background:#efedff;color:#5a4bd6;"
+                f"border:1px solid #e0ddff;border-radius:999px;padding:2px 10px;"
+                f"margin:0 4px 6px 0;font-size:12px;font-weight:600'>{t}</span>"
+                for t in config.TARGET_TITLES
+            ),
+            unsafe_allow_html=True,
+        )
+        st.markdown(f"**🌍 Locations:** {locs}")
+    st.caption("Change any of these on the ⚙️ **Settings** page → *Search & targeting*.")
+
 # ── Spend ──────────────────────────────────────────────────────────────────
 with st.container(border=True):
     st.markdown("##### 💰 Spend")
