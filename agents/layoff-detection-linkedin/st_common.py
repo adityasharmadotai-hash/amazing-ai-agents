@@ -14,7 +14,6 @@ The `agent` package reads all configuration from environment variables (via
 """
 from __future__ import annotations
 
-import importlib
 import os
 
 import streamlit as st
@@ -272,9 +271,6 @@ CONFIG_KEYS: list[dict] = [
 # The env keys we will copy from st.secrets into os.environ at startup.
 _ALL_KEYS = [c["key"] for c in CONFIG_KEYS]
 
-# agent modules that cache config values and must be reloaded when keys change.
-_RELOAD_ORDER = ("agent.config", "agent.llm")
-
 
 def bootstrap_env() -> None:
     """Copy known keys from st.secrets into os.environ (once per process).
@@ -298,11 +294,11 @@ def bootstrap_env() -> None:
 
 
 def apply_overrides(values: dict[str, str]) -> None:
-    """Set env vars from the Settings page and hot-reload the config modules.
+    """Set env vars from the Settings page and re-read config in place.
 
-    `from . import config` in the agent package binds the *module object*, and
-    call sites read `config.ATTR` at call time — so reloading the config module
-    in place propagates the new values everywhere.
+    We call `config.refresh()` (which recomputes the module globals from
+    os.environ) rather than `importlib.reload` — reloading a submodule is unsafe
+    under Streamlit's rerun model and can corrupt the `agent` package import.
     """
     for key, val in values.items():
         if val is None:
@@ -312,12 +308,11 @@ def apply_overrides(values: dict[str, str]) -> None:
             os.environ[key] = val
         else:
             os.environ.pop(key, None)
-    for mod_name in _RELOAD_ORDER:
-        try:
-            mod = importlib.import_module(mod_name)
-            importlib.reload(mod)
-        except Exception:
-            pass
+    try:
+        from agent import config
+        config.refresh()
+    except Exception:
+        pass
     # llm caches a "configured" flag against the old key — reset it so the new
     # Gemini key is picked up on the next call.
     try:

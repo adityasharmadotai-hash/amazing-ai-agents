@@ -1,4 +1,10 @@
-"""Central config — reads .env once and exposes typed settings."""
+"""Central config — reads settings from the environment.
+
+All env-derived values are computed inside `refresh()`, which is called once at
+import and again whenever the Settings page changes a key (see
+`st_common.apply_overrides`). This avoids `importlib.reload`, which is unsafe
+under Streamlit's rerun model and was corrupting the `agent` package import.
+"""
 from __future__ import annotations
 
 import os
@@ -18,54 +24,12 @@ def _int(name: str, default: int) -> int:
         return default
 
 
-# Required
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-SERPAPI_KEY = os.getenv("SERPAPI_KEY", "")
-SUPABASE_URL = os.getenv("SUPABASE_URL", "")
-SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY", "")
-
-# Optional integrations
-WIZA_API_KEY = os.getenv("WIZA_API_KEY", "")
-NEWSAPI_KEY = os.getenv("NEWSAPI_KEY", "")
-
-# LinkedIn backend: "serpapi" (Google-indexed, free-ish) or "apify" (real
-# LinkedIn scrape, paid, full post text + author headline).
-LINKEDIN_SOURCE = os.getenv("LINKEDIN_SOURCE", "serpapi").strip().lower()
-APIFY_TOKEN = os.getenv("APIFY_TOKEN", "")
-APIFY_ACTOR = os.getenv("APIFY_ACTOR",
-                        "apimaestro/linkedin-posts-search-scraper-no-cookies")
-APIFY_DATE_FILTER = os.getenv("APIFY_DATE_FILTER", "")  # override auto-mapping
-
-# Location enrichment: when a laid-off individual's country is unknown from the
-# post, scrape their LinkedIn profile to resolve it, then apply the US filter.
-ENRICH_LOCATION = _bool("ENRICH_LOCATION", True)
-APIFY_PROFILE_ACTOR = os.getenv("APIFY_PROFILE_ACTOR",
-                                "apimaestro/linkedin-profile-detail")
-
-
 def _float(name: str, default: float) -> float:
     try:
         return float(os.getenv(name, str(default)))
     except ValueError:
         return default
 
-
-# Cost-estimate rates (USD) for the cost analyzer. These are ESTIMATES — adjust
-# to your actual Apify/Gemini/SerpAPI plan pricing.
-APIFY_POST_COST_PER_1K = _float("APIFY_POST_COST_PER_1K", 3.0)     # $/1000 posts
-APIFY_PROFILE_COST_PER_1K = _float("APIFY_PROFILE_COST_PER_1K", 5.0)  # $/1000 profiles
-GEMINI_IN_COST_PER_1M = _float("GEMINI_IN_COST_PER_1M", 0.30)      # $/1M input tokens
-GEMINI_OUT_COST_PER_1M = _float("GEMINI_OUT_COST_PER_1M", 2.50)    # $/1M output tokens
-SERPAPI_COST_PER_SEARCH = _float("SERPAPI_COST_PER_SEARCH", 0.01)  # $/search
-
-# Tuning knobs
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
-LINKEDIN_RECENCY = os.getenv("LINKEDIN_RECENCY", "w")
-LINKEDIN_RESULTS_PER_Q = _int("LINKEDIN_RESULTS_PER_Q", 20)
-# Default OFF = worldwide (no location filter), so scans return leads out of the
-# box. Set true (or use TARGET_LOCATIONS) to restrict to specific countries.
-LAYOFF_US_ONLY = _bool("LAYOFF_US_ONLY", False)
-SCAN_INTERVAL_HOURS = _int("SCAN_INTERVAL_HOURS", 4)
 
 def _parse_list(raw: str) -> list[str]:
     """Split a comma / pipe / newline separated string into a clean list."""
@@ -74,9 +38,13 @@ def _parse_list(raw: str) -> list[str]:
     return [s.strip() for s in raw.split(",") if s.strip()]
 
 
+# ── Immutable constants ──────────────────────────────────────────────────────
+_US_ALIASES = {"united states", "usa", "us", "u.s.", "u.s.a.", "america"}
+_UNKNOWN_LOC = {"", "unknown", "none", "n/a", "null", "remote", "worldwide", "global"}
+
 # Target job titles — only individuals whose role maps to one of these are kept.
-# Override via the TARGET_TITLES env var (comma / pipe / newline separated) to
-# retarget the app at a different talent pool (e.g. data scientists, designers).
+# Override via TARGET_TITLES (comma / pipe / newline separated) to retarget the
+# app at a different talent pool (e.g. data scientists, designers).
 _DEFAULT_TITLES = [
     "Software Engineer", "Software Developer", "Senior Software Engineer",
     "Staff Software Engineer", "Principal Software Engineer",
@@ -92,36 +60,101 @@ _DEFAULT_TITLES = [
     "Application Security Engineer", "Cybersecurity Engineer",
     "Solutions Architect", "Technical Architect",
 ]
-_titles_raw = os.getenv("TARGET_TITLES", "").strip()
-TARGET_TITLES = _parse_list(_titles_raw) if _titles_raw else list(_DEFAULT_TITLES)
-_TITLES_LOWER = {t.lower() for t in TARGET_TITLES}
+
+# Default query set — BROAD nets, not per-title. The Gemini extractor reads the
+# full post + headline and maps the role to a TARGET_TITLE; the filter enforces
+# location + title. Override via LINKEDIN_QUERIES (one per line / pipe-separated).
+_DEFAULT_QUERIES = [
+    '"open to work" "software engineer" (laid off OR "impacted by the layoffs" OR layoff)',
+    '"open to work" (developer OR engineer) "laid off" (software OR tech)',
+    '"impacted by the layoffs" ("software engineer" OR "software developer" OR developer)',
+    '"recently laid off" "open to work" (software OR engineer OR developer)',
+    '#opentowork #layoff (software OR engineer OR developer)',
+    '"open to work" "full stack" (laid off OR layoff OR "impacted by the layoffs")',
+    '"open to work" (devops OR "site reliability" OR cloud OR platform OR infrastructure) engineer (laid off OR layoff)',
+    '"open to work" (qa OR test OR "quality assurance" OR security) engineer (laid off OR layoff)',
+    '"open to work" (android OR ios OR mobile OR frontend OR backend) developer (laid off OR layoff)',
+    '"open to work" (embedded OR firmware OR systems OR automation OR architect) (laid off OR layoff)',
+]
+
+
+def refresh() -> None:
+    """(Re)read every setting from os.environ. Called at import and after the
+    Settings page changes a key. Mutating module globals in place means other
+    modules that did `from . import config` see the new values immediately."""
+    global GEMINI_API_KEY, SERPAPI_KEY, SUPABASE_URL, SUPABASE_SERVICE_KEY
+    global WIZA_API_KEY, NEWSAPI_KEY
+    global LINKEDIN_SOURCE, APIFY_TOKEN, APIFY_ACTOR, APIFY_DATE_FILTER
+    global ENRICH_LOCATION, APIFY_PROFILE_ACTOR
+    global APIFY_POST_COST_PER_1K, APIFY_PROFILE_COST_PER_1K
+    global GEMINI_IN_COST_PER_1M, GEMINI_OUT_COST_PER_1M, SERPAPI_COST_PER_SEARCH
+    global GEMINI_MODEL, LINKEDIN_RECENCY, LINKEDIN_RESULTS_PER_Q
+    global LAYOFF_US_ONLY, SCAN_INTERVAL_HOURS
+    global TARGET_TITLES, _TITLES_LOWER
+    global TARGET_LOCATIONS, _LOCATIONS_LOWER, LOCATION_INCLUDE_UNKNOWN
+    global LINKEDIN_QUERIES
+
+    # Required
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+    SERPAPI_KEY = os.getenv("SERPAPI_KEY", "")
+    SUPABASE_URL = os.getenv("SUPABASE_URL", "")
+    SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY", "")
+
+    # Optional integrations
+    WIZA_API_KEY = os.getenv("WIZA_API_KEY", "")
+    NEWSAPI_KEY = os.getenv("NEWSAPI_KEY", "")
+
+    # LinkedIn backend
+    LINKEDIN_SOURCE = os.getenv("LINKEDIN_SOURCE", "serpapi").strip().lower()
+    APIFY_TOKEN = os.getenv("APIFY_TOKEN", "")
+    APIFY_ACTOR = os.getenv("APIFY_ACTOR",
+                            "apimaestro/linkedin-posts-search-scraper-no-cookies")
+    APIFY_DATE_FILTER = os.getenv("APIFY_DATE_FILTER", "")
+    ENRICH_LOCATION = _bool("ENRICH_LOCATION", True)
+    APIFY_PROFILE_ACTOR = os.getenv("APIFY_PROFILE_ACTOR",
+                                    "apimaestro/linkedin-profile-detail")
+
+    # Cost-estimate rates (USD)
+    APIFY_POST_COST_PER_1K = _float("APIFY_POST_COST_PER_1K", 3.0)
+    APIFY_PROFILE_COST_PER_1K = _float("APIFY_PROFILE_COST_PER_1K", 5.0)
+    GEMINI_IN_COST_PER_1M = _float("GEMINI_IN_COST_PER_1M", 0.30)
+    GEMINI_OUT_COST_PER_1M = _float("GEMINI_OUT_COST_PER_1M", 2.50)
+    SERPAPI_COST_PER_SEARCH = _float("SERPAPI_COST_PER_SEARCH", 0.01)
+
+    # Tuning knobs
+    GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+    LINKEDIN_RECENCY = os.getenv("LINKEDIN_RECENCY", "w")
+    LINKEDIN_RESULTS_PER_Q = _int("LINKEDIN_RESULTS_PER_Q", 20)
+    LAYOFF_US_ONLY = _bool("LAYOFF_US_ONLY", False)
+    SCAN_INTERVAL_HOURS = _int("SCAN_INTERVAL_HOURS", 4)
+
+    # Target titles
+    _titles_raw = os.getenv("TARGET_TITLES", "").strip()
+    TARGET_TITLES = _parse_list(_titles_raw) if _titles_raw else list(_DEFAULT_TITLES)
+    _TITLES_LOWER = {t.lower() for t in TARGET_TITLES}
+
+    # Target locations (blank = worldwide; falls back to US when LAYOFF_US_ONLY)
+    _loc_raw = os.getenv("TARGET_LOCATIONS", "").strip()
+    if _loc_raw:
+        TARGET_LOCATIONS = _parse_list(_loc_raw)
+    elif LAYOFF_US_ONLY:
+        TARGET_LOCATIONS = ["United States"]
+    else:
+        TARGET_LOCATIONS = []
+    _LOCATIONS_LOWER = [c.lower() for c in TARGET_LOCATIONS]
+    LOCATION_INCLUDE_UNKNOWN = _bool("LOCATION_INCLUDE_UNKNOWN", True)
+
+    # Queries (one per line / pipe-separated; commas are NOT separators)
+    raw = os.getenv("LINKEDIN_QUERIES", "").strip().replace("\n", "|")
+    LINKEDIN_QUERIES = [q.strip() for q in raw.split("|") if q.strip()] or list(_DEFAULT_QUERIES)
+
+
+# Compute all settings now, at import time.
+refresh()
 
 
 def is_target_title(title: str | None) -> bool:
     return bool(title) and title.strip().lower() in _TITLES_LOWER
-
-
-# Target locations — countries to keep, matched case-insensitively against the
-# person's country/location. Override via TARGET_LOCATIONS (comma separated).
-# Empty = worldwide. Defaults to United States when LAYOFF_US_ONLY is on, so
-# existing behaviour is unchanged until the user edits it.
-_loc_raw = os.getenv("TARGET_LOCATIONS", "").strip()
-if _loc_raw:
-    TARGET_LOCATIONS = _parse_list(_loc_raw)
-elif LAYOFF_US_ONLY:
-    TARGET_LOCATIONS = ["United States"]
-else:
-    TARGET_LOCATIONS = []
-_LOCATIONS_LOWER = [c.lower() for c in TARGET_LOCATIONS]
-_US_ALIASES = {"united states", "usa", "us", "u.s.", "u.s.a.", "america"}
-_UNKNOWN_LOC = {"", "unknown", "none", "n/a", "null", "remote", "worldwide", "global"}
-
-# When a post never reveals the person's country, keep it anyway (the LinkedIn
-# search is already US-geo-biased, so unknown ≈ probably-US). Confirmed OTHER
-# countries are still excluded. This is what recovers leads on the SerpAPI
-# backend, which can't scrape profiles to resolve location. Set false to be
-# strict and keep only explicitly-matched locations.
-LOCATION_INCLUDE_UNKNOWN = _bool("LOCATION_INCLUDE_UNKNOWN", True)
 
 
 def location_ok(rec: dict) -> bool:
@@ -129,7 +162,6 @@ def location_ok(rec: dict) -> bool:
     location filter is configured, i.e. worldwide)."""
     if not _LOCATIONS_LOWER:
         return True
-    # Fast path: the extractor sets is_us directly.
     if rec.get("is_us") and any(c in _US_ALIASES for c in _LOCATIONS_LOWER):
         return True
     hay = " ".join(str(rec.get(k) or "") for k in ("country", "location")).lower()
@@ -149,29 +181,6 @@ def serp_geo() -> tuple[str | None, str | None]:
     if _LOCATIONS_LOWER and all(c in _US_ALIASES for c in _LOCATIONS_LOWER):
         return "us", "en"
     return None, None
-
-
-# Default query set — BROAD nets, not per-title. The Gemini extractor reads the
-# full post + headline and maps the role to one of the 36 TARGET_TITLES, and the
-# filter enforces US + title. So queries only need to surface laid-off software
-# people widely; over-specific queries (exact rare titles) match almost nothing.
-# Override via LINKEDIN_QUERIES (pipe-separated).
-_DEFAULT_QUERIES = [
-    '"open to work" "software engineer" (laid off OR "impacted by the layoffs" OR layoff)',
-    '"open to work" (developer OR engineer) "laid off" (software OR tech)',
-    '"impacted by the layoffs" ("software engineer" OR "software developer" OR developer)',
-    '"recently laid off" "open to work" (software OR engineer OR developer)',
-    '#opentowork #layoff (software OR engineer OR developer)',
-    '"open to work" "full stack" (laid off OR layoff OR "impacted by the layoffs")',
-    '"open to work" (devops OR "site reliability" OR cloud OR platform OR infrastructure) engineer (laid off OR layoff)',
-    '"open to work" (qa OR test OR "quality assurance" OR security) engineer (laid off OR layoff)',
-    '"open to work" (android OR ios OR mobile OR frontend OR backend) developer (laid off OR layoff)',
-    '"open to work" (embedded OR firmware OR systems OR automation OR architect) (laid off OR layoff)',
-]
-# Queries may be separated by "|" or newlines (the Settings text area uses one
-# query per line). Commas are NOT separators — a query can legitimately need one.
-_raw = os.getenv("LINKEDIN_QUERIES", "").strip().replace("\n", "|")
-LINKEDIN_QUERIES = [q.strip() for q in _raw.split("|") if q.strip()] or _DEFAULT_QUERIES
 
 
 def missing_required() -> list[str]:

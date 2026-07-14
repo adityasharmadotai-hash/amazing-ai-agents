@@ -1,12 +1,13 @@
 """LayoffScout AI — Streamlit Cloud entry point / router.
 
-Uses st.navigation so the sidebar shows clean, branded page names ("Dashboard",
-"Settings") instead of raw filenames. Page config, the brand design system, and
-the secrets→env bridge are set up here, once, before either page runs.
+Uses st.navigation with CALLABLE pages (functions), not file paths. File-path
+pages resolve relative to the entrypoint and are unreliable when the app lives
+in a repo subdirectory (Streamlit Cloud reported "dashboard.py could not be
+found"); callables sidestep path resolution entirely.
 
   streamlit_app.py     -> this router (page config, CSS, navigation)
-  views/dashboard.py   -> the dashboard (scan, leads, cost, enrich)
-  views/settings.py    -> all API keys + how to generate each one
+  views/dashboard.py   -> render() for the dashboard
+  views/settings.py    -> render() for the settings page
 """
 from __future__ import annotations
 
@@ -18,13 +19,17 @@ st.set_page_config(page_title="LayoffScout AI", page_icon="🎯", layout="wide")
 st_common.apply_brand()
 st_common.bootstrap_env()
 
+# Import views AFTER bootstrap so their `from agent import config` sees the keys.
+from views import dashboard, settings  # noqa: E402
+
 # Branded block at the very top of the sidebar, above the nav.
 with st.sidebar:
     st_common.sidebar_brand()
 
 pages = [
-    st.Page("views/dashboard.py", title="Dashboard", icon="🎯", default=True),
-    st.Page("views/settings.py", title="Settings", icon="⚙️"),
+    st.Page(dashboard.render, title="Dashboard", icon="🎯",
+            url_path="dashboard", default=True),
+    st.Page(settings.render, title="Settings", icon="⚙️", url_path="settings"),
 ]
 st.navigation(pages).run()
 
