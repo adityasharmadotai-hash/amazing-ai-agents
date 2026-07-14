@@ -38,6 +38,26 @@ def _capture_scan():
     return summary, buf.getvalue()
 
 
+@st.dialog("Delete all lead data?")
+def _delete_dialog():
+    st.warning("This permanently deletes **all** stored leads from your Supabase "
+               "table. This cannot be undone.", icon="⚠️")
+    also = st.checkbox("Also clear scan history & spend totals", value=True)
+    c1, c2 = st.columns(2)
+    if c1.button("🗑️ Yes, delete everything", type="primary",
+                 use_container_width=True):
+        try:
+            n = store.delete_all()
+            if also:
+                usage.reset()
+            st.session_state["_delete_result"] = ("ok", n)
+        except Exception as exc:  # noqa: BLE001
+            st.session_state["_delete_result"] = ("err", str(exc))
+        st.rerun()
+    if c2.button("Cancel", use_container_width=True):
+        st.rerun()
+
+
 # ── Hero ───────────────────────────────────────────────────────────────────
 src_badge = "🟢 SerpAPI" if config.LINKEDIN_SOURCE == "serpapi" else "🔵 Apify"
 locs = ", ".join(config.TARGET_LOCATIONS) or "🌍 Worldwide"
@@ -48,6 +68,14 @@ st_common.hero(
     badges=[f"Source · {src_badge}", f"🎯 {locs}",
             f"Roles · {len(config.TARGET_TITLES)}"],
 )
+
+# Show the outcome of a delete that just happened (dialog closed via rerun).
+_res = st.session_state.pop("_delete_result", None)
+if _res:
+    if _res[0] == "ok":
+        st.toast(f"🗑️ Deleted {_res[1]} lead(s). Everything is cleared.", icon="✅")
+    else:
+        st.toast(f"Delete failed: {_res[1]}", icon="⚠️")
 
 missing = config.missing_required()
 if missing:
@@ -82,20 +110,38 @@ if scan_clicked:
             f"{summary.get('candidates', 0)} examined). "
             f"This scan cost **{_money(cost.get('total'))}**."
         )
+        # Funnel — shows exactly where candidates drop off (a lead must pass ALL
+        # three: individual + target location + target role).
+        b = summary.get("breakdown", {}) or {}
+        st.markdown(
+            f"**Why this number?** &nbsp; {summary.get('candidates', 0)} examined "
+            f"→ **{b.get('layoff_posts', 0)}** layoff posts → "
+            f"**{b.get('individuals', 0)}** individuals · "
+            f"**{b.get('in_location', 0)}** in {locs} · "
+            f"**{b.get('target_role', 0)}** in a target role → "
+            f"**{summary.get('relevant_us_swe', 0)} qualified** "
+            f"_(a lead must pass all three)_."
+        )
+        if summary.get("relevant_us_swe", 0) == 0:
+            st.info(
+                "0 qualified usually means the **US-only** filter dropped posts "
+                "whose location couldn't be confirmed (common with SerpAPI, which "
+                "can't scrape profiles to resolve location). Try one of these on "
+                "the **⚙️ Settings** page: clear **Target locations** (worldwide), "
+                "broaden **Target roles**, or switch the source to **Apify** "
+                "(resolves unknown locations).",
+                icon="💡",
+            )
         with st.expander("📜 Scan log"):
             st.code(logs or "(no output)", language="text")
 
-# ── What this scan looks for (active targeting, always visible) ────────────
-with st.container(border=True):
-    st.markdown(
-        f"##### 🔎 What this scan looks for "
-        f"<span style='font-size:13px;font-weight:500;color:#6b7280'>"
-        f"— {len(config.LINKEDIN_QUERIES)} "
-        f"keyword{'s' if len(config.LINKEDIN_QUERIES) != 1 else ''} · "
-        f"{len(config.TARGET_TITLES)} role{'s' if len(config.TARGET_TITLES) != 1 else ''} · "
-        f"{locs}</span>",
-        unsafe_allow_html=True,
-    )
+# ── What this scan looks for (active targeting, collapsible) ───────────────
+with st.expander(
+    f"🔎 What this scan looks for — {len(config.LINKEDIN_QUERIES)} "
+    f"keyword{'s' if len(config.LINKEDIN_QUERIES) != 1 else ''} · "
+    f"{len(config.TARGET_TITLES)} role{'s' if len(config.TARGET_TITLES) != 1 else ''} · "
+    f"{locs}"
+):
     kw_col, role_col = st.columns(2)
     with kw_col:
         st.markdown("**🔑 Search keywords / queries**")
@@ -171,12 +217,18 @@ with tab_leads:
             column_config={"Post": st.column_config.LinkColumn("Post",
                                                                display_text="open ↗")},
         )
-        st.download_button("⤓ Download CSV", view.to_csv(index=False).encode("utf-8"),
-                           "us_software_leads.csv", "text/csv")
+        dl, dele = st.columns([1, 1])
+        dl.download_button("⤓ Download CSV", view.to_csv(index=False).encode("utf-8"),
+                           "us_software_leads.csv", "text/csv",
+                           use_container_width=True)
+        if dele.button("🗑️ Delete all lead data", use_container_width=True):
+            _delete_dialog()
     elif not missing:
         st.info("No leads yet — click **⚡ Scan New Data** above to collect some. "
                 "You can retarget what it looks for on the **Settings** page.",
                 icon="👋")
+        if st.button("🗑️ Delete all lead data"):
+            _delete_dialog()
 
 with tab_analyze:
     st.caption("Test the pipeline on a single post without running a full scan.")

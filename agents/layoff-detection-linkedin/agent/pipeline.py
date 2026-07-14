@@ -84,6 +84,22 @@ def _run_scan_locked() -> dict[str, Any]:
     for r in relevant:
         log.info("  ✓ %s — %s (%s)", r.get("person_name") or "?",
                  r.get("role_category"), r.get("location") or "US")
+
+    # Funnel breakdown — shows WHERE candidates drop off (a lead must pass all
+    # three: individual + target location + target role). Great for answering
+    # "why did I get 0 leads?".
+    breakdown = {
+        "layoff_posts": len(records),
+        "individuals": sum(1 for r in records if r.get("is_individual")),
+        "in_location": sum(1 for r in records if extract.config.location_ok(r)),
+        "target_role": sum(1 for r in records
+                           if extract.config.is_target_title(r.get("role_category"))),
+    }
+    log.info("Funnel: %d layoff posts | %d individuals | %d in-location | "
+             "%d target-role -> %d qualified", breakdown["layoff_posts"],
+             breakdown["individuals"], breakdown["in_location"],
+             breakdown["target_role"], len(relevant))
+
     stored = store.upsert_records(relevant)
     after = len(store.list_records(limit=1000))
     log.info("Stored %d qualified leads (%d new). Scan complete.",
@@ -102,6 +118,7 @@ def _run_scan_locked() -> dict[str, Any]:
         "stored": stored,
         "cost": meter["cost"],
         "usage": meter["counts"],
+        "breakdown": breakdown,
     }
     log.info("Scan complete: %s", summary)
     return summary

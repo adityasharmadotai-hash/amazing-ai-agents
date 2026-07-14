@@ -86,6 +86,17 @@ def totals() -> dict:
             "last": log[-1] if log else None}
 
 
+def reset() -> None:
+    """Wipe the local scan-history / spend log."""
+    global _current
+    with _lock:
+        _current = None
+        try:
+            os.remove(_LOG)
+        except FileNotFoundError:
+            pass
+
+
 def recent(limit: int = 25) -> list[dict]:
     """Recent scans, newest first, slimmed for the history table."""
     log = _read_log()

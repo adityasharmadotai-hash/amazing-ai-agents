@@ -112,6 +112,23 @@ def list_records(limit: int = 200, company: str | None = None,
     return out
 
 
+def delete_all() -> int:
+    """Delete EVERY row in the leads table. Returns the number deleted.
+
+    Irreversible. PostgREST requires a filter for a DELETE, so we match all rows
+    with id >= 0 (the identity column starts at 1).
+    """
+    url = f"{_base()}/{_TABLE}?id=gte.0"
+    headers = _headers({"Prefer": "return=representation"})
+    resp = httpx.delete(url, headers=headers, timeout=60)
+    if resp.status_code >= 300:
+        raise RuntimeError(f"Supabase delete failed {resp.status_code}: {resp.text[:200]}")
+    try:
+        return len(resp.json())
+    except Exception:  # noqa: BLE001
+        return 0
+
+
 def table_exists() -> bool:
     """True if the layoff_posts table is reachable via PostgREST."""
     resp = httpx.get(f"{_base()}/{_TABLE}", params={"select": "id", "limit": "1"},
