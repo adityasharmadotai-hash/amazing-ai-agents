@@ -112,6 +112,14 @@ else:
     TARGET_LOCATIONS = []
 _LOCATIONS_LOWER = [c.lower() for c in TARGET_LOCATIONS]
 _US_ALIASES = {"united states", "usa", "us", "u.s.", "u.s.a.", "america"}
+_UNKNOWN_LOC = {"", "unknown", "none", "n/a", "null", "remote", "worldwide", "global"}
+
+# When a post never reveals the person's country, keep it anyway (the LinkedIn
+# search is already US-geo-biased, so unknown ≈ probably-US). Confirmed OTHER
+# countries are still excluded. This is what recovers leads on the SerpAPI
+# backend, which can't scrape profiles to resolve location. Set false to be
+# strict and keep only explicitly-matched locations.
+LOCATION_INCLUDE_UNKNOWN = _bool("LOCATION_INCLUDE_UNKNOWN", True)
 
 
 def location_ok(rec: dict) -> bool:
@@ -123,7 +131,14 @@ def location_ok(rec: dict) -> bool:
     if rec.get("is_us") and any(c in _US_ALIASES for c in _LOCATIONS_LOWER):
         return True
     hay = " ".join(str(rec.get(k) or "") for k in ("country", "location")).lower()
-    return any(c in hay for c in _LOCATIONS_LOWER)
+    if any(c in hay for c in _LOCATIONS_LOWER):
+        return True
+    # Benefit of the doubt: unknown/unstated country passes when enabled.
+    if LOCATION_INCLUDE_UNKNOWN:
+        country = (rec.get("country") or "").strip().lower()
+        if country in _UNKNOWN_LOC:
+            return True
+    return False
 
 
 def serp_geo() -> tuple[str | None, str | None]:

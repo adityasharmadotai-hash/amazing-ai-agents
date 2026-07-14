@@ -239,6 +239,23 @@ CONFIG_KEYS: list[dict] = [
         "steps": ["`true` keeps only US leads; `false` keeps everyone."],
     },
     {
+        "key": "LOCATION_INCLUDE_UNKNOWN",
+        "label": "Keep unknown-location candidates (true/false)",
+        "group": "Tuning",
+        "secret": False,
+        "required": False,
+        "help": "When ON, keep candidates whose country couldn't be determined "
+                "from the post (the LinkedIn search is already US-biased). This "
+                "recovers a LOT of leads on SerpAPI. Confirmed other-country "
+                "candidates are still excluded. Turn OFF to be strict.",
+        "steps": [
+            "`true` (recommended for SerpAPI) — unknown location is treated as "
+            "eligible, so you get far more leads.",
+            "`false` — keep only candidates whose location explicitly matches "
+            "your Target locations.",
+        ],
+    },
+    {
         "key": "ENRICH_LOCATION",
         "label": "Resolve unknown locations (true/false)",
         "group": "Tuning",

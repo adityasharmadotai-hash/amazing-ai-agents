@@ -138,6 +138,7 @@ _DEFAULTS = {
     "LINKEDIN_RECENCY": "w",
     "LINKEDIN_RESULTS_PER_Q": "20",
     "LAYOFF_US_ONLY": "true",
+    "LOCATION_INCLUDE_UNKNOWN": "true",
     "ENRICH_LOCATION": "true",
 }
 template_lines = []

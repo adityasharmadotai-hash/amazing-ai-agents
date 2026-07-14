@@ -122,16 +122,24 @@ if scan_clicked:
             f"**{summary.get('relevant_us_swe', 0)} qualified** "
             f"_(a lead must pass all three)_."
         )
-        if summary.get("relevant_us_swe", 0) == 0:
-            st.info(
-                "0 qualified usually means the **US-only** filter dropped posts "
-                "whose location couldn't be confirmed (common with SerpAPI, which "
-                "can't scrape profiles to resolve location). Try one of these on "
-                "the **⚙️ Settings** page: clear **Target locations** (worldwide), "
-                "broaden **Target roles**, or switch the source to **Apify** "
-                "(resolves unknown locations).",
-                icon="💡",
-            )
+        if summary.get("relevant_us_swe", 0) == 0 and b:
+            stages = {
+                "individuals": b.get("individuals", 0),
+                "in a target location": b.get("in_location", 0),
+                "in a target role": b.get("target_role", 0),
+            }
+            worst = min(stages, key=stages.get)
+            tips = {
+                "individuals": "Most posts were company news, not people. Try more "
+                "person-focused keywords like `\"open to work\"` / `#opentowork`.",
+                "in a target location": "Locations couldn't be confirmed. Make sure "
+                "**Keep unknown-location candidates** is ON (Settings → Tuning), or "
+                "clear **Target locations** for worldwide, or switch to **Apify**.",
+                "in a target role": "Few posts matched your **Target roles**. Broaden "
+                "the role list on Settings → *Search & targeting*.",
+            }
+            st.info(f"Biggest drop-off: **{worst}** — only {stages[worst]} of "
+                    f"{b.get('layoff_posts', 0)} passed. {tips[worst]}", icon="💡")
         with st.expander("📜 Scan log"):
             st.code(logs or "(no output)", language="text")
 
