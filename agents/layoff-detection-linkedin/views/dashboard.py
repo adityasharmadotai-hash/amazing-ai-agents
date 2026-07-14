@@ -265,14 +265,22 @@ with tab_enrich:
                                 placeholder="https://www.linkedin.com/in/…")
         enrich_go = st.form_submit_button("✉ Enrich via Wiza", type="primary")
     if enrich_go and profile.strip():
-        with st.spinner("Looking up contact via Wiza…"):
+        with st.spinner("Looking up contact via Wiza… this can take up to a minute "
+                        "(Wiza processes the reveal asynchronously)."):
             res = enrich.enrich_profile(profile.strip())
-        if res.get("status") == "ok":
-            st.success(f"✅ {res.get('full_name') or ''} — "
-                       f"{res.get('email') or 'no email found'}")
+        status = res.get("status")
+        if status == "ok" and res.get("email"):
+            st.success(f"✅ {res.get('full_name') or 'Contact'} — {res.get('email')}")
             st.json(res)
+        elif status == "ok":
+            st.warning("Wiza finished the lookup but **found no email** for this "
+                       "profile. (Not every profile has a discoverable email.)")
+            st.json(res)
+        elif status == "pending":
+            st.info("⏳ " + (res.get("message") or "Still processing — try again "
+                             "in a few seconds."))
         else:
-            st.info(f"ℹ️ {res.get('message') or res.get('status')}")
+            st.info(f"ℹ️ {res.get('message') or status}")
 
 with tab_history:
     try:
