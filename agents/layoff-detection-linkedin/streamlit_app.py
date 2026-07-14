@@ -6,7 +6,7 @@ original FastAPI app used, but in-process, so the whole thing runs as a single
 
 Pages:
   streamlit_app.py          -> this dashboard (scan, leads table, cost, enrich)
-  pages/1_⚙️_Settings.py     -> all API keys + how to generate each one
+  pages/1_Settings.py       -> all API keys + how to generate each one
 """
 from __future__ import annotations
 

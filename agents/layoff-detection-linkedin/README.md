@@ -97,7 +97,7 @@ layoff-detection-linkedin/
 ├── streamlit_app.py            # Main dashboard (Streamlit entry point)
 ├── st_common.py                # Secrets ↔ env bridge + config key metadata
 ├── pages/
-│   └── 1_⚙️_Settings.py        # API keys page with generation instructions
+│   └── 1_Settings.py           # API keys page with generation instructions
 ├── agent/                      # The reusable pipeline (UI-agnostic)
 │   ├── config.py               # Reads env vars → typed settings
 │   ├── pipeline.py             # Orchestrates collect → extract → store
@@ -114,7 +114,6 @@ layoff-detection-linkedin/
 │       └── news.py             # NewsAPI source
 ├── supabase/
 │   └── layoff_posts.sql        # Table schema — run once in Supabase
-├── scheduler.py                # Optional periodic-scan helper
 ├── requirements.txt            # Python dependencies
 ├── .streamlit/
 │   ├── config.toml             # Theme + server config

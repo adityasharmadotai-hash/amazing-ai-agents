@@ -29,7 +29,7 @@
    - [6.6 `agent/pipeline.py`](#66-agentpipelinepy--the-orchestra-conductor)
    - [6.7 `st_common.py`](#67-st_commonpy--bridging-secrets-and-config)
    - [6.8 `streamlit_app.py`](#68-streamlit_apppy--the-dashboard)
-   - [6.9 `pages/1_⚙️_Settings.py`](#69-pages1_️_settingspy--the-settings-page)
+   - [6.9 `pages/1_Settings.py`](#69-pages1_settingspy--the-settings-page)
 7. [How to run locally](#7-how-to-run-locally)
 8. [How to deploy on Streamlit Cloud](#8-how-to-deploy-on-streamlit-cloud)
 9. [Common errors and fixes](#9-common-errors-and-fixes)
@@ -145,7 +145,6 @@ pydantic==2.9.2              # data validation
 python-dotenv==1.0.1         # reading a local .env file
 google-generativeai==0.8.3   # the Gemini client
 tenacity==9.0.0              # automatic retries on flaky calls
-apscheduler==3.10.4          # optional scheduled scans
 ```
 
 ---
@@ -423,7 +422,7 @@ if st.button("⚡ Scan New Data", type="primary"):
 runs, so we can show the pipeline's log output in an expander — a nice touch that makes
 the agent feel transparent.
 
-### 6.9 `pages/1_⚙️_Settings.py` — the settings page
+### 6.9 `pages/1_Settings.py` — the settings page
 
 Streamlit turns any file inside a `pages/` folder into an extra page in the sidebar
 automatically. Our Settings page:
@@ -583,7 +582,7 @@ By building this, you now understand how to:
 
 Ideas to extend the project:
 
-- 🔁 **Auto-scan on a schedule** — wire up `scheduler.py` to scan every few hours.
+- 🔁 **Auto-scan on a schedule** — add a scheduler (e.g. APScheduler) to scan every few hours.
 - 🧭 **More filters** — filter the dashboard by company, role, or state.
 - 🌍 **Retarget anywhere** — you can already change keywords, roles, and locations on
   the Settings page; try pointing it at a totally different talent pool.
