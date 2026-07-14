@@ -94,10 +94,11 @@ engineers → store & enrich them → show it all in a dashboard.*
 
 ```
 layoff-detection-linkedin/
-├── streamlit_app.py            # Main dashboard (Streamlit entry point)
-├── st_common.py                # Secrets ↔ env bridge + config key metadata
-├── pages/
-│   └── 1_Settings.py           # API keys page with generation instructions
+├── streamlit_app.py            # Entry point / router (st.navigation, theme, branding)
+├── st_common.py                # Secrets ↔ env bridge, config metadata, brand design system
+├── views/
+│   ├── dashboard.py            # Dashboard (scan, leads, cost, analyze, enrich)
+│   └── settings.py             # API keys page with generation instructions
 ├── agent/                      # The reusable pipeline (UI-agnostic)
 │   ├── config.py               # Reads env vars → typed settings
 │   ├── pipeline.py             # Orchestrates collect → extract → store

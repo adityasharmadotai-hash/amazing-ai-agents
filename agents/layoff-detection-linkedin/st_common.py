@@ -326,30 +326,144 @@ def current_source() -> str:
     return src if src in ("serpapi", "apify") else "serpapi"
 
 
-# Small, theme-aware CSS to lift the default Streamlit look a little without
-# fighting the framework. Called once at the top of each page.
-_CSS = """
+# ── Brand design system ──────────────────────────────────────────────────────
+# A cohesive, product-grade look injected as CSS. Targets Streamlit's stable
+# data-testid hooks so it degrades gracefully across minor version bumps.
+BRAND_PRIMARY = "#6d5efc"
+BRAND_GRADIENT = "linear-gradient(135deg,#6d5efc 0%,#8b5cf6 52%,#ec4899 128%)"
+
+_BRAND_CSS = """
 <style>
-  /* tighten the top padding so the app feels less empty */
-  .block-container { padding-top: 2.2rem; max-width: 1150px; }
-  /* metric cards: give them a subtle surface + border */
-  div[data-testid="stMetric"] {
-    background: rgba(127,127,127,0.06);
-    border: 1px solid rgba(127,127,127,0.18);
-    border-radius: 12px;
-    padding: 12px 16px;
-  }
-  div[data-testid="stMetricValue"] { font-size: 1.5rem; }
-  /* primary buttons: full-width feel + weight */
-  button[kind="primary"] { font-weight: 600; border-radius: 10px; }
-  /* dataframe corners */
-  div[data-testid="stDataFrame"] { border-radius: 10px; }
-  /* tab labels a touch larger */
-  button[data-baseweb="tab"] { font-size: 0.95rem; }
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+:root { --brand:#6d5efc; --brand-2:#8b5cf6; --ink:#1e2233; --muted:#6b7280;
+        --line:#e8eaf2; --card:#ffffff; --bg:#f5f6fb; }
+
+html, body, .stApp, [data-testid="stAppViewContainer"],
+[data-testid="stSidebar"] * , .stMarkdown, button, input, textarea, select {
+  font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+}
+.stApp { background:var(--bg); }
+[data-testid="stHeader"] { background:transparent; }
+.block-container { padding-top:1.4rem; padding-bottom:3rem; max-width:1180px; }
+
+/* ---------- Hero ---------- */
+.ls-hero {
+  display:flex; justify-content:space-between; align-items:center; gap:18px;
+  flex-wrap:wrap; background:""" + BRAND_GRADIENT + """; color:#fff;
+  border-radius:22px; padding:26px 30px; margin:2px 0 20px;
+  box-shadow:0 16px 34px rgba(109,94,252,.28);
+}
+.ls-hero-l { display:flex; align-items:center; gap:16px; }
+.ls-logo {
+  font-size:32px; width:60px; height:60px; border-radius:16px;
+  background:rgba(255,255,255,.18); display:flex; align-items:center;
+  justify-content:center; box-shadow:inset 0 0 0 1px rgba(255,255,255,.25);
+}
+.ls-title { font-size:27px; font-weight:800; letter-spacing:-.6px; line-height:1.05; }
+.ls-sub { opacity:.92; font-size:13px; margin-top:4px; max-width:46ch; }
+.ls-badges { display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
+.ls-pill {
+  background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.30);
+  color:#fff; padding:7px 14px; border-radius:999px; font-size:12.5px;
+  font-weight:600; white-space:nowrap;
+}
+
+/* ---------- Sidebar ---------- */
+[data-testid="stSidebar"] { background:var(--card); border-right:1px solid var(--line); }
+[data-testid="stSidebarNav"] { padding-top:.4rem; }
+[data-testid="stSidebarNav"] a { border-radius:10px; margin:2px 8px; }
+[data-testid="stSidebarNav"] a:hover { background:#f1f0ff; }
+[data-testid="stSidebarNav"] a[aria-current="page"] {
+  background:#efedff; color:#5a4bd6; font-weight:700;
+}
+.ls-brand { display:flex; align-items:center; gap:11px; padding:6px 6px 2px; }
+.ls-brand .m { font-size:22px; width:38px; height:38px; border-radius:11px;
+  background:""" + BRAND_GRADIENT + """; display:flex; align-items:center;
+  justify-content:center; box-shadow:0 6px 14px rgba(109,94,252,.35); }
+.ls-brand .t { font-weight:800; font-size:16px; color:var(--ink); letter-spacing:-.3px; }
+.ls-brand .s { font-size:11px; color:var(--muted); margin-top:-2px; }
+
+/* ---------- Metric cards ---------- */
+[data-testid="stMetric"] {
+  background:var(--card); border:1px solid var(--line); border-radius:16px;
+  padding:15px 18px; box-shadow:0 1px 3px rgba(16,24,40,.05);
+  transition:transform .12s, box-shadow .12s;
+}
+[data-testid="stMetric"]:hover { transform:translateY(-2px);
+  box-shadow:0 10px 22px rgba(16,24,40,.08); }
+[data-testid="stMetricValue"] { font-weight:800; color:var(--ink); }
+[data-testid="stMetricLabel"] p { font-weight:600; color:var(--muted); }
+
+/* ---------- Buttons ---------- */
+.stButton>button, .stDownloadButton>button, .stFormSubmitButton>button {
+  border-radius:12px; font-weight:600; border:1px solid var(--line);
+  transition:.15s; padding:.5rem 1rem;
+}
+.stButton>button:hover, .stDownloadButton>button:hover { border-color:var(--brand);
+  color:var(--brand); }
+button[kind="primary"], button[kind="primaryFormSubmit"] {
+  background:""" + BRAND_GRADIENT + """ !important; border:none !important;
+  color:#fff !important; box-shadow:0 8px 18px rgba(109,94,252,.34);
+}
+button[kind="primary"]:hover, button[kind="primaryFormSubmit"]:hover {
+  filter:brightness(1.06); transform:translateY(-1px); color:#fff !important;
+}
+button[kind="primary"]:disabled { filter:grayscale(.4) opacity(.7);
+  box-shadow:none; transform:none; }
+
+/* ---------- Surfaces ---------- */
+[data-testid="stVerticalBlockBorderWrapper"] { border-radius:18px; }
+[data-testid="stAlert"] { border-radius:14px; border:1px solid var(--line); }
+[data-testid="stDataFrame"] { border-radius:12px; overflow:hidden;
+  border:1px solid var(--line); }
+[data-testid="stForm"] { border-radius:18px; border:1px solid var(--line);
+  background:var(--card); }
+.stTextInput input, .stTextArea textarea {
+  border-radius:10px !important; }
+
+/* ---------- Tabs ---------- */
+[data-baseweb="tab-list"] { gap:2px; border-bottom:1px solid var(--line); }
+button[data-baseweb="tab"] { font-weight:600; font-size:.95rem; }
+[data-baseweb="tab-highlight"] { background:var(--brand); height:3px; border-radius:3px; }
+
+/* ---------- Chrome ---------- */
+#MainMenu, footer, [data-testid="stStatusWidget"] { visibility:hidden; }
 </style>
 """
 
 
+def apply_brand() -> None:
+    """Inject the brand design system. Safe to call once per page."""
+    st.markdown(_BRAND_CSS, unsafe_allow_html=True)
+
+
+# Backwards-compatible alias.
 def inject_css() -> None:
-    """Apply the shared visual polish. Safe to call on every page."""
-    st.markdown(_CSS, unsafe_allow_html=True)
+    apply_brand()
+
+
+def sidebar_brand() -> None:
+    """Render the branded product block at the top of the sidebar."""
+    st.markdown(
+        "<div class='ls-brand'><div class='m'>🎯</div>"
+        "<div><div class='t'>LayoffScout&nbsp;AI</div>"
+        "<div class='s'>AI recruiting agent</div></div></div>",
+        unsafe_allow_html=True,
+    )
+
+
+def hero(title: str, subtitle: str, badges: list[str] | None = None) -> None:
+    """Render the gradient product hero header.
+
+    `badges` is a list of short HTML-safe strings shown as pills on the right.
+    """
+    pills = "".join(f"<span class='ls-pill'>{b}</span>" for b in (badges or []))
+    st.markdown(
+        f"<div class='ls-hero'><div class='ls-hero-l'>"
+        f"<div class='ls-logo'>🎯</div><div>"
+        f"<div class='ls-title'>{title}</div>"
+        f"<div class='ls-sub'>{subtitle}</div></div></div>"
+        f"<div class='ls-badges'>{pills}</div></div>",
+        unsafe_allow_html=True,
+    )

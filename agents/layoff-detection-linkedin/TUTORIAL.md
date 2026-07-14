@@ -29,7 +29,7 @@
    - [6.6 `agent/pipeline.py`](#66-agentpipelinepy--the-orchestra-conductor)
    - [6.7 `st_common.py`](#67-st_commonpy--bridging-secrets-and-config)
    - [6.8 `streamlit_app.py`](#68-streamlit_apppy--the-dashboard)
-   - [6.9 `pages/1_Settings.py`](#69-pages1_settingspy--the-settings-page)
+   - [6.9 `views/settings.py`](#69-viewssettingspy--the-settings-page)
 7. [How to run locally](#7-how-to-run-locally)
 8. [How to deploy on Streamlit Cloud](#8-how-to-deploy-on-streamlit-cloud)
 9. [Common errors and fixes](#9-common-errors-and-fixes)
@@ -422,10 +422,11 @@ if st.button("⚡ Scan New Data", type="primary"):
 runs, so we can show the pipeline's log output in an expander — a nice touch that makes
 the agent feel transparent.
 
-### 6.9 `pages/1_Settings.py` — the settings page
+### 6.9 `views/settings.py` — the settings page
 
-Streamlit turns any file inside a `pages/` folder into an extra page in the sidebar
-automatically. Our Settings page:
+`streamlit_app.py` is a small **router** that uses `st.navigation` to register two
+pages — `views/dashboard.py` and `views/settings.py` — with clean names and icons in
+the sidebar. Our Settings page:
 
 1. Shows a **live status** — green if all required keys are set, a warning otherwise.
 2. Renders a form by looping over `st_common.CONFIG_KEYS`, grouping fields into
