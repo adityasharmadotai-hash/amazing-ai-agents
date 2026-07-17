@@ -14,7 +14,8 @@ from __future__ import annotations
 import json
 import logging
 
-from tenacity import retry, stop_after_attempt, wait_exponential
+from tenacity import (retry, retry_if_exception_type, stop_after_attempt,
+                      wait_exponential)
 
 from . import config
 
@@ -57,11 +58,17 @@ def _strip_code_fence(text: str) -> str:
     return text.strip()
 
 
-@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, max=10))
+# Only retry when the MODEL returned non-JSON (transient). API errors like
+# InvalidArgument (bad key/model/request) are NOT retried — retrying wastes calls
+# and hides the real message; we reraise the original error immediately so the
+# caller can show exactly what Gemini said.
+@retry(retry=retry_if_exception_type(json.JSONDecodeError),
+       stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, max=10),
+       reraise=True)
 def complete_json(system: str, user: str) -> dict | list:
     """Send a prompt and parse the model's reply as JSON.
 
-    Raises on repeated failure (tenacity retries transient errors 3x).
+    Retries up to 3x only on non-JSON replies; API errors propagate immediately.
     """
     _ensure_configured()
     genai = _get_genai()

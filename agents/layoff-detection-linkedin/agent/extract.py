@@ -3,12 +3,29 @@ from __future__ import annotations
 
 import logging
 import re
+import threading
 from typing import Any
 from urllib.parse import unquote, urlparse
 
 from . import config, llm
 
 log = logging.getLogger(__name__)
+
+# Last LLM/API error seen during extraction — surfaced by the pipeline so the UI
+# can tell the user "your Gemini key/model is failing" instead of a silent 0.
+_err_lock = threading.Lock()
+_last_error: str | None = None
+
+
+def reset_error() -> None:
+    global _last_error
+    with _err_lock:
+        _last_error = None
+
+
+def last_error() -> str | None:
+    with _err_lock:
+        return _last_error
 
 
 def slug_text(url: str) -> str:
@@ -95,6 +112,9 @@ def extract_record(text: str, url: str) -> dict[str, Any] | None:
                                   titles=", ".join(config.TARGET_TITLES)),
         )
     except Exception as exc:  # noqa: BLE001 — one bad post shouldn't kill a scan
+        global _last_error
+        with _err_lock:
+            _last_error = str(exc)
         log.warning("extraction failed for %s: %s", url, exc)
         return None
 

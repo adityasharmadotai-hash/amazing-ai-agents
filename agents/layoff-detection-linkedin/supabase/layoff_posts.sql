@@ -13,14 +13,20 @@ create table if not exists public.layoff_posts (
     location     text,
     event_date   date,
     open_to_work boolean default false,
+    is_qualified boolean default false,           -- validated: matches target job role (+ location)
     summary      text,
     confidence   numeric,
     created_at   timestamptz default now(),
     updated_at   timestamptz default now()
 );
 
+-- If your table already exists (created before is_qualified was added), run this
+-- ONCE to add the new column without dropping data:
+--   alter table public.layoff_posts add column if not exists is_qualified boolean default false;
+
 create index if not exists layoff_posts_company_idx on public.layoff_posts (company);
 create index if not exists layoff_posts_open_to_work_idx on public.layoff_posts (open_to_work);
+create index if not exists layoff_posts_is_qualified_idx on public.layoff_posts (is_qualified);
 create index if not exists layoff_posts_created_at_idx on public.layoff_posts (created_at desc);
 
 -- keep updated_at fresh on upsert

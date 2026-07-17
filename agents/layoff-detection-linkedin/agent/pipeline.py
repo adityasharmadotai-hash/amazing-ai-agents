@@ -63,6 +63,7 @@ def run_scan() -> dict[str, Any]:
 
 def _run_scan_locked() -> dict[str, Any]:
     usage.start_scan()
+    extract.reset_error()
     before = len(store.list_records(limit=1000))
 
     log.info("▶ Scan started — collecting posts from LinkedIn + News…")
@@ -79,8 +80,12 @@ def _run_scan_locked() -> dict[str, Any]:
     log.info("Found %d layoff posts; applying US + software-title filter…",
              len(records))
 
-    # Keep only qualified leads: US-based individuals in a target software role.
-    relevant = [r for r in records if extract.is_relevant(r)]
+    # Validate each extracted lead against the target job role (+ location) and
+    # tag it. We STORE EVERY lead (not just the validated ones) so nothing is
+    # lost; `is_qualified` marks which ones match the target role.
+    for r in records:
+        r["is_qualified"] = extract.is_relevant(r)
+    relevant = [r for r in records if r["is_qualified"]]
     for r in relevant:
         log.info("  ✓ %s — %s (%s)", r.get("person_name") or "?",
                  r.get("role_category"), r.get("location") or "US")
@@ -100,10 +105,10 @@ def _run_scan_locked() -> dict[str, Any]:
              breakdown["individuals"], breakdown["in_location"],
              breakdown["target_role"], len(relevant))
 
-    stored = store.upsert_records(relevant)
+    stored = store.upsert_records(records)   # save ALL leads, not just validated
     after = len(store.list_records(limit=1000))
-    log.info("Stored %d qualified leads (%d new). Scan complete.",
-             stored, max(0, after - before))
+    log.info("Stored %d leads (%d validated, %d new). Scan complete.",
+             stored, len(relevant), max(0, after - before))
 
     meter = usage.finish_scan(extra={
         "examined": len(candidates),
@@ -120,6 +125,10 @@ def _run_scan_locked() -> dict[str, Any]:
         "usage": meter["counts"],
         "breakdown": breakdown,
     }
+    # If every post produced 0 records AND the LLM was erroring, surface it — this
+    # is almost always a bad GEMINI_API_KEY or model, not "no layoffs found".
+    if len(records) == 0 and candidates and extract.last_error():
+        summary["ai_error"] = extract.last_error()
     log.info("Scan complete: %s", summary)
     return summary
 
@@ -130,6 +139,7 @@ def analyze_url(url: str) -> dict[str, Any] | None:
     if not candidate:
         return None
     rec = process_candidate(candidate)
-    if rec and extract.is_relevant(rec):
-        store.upsert_records([rec])
+    if rec:
+        rec["is_qualified"] = extract.is_relevant(rec)
+        store.upsert_records([rec])   # save it either way; tag if validated
     return rec

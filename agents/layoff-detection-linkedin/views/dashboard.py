@@ -89,13 +89,16 @@ def render():
         )
 
     # ── Action bar ─────────────────────────────────────────────────────────
-    c1, c2, c3 = st.columns([1.5, 1, 1])
+    c1, c2, c3, c4 = st.columns([1.6, 1, 1.15, 1.15])
     with c1:
         scan_clicked = st.button("⚡ Scan New Data", type="primary",
                                  use_container_width=True, disabled=bool(missing))
     with c2:
         st.button("↻ Refresh", use_container_width=True)
     with c3:
+        validated_only = st.toggle("✅ Validated only", value=False,
+                                   help="Show only leads that match a target job role.")
+    with c4:
         otw_only = st.toggle("Open-to-work only", value=False)
 
     if scan_clicked:
@@ -104,12 +107,25 @@ def render():
             summary, logs = _capture_scan()
         if summary.get("status") == "busy":
             st.info("⏳ " + summary.get("message", "A scan is already running."))
+        elif summary.get("ai_error"):
+            st.error(
+                "🛑 **The AI (Gemini) rejected every request — no posts could be "
+                "analyzed.** This is almost always a bad **GEMINI_API_KEY** or an "
+                "invalid **GEMINI_MODEL**, not 'no layoffs found'.\n\n"
+                f"**Gemini said:** `{summary['ai_error'][:300]}`\n\n"
+                "Fix on the **⚙️ Settings** page: paste a valid key from "
+                "https://aistudio.google.com/app/apikey (or set `GEMINI_MODEL` to "
+                "`gemini-2.5-flash` / `gemini-1.5-flash`), then scan again."
+            )
+            with st.expander("📜 Scan log"):
+                st.code(logs or "(no output)", language="text")
         else:
             cost = summary.get("cost", {}) or {}
             st.success(
-                f"✅ Scan complete — **{summary.get('new_leads', 0)} new lead(s)** "
-                f"({summary.get('relevant_us_swe', 0)} qualified of "
-                f"{summary.get('candidates', 0)} examined). "
+                f"✅ Scan complete — **{summary.get('new_leads', 0)} new lead(s) "
+                f"saved** to the database "
+                f"(**{summary.get('relevant_us_swe', 0)} validated** for a target "
+                f"role, of {summary.get('candidates', 0)} examined). "
                 f"This scan cost **{_money(cost.get('total'))}**."
             )
             b = summary.get("breakdown", {}) or {}
@@ -202,8 +218,11 @@ def render():
 
     with tab_leads:
         try:
-            rows = store.list_records(limit=200,
-                                      open_to_work=True if otw_only else None)
+            rows = store.list_records(
+                limit=500,
+                open_to_work=True if otw_only else None,
+                qualified=True if validated_only else None,
+            )
         except Exception as exc:
             rows = []
             st.info(
@@ -213,17 +232,23 @@ def render():
             )
 
         if rows:
-            st.caption(f"**{len(rows)}** lead(s)"
-                       + (" · open-to-work only" if otw_only else ""))
+            n_valid = sum(1 for r in rows if r.get("is_qualified"))
+            st.caption(
+                f"**{len(rows)}** lead(s) saved · **{n_valid}** validated for the "
+                f"target role"
+                + (" · validated only" if validated_only else "")
+                + (" · open-to-work only" if otw_only else "")
+            )
             df = pd.DataFrame(rows)
             show_cols = [c for c in [
                 "person_name", "role_category", "company", "location", "is_us",
-                "open_to_work", "summary", "source_url",
+                "is_qualified", "open_to_work", "summary", "source_url",
             ] if c in df.columns]
             view = df[show_cols].rename(columns={
                 "person_name": "Person", "role_category": "Role",
                 "company": "Company", "location": "Location", "is_us": "US",
-                "open_to_work": "Open?", "summary": "Summary", "source_url": "Post",
+                "is_qualified": "Validated", "open_to_work": "Open?",
+                "summary": "Summary", "source_url": "Post",
             })
             st.dataframe(
                 view, use_container_width=True, hide_index=True,

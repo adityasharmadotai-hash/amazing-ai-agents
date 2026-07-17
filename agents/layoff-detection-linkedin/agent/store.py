@@ -49,7 +49,7 @@ def _headers(extra: dict | None = None) -> dict:
 
 _FIELDS = ("source_url", "source", "company", "person_name", "role_hint",
            "role_category", "country", "is_us", "headcount", "location",
-           "event_date", "open_to_work", "summary", "confidence")
+           "event_date", "open_to_work", "is_qualified", "summary", "confidence")
 
 
 def upsert_records(records: list[dict[str, Any]]) -> int:
@@ -65,6 +65,7 @@ def upsert_records(records: list[dict[str, Any]]) -> int:
     for row in rows:
         row["source_url"] = normalize_url(row.get("source_url"))
         row["open_to_work"] = bool(row.get("open_to_work"))
+        row["is_qualified"] = bool(row.get("is_qualified"))
         if row["source_url"] in seen:
             continue
         seen.add(row["source_url"])
@@ -83,7 +84,8 @@ def upsert_records(records: list[dict[str, Any]]) -> int:
 
 
 def list_records(limit: int = 200, company: str | None = None,
-                 open_to_work: bool | None = None) -> list[dict]:
+                 open_to_work: bool | None = None,
+                 qualified: bool | None = None) -> list[dict]:
     params = {
         "select": "*",
         "order": "created_at.desc",
@@ -93,6 +95,8 @@ def list_records(limit: int = 200, company: str | None = None,
         params["company"] = f"ilike.*{company}*"
     if open_to_work is not None:
         params["open_to_work"] = f"eq.{str(open_to_work).lower()}"
+    if qualified is not None:
+        params["is_qualified"] = f"eq.{str(qualified).lower()}"
 
     resp = httpx.get(f"{_base()}/{_TABLE}", params=params, headers=_headers(), timeout=30)
     if resp.status_code >= 300:
