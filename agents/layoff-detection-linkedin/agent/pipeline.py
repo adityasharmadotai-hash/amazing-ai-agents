@@ -32,16 +32,20 @@ def process_candidate(c: dict) -> dict | None:
     if not rec:
         return None
     rec["source"] = c.get("source", "linkedin")
-    # Only spend a profile lookup when the post didn't reveal a country and the
-    # role is a target one (no point locating a non-software person). We
-    # deliberately do NOT gate on location_ok() here: in the default worldwide
-    # config (and whenever LOCATION_INCLUDE_UNKNOWN is on) an unknown-country
-    # record already "passes" location_ok, which would skip enrichment for
-    # exactly the records that need it — leaving the Location column empty.
+    # Resolve the location via a profile scrape when the post didn't reveal a
+    # country. We deliberately do NOT gate on location_ok() here: in the default
+    # worldwide config (and whenever LOCATION_INCLUDE_UNKNOWN is on) an unknown-
+    # country record already "passes" location_ok, which would skip enrichment
+    # for exactly the records that need it — leaving the Location column empty.
+    #
+    # Role gate: only restrict enrichment to target-title people when the app is
+    # actually filtering by role (REQUIRE_TARGET_TITLE). In capture-everyone mode
+    # we want a location for every individual, so we enrich them all.
     country = (rec.get("country") or "").strip().lower()
+    role_ok = (not extract.config.REQUIRE_TARGET_TITLE
+               or extract.config.is_target_title(rec.get("role_category")))
     if (country in _UNKNOWN
-            and c.get("profile_url") and rec.get("is_individual")
-            and extract.config.is_target_title(rec.get("role_category"))):
+            and c.get("profile_url") and rec.get("is_individual") and role_ok):
         loc = enrich_location.resolve_country(c["profile_url"])
         if loc:
             rec["country"] = loc.get("country") or rec.get("country")

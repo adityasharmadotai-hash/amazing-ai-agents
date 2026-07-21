@@ -53,30 +53,48 @@ def _profile_url_from_post(post_url: str) -> str:
 
 
 def _fetch(query: str) -> list[dict]:
+    """Fetch results for one query, paginating until we have
+    LINKEDIN_RESULTS_PER_Q of them.
+
+    Google serves only ~10 organic results per page for a `site:` query (it
+    ignores a large `num`), so to get more we must page with `start`. Each page
+    is a separate SerpAPI search (and cost), so the number of pages is bounded
+    by LINKEDIN_RESULTS_PER_Q — e.g. 20 -> 2 pages, 10 -> 1 page.
+    """
+    from .. import usage
     loc = config.location_query()
     q = f'site:linkedin.com/posts {query}'
     if loc:
         q = f"{q} {loc}"          # bias toward the target city/region
-    params = {
-        "engine": "google",
-        "q": q,
-        "num": config.LINKEDIN_RESULTS_PER_Q,
-        "api_key": config.SERPAPI_KEY,
-        "tbs": _recency_tbs(),  # last-N-days range, or qdr:<d/w/m/y> fallback
-    }
     gl, hl = config.serp_geo()
-    if gl:
-        params["gl"] = gl
-        params["hl"] = hl
-    try:
-        resp = httpx.get(_SERPAPI, params=params, timeout=30)
-        resp.raise_for_status()
-    except httpx.HTTPError as exc:
-        log.warning("SerpAPI query failed (%s): %s", query, exc)
-        return []
-    from .. import usage
-    usage.add("serpapi_searches", 1)
-    return resp.json().get("organic_results", []) or []
+    tbs = _recency_tbs()
+    want = max(1, config.LINKEDIN_RESULTS_PER_Q)
+    pages = (want + 9) // 10       # ceil(want / 10)
+    out: list[dict] = []
+    for p in range(pages):
+        params = {
+            "engine": "google",
+            "q": q,
+            "num": 10,
+            "start": p * 10,
+            "api_key": config.SERPAPI_KEY,
+            "tbs": tbs,  # last-N-days range, or qdr:<d/w/m/y> fallback
+        }
+        if gl:
+            params["gl"] = gl
+            params["hl"] = hl
+        try:
+            resp = httpx.get(_SERPAPI, params=params, timeout=30)
+            resp.raise_for_status()
+        except httpx.HTTPError as exc:
+            log.warning("SerpAPI query failed (%s, page %d): %s", query, p, exc)
+            break
+        usage.add("serpapi_searches", 1)
+        batch = resp.json().get("organic_results", []) or []
+        out.extend(batch)
+        if len(batch) < 10:        # no further pages available
+            break
+    return out[:want]
 
 
 def search_linkedin_posts() -> list[dict]:

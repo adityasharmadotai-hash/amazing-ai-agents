@@ -73,13 +73,25 @@ _DEFAULT_TITLES = [
     "Solutions Architect", "Technical Architect",
 ]
 
-# Default query set — LEAN & CHEAP. Each line is one paid search, so we keep it
-# to two broad keyword/hashtag nets that capture any "open to work" layoff post
-# (no per-role word — role narrowing, if wanted, is done by REQUIRE_TARGET_TITLE
-# below, not by paying for extra searches). Override via LINKEDIN_QUERIES.
+# Default query set — broad layoff / open-to-work coverage. Each line is one
+# paid search (SerpAPI paginates it; Apify runs it as a simplified keyword), so
+# more lines = more coverage but more cost. These 4 cover the common phrasings
+# people use when posting about being laid off. No per-role word — role
+# narrowing, if wanted, is done by REQUIRE_TARGET_TITLE below. Override via
+# LINKEDIN_QUERIES; trim lines to cut cost.
 _DEFAULT_QUERIES = [
-    '"open to work" ("laid off" OR "impacted by the layoffs" OR layoff OR layoffs)',
-    '#opentowork (#layoff OR #layoffs OR "laid off")',
+    # Core: open-to-work + the most common layoff phrasings.
+    '"open to work" ("laid off" OR "impacted by the layoffs" OR "let go" OR '
+    '"lost my job" OR layoff OR layoffs)',
+    # Other ways people describe a layoff.
+    '"open to work" ("role was eliminated" OR "position was eliminated" OR '
+    '"affected by the layoffs" OR "part of the layoffs" OR "reduction in force" '
+    'OR "no longer with")',
+    # Hashtag-driven posts.
+    '#opentowork (#layoff OR #layoffs OR "laid off" OR "let go")',
+    # Job-seeking language paired with a layoff signal.
+    '("recently laid off" OR "just got laid off" OR "impacted by layoffs") '
+    '("open to work" OR "seeking new" OR "new opportunities" OR "back on the market")',
 ]
 
 

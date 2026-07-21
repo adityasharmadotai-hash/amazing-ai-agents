@@ -59,8 +59,11 @@ def _run_profile(username: str) -> list[dict]:
     url = _API.format(actor=config.APIFY_PROFILE_ACTOR.replace("/", "~"))
     headers = {"Authorization": f"Bearer {config.APIFY_TOKEN}",
                "Content-Type": "application/json"}
+    # A profile that takes longer than this isn't worth blocking the whole scan
+    # for — the lead is simply kept with an unknown location. 120s (the old
+    # value) let a single slow profile stall a worker for two minutes.
     try:
-        resp = httpx.post(url, json={"username": username}, headers=headers, timeout=120)
+        resp = httpx.post(url, json={"username": username}, headers=headers, timeout=45)
         resp.raise_for_status()
     except httpx.HTTPError as exc:
         log.warning("Profile scrape failed for %s: %s", username, exc)
