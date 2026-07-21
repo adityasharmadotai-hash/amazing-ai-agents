@@ -126,13 +126,16 @@ def extract_record(text: str, url: str) -> dict[str, Any] | None:
 
 
 def is_relevant(rec: dict[str, Any]) -> bool:
-    """A record is a qualified recruiting lead only if it is an individual in a
-    target location whose role maps to one of the TARGET_TITLES."""
+    """A record is a qualified recruiting lead if it is a laid-off individual in
+    a target location. When REQUIRE_TARGET_TITLE is on, the role must also map to
+    one of the TARGET_TITLES; otherwise any role qualifies (capture-everyone)."""
     if not rec:
         return False
     if not rec.get("is_individual"):
         return False
     if not config.location_ok(rec):
         return False
+    if not config.REQUIRE_TARGET_TITLE:
+        return True
     # trust the model's role_category, but re-validate against the canonical list
     return config.is_target_title(rec.get("role_category"))

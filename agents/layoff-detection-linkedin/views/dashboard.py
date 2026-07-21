@@ -129,21 +129,27 @@ def render():
                 f"This scan cost **{_money(cost.get('total'))}**."
             )
             b = summary.get("breakdown", {}) or {}
+            role_gated = config.REQUIRE_TARGET_TITLE
+            role_clause = (f"**{b.get('target_role', 0)}** in a target role → "
+                           if role_gated else "")
+            gate_note = ("a lead must pass all three" if role_gated
+                         else "a lead must be an individual in " + locs)
             st.markdown(
                 f"**Why this number?** &nbsp; {summary.get('candidates', 0)} examined "
                 f"→ **{b.get('layoff_posts', 0)}** layoff posts → "
                 f"**{b.get('individuals', 0)}** individuals · "
                 f"**{b.get('in_location', 0)}** in {locs} · "
-                f"**{b.get('target_role', 0)}** in a target role → "
+                f"{role_clause}"
                 f"**{summary.get('relevant_us_swe', 0)} qualified** "
-                f"_(a lead must pass all three)_."
+                f"_({gate_note})_."
             )
             if summary.get("relevant_us_swe", 0) == 0 and b:
                 stages = {
                     "individuals": b.get("individuals", 0),
                     "in a target location": b.get("in_location", 0),
-                    "in a target role": b.get("target_role", 0),
                 }
+                if role_gated:                    # role is only a gate when required
+                    stages["in a target role"] = b.get("target_role", 0)
                 worst = min(stages, key=stages.get)
                 tips = {
                     "individuals": "Most posts were company news, not people. Try "

@@ -115,6 +115,7 @@ CONFIG_KEYS: list[dict] = [
         "backend": "apify",
         "secret": False,
         "required": False,
+        "default": "apimaestro/linkedin-posts-search-scraper-no-cookies",
         "help": "The Apify actor used to search LinkedIn posts. Default works "
                 "out of the box.",
         "steps": [
@@ -145,12 +146,14 @@ CONFIG_KEYS: list[dict] = [
         "secret": False,
         "required": False,
         "multiline": True,
-        "help": "Only people whose role matches one of these titles are kept. "
-                "Comma- or newline-separated. Leave blank for the default 36 "
-                "software-engineering titles.",
+        "help": "Used to label each lead's Role column. Only acts as a hard "
+                "filter when **Require target role** (Tuning) is ON — otherwise "
+                "every laid-off person is kept regardless of role. Comma- or "
+                "newline-separated; blank = default 36 software titles.",
         "steps": [
             "List the roles you want, comma- or newline-separated.",
             "Example: `Data Scientist, Machine Learning Engineer, Data Analyst`",
+            "These only restrict leads if **Require target role** is ON (Tuning).",
             "Leave blank to keep the default software-engineering titles.",
         ],
     },
@@ -212,18 +215,26 @@ CONFIG_KEYS: list[dict] = [
         "group": "Tuning",
         "secret": False,
         "required": False,
+        "default": "gemini-2.5-flash",
         "help": "`gemini-2.5-flash` is cheap & fast; `gemini-2.5-pro` is higher "
                 "quality but costs more.",
         "steps": ["Leave as `gemini-2.5-flash` unless you need higher quality."],
     },
     {
-        "key": "LINKEDIN_RECENCY",
-        "label": "Recency window (d/w/m/y)",
+        "key": "LINKEDIN_RECENCY_DAYS",
+        "label": "Search posts from the last N days",
         "group": "Tuning",
         "secret": False,
         "required": False,
-        "help": "How far back to search: d=day, w=week, m=month, y=year.",
-        "steps": ["`w` (past week) is a good default."],
+        "default": "2",
+        "help": "How fresh posts must be. Default **2** = only the last 2 days "
+                "(fresher leads + lower cost). Increase for more volume.",
+        "steps": [
+            "`2` (default) searches the last 2 days.",
+            "Use e.g. `1`, `3`, `7`, or `30` for a different window.",
+            "SerpAPI honours the exact number; Apify rounds to its nearest bucket "
+            "(24h / week / month / year).",
+        ],
     },
     {
         "key": "LINKEDIN_RESULTS_PER_Q",
@@ -231,8 +242,9 @@ CONFIG_KEYS: list[dict] = [
         "group": "Tuning",
         "secret": False,
         "required": False,
+        "default": "20",
         "help": "How many results to pull per search query (higher = more cost).",
-        "steps": ["`20` is a sensible default."],
+        "steps": ["`20` is a sensible default; lower it to `10` to cut cost."],
     },
     {
         "key": "LAYOFF_US_ONLY",
@@ -240,10 +252,28 @@ CONFIG_KEYS: list[dict] = [
         "group": "Tuning",
         "secret": False,
         "required": False,
-        "help": "Shortcut for US-only. Default is **false** (worldwide). For finer "
-                "control use **Target locations** above, which overrides this.",
-        "steps": ["`false` (default) keeps candidates worldwide; `true` keeps only "
-                  "US leads."],
+        "default": "true",
+        "help": "Shortcut for US-only. Default is **true** (only US candidates, and "
+                "the search is biased to the US to avoid paying for foreign posts). "
+                "For finer control use **Target locations** above, which overrides "
+                "this.",
+        "steps": ["`true` (default) keeps only US leads; `false` searches worldwide."],
+    },
+    {
+        "key": "REQUIRE_TARGET_TITLE",
+        "label": "Require target role (true/false)",
+        "group": "Tuning",
+        "secret": False,
+        "required": False,
+        "default": "false",
+        "help": "When **false** (default), every laid-off 'open to work' individual "
+                "in your target location is a qualified lead, any job. When "
+                "**true**, only people whose role matches **Target job titles** are "
+                "validated (software-engineering focus).",
+        "steps": [
+            "`false` (default) — capture everyone laid off, regardless of role.",
+            "`true` — restrict validated leads to your Target job titles list.",
+        ],
     },
     {
         "key": "LOCATION_INCLUDE_UNKNOWN",
@@ -251,6 +281,7 @@ CONFIG_KEYS: list[dict] = [
         "group": "Tuning",
         "secret": False,
         "required": False,
+        "default": "true",
         "help": "When ON, keep candidates whose country couldn't be determined "
                 "from the post (the LinkedIn search is already US-biased). This "
                 "recovers a LOT of leads on SerpAPI. Confirmed other-country "
@@ -268,6 +299,7 @@ CONFIG_KEYS: list[dict] = [
         "group": "Tuning",
         "secret": False,
         "required": False,
+        "default": "true",
         "help": "When a post doesn't state a country, scrape the profile to find "
                 "it (Apify only; costs one extra profile scrape).",
         "steps": ["`true` recovers more US leads; `false` saves scrapes."],

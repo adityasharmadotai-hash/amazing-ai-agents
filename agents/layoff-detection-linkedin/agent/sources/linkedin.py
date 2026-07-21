@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 import re
+from datetime import date, timedelta
 from urllib.parse import urlsplit
 
 import httpx
@@ -19,6 +20,17 @@ from .. import config
 log = logging.getLogger(__name__)
 
 _SERPAPI = "https://serpapi.com/search.json"
+
+
+def _recency_tbs() -> str:
+    """Google `tbs` recency filter. Prefer an exact N-day custom date range
+    (LINKEDIN_RECENCY_DAYS), falling back to the qdr:<d/w/m/y> shorthand."""
+    days = config.LINKEDIN_RECENCY_DAYS
+    if days and days > 0:
+        cd_max = date.today()
+        cd_min = cd_max - timedelta(days=days)
+        return f"cdr:1,cd_min:{cd_min:%m/%d/%Y},cd_max:{cd_max:%m/%d/%Y}"
+    return f"qdr:{config.LINKEDIN_RECENCY}"
 
 
 def _profile_url_from_post(post_url: str) -> str:
@@ -50,7 +62,7 @@ def _fetch(query: str) -> list[dict]:
         "q": q,
         "num": config.LINKEDIN_RESULTS_PER_Q,
         "api_key": config.SERPAPI_KEY,
-        "tbs": f"qdr:{config.LINKEDIN_RECENCY}",  # recency filter d/w/m/y
+        "tbs": _recency_tbs(),  # last-N-days range, or qdr:<d/w/m/y> fallback
     }
     gl, hl = config.serp_geo()
     if gl:

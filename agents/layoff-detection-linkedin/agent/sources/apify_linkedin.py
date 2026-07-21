@@ -33,6 +33,18 @@ def _actor_path() -> str:
 def _date_filter() -> str:
     if config.APIFY_DATE_FILTER:
         return config.APIFY_DATE_FILTER
+    # The actor only offers fixed buckets, so map the requested N-day window to
+    # the nearest one (e.g. the 2-day default -> past-week, since there is no
+    # "past-2-days" option). Set APIFY_DATE_FILTER to override exactly.
+    days = config.LINKEDIN_RECENCY_DAYS
+    if days and days > 0:
+        if days <= 1:
+            return "past-24h"
+        if days <= 7:
+            return "past-week"
+        if days <= 31:
+            return "past-month"
+        return "past-year"
     return _DATE_MAP.get(config.LINKEDIN_RECENCY, "past-week")
 
 

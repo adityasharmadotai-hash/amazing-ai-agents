@@ -24,6 +24,20 @@ _GROUP_ICONS = {
 }
 
 
+def _field_help(f: dict) -> str:
+    """Compose a field's tooltip: its short help plus the numbered how-to steps.
+
+    Folding the steps into the `?` tooltip (instead of a per-field expander)
+    keeps the Settings page short while retaining the full instructions.
+    """
+    txt = f.get("help", "")
+    steps = f.get("steps") or []
+    if steps:
+        txt += "\n\n**How to get / use:**\n" + "\n".join(
+            f"{i}. {s}" for i, s in enumerate(steps, 1))
+    return txt
+
+
 def render():
     st_common.hero(
         "Settings &amp; API keys",
@@ -77,6 +91,9 @@ def render():
 
     # ── Step 2: the configuration form ─────────────────────────────────────
     st.subheader("2 · Keys & options")
+    st.caption("Grouped below to keep things short — **Required** and your "
+               "**LinkedIn source** are open; expand the others only to change "
+               "them. Hover the **?** on any field for step-by-step help.")
 
     # Only show the key for the chosen backend; hide the other one entirely.
     visible = [f for f in st_common.CONFIG_KEYS
@@ -87,40 +104,46 @@ def render():
     for field in visible:
         groups.setdefault(field["group"], []).append(field)
 
+    # Groups that start expanded (what a first-time user must fill in). The rest
+    # collapse so the page fits on a screen.
+    _open = {"Required", "LinkedIn source"}
+
     with st.form("settings"):
         overrides: dict[str, str] = {}
         for group, fields in groups.items():
-            st.markdown(f"#### {_GROUP_ICONS.get(group, '•')} {group}")
-            for f in fields:
-                key = f["key"]
-                current = st_common.current_value(key)
-                label = f["label"] + ("  ·  *required*" if f.get("required") else "")
-                if f.get("multiline"):
-                    # Pre-fill with the *active* values (defaults included) so the
-                    # box is never confusingly blank. Clearing resets to defaults.
-                    prefill = current
-                    if not current and key == "LINKEDIN_QUERIES":
-                        prefill = "\n".join(config.LINKEDIN_QUERIES)
-                    elif not current and key == "TARGET_TITLES":
-                        prefill = ", ".join(config.TARGET_TITLES)
-                    overrides[key] = st.text_area(
-                        label, value=prefill, help=f["help"],
-                        placeholder="Clear this box to reset to the built-in defaults.",
-                        height=160, key=f"in_{key}",
-                    )
-                else:
-                    overrides[key] = st.text_input(
-                        label,
-                        value="" if f.get("secret") else current,
-                        type="password" if f.get("secret") else "default",
-                        placeholder="•••• already set" if (f.get("secret") and current)
-                        else "",
-                        help=f["help"], key=f"in_{key}",
-                    )
-                with st.expander(f"How to get / use: {f['label']}"):
-                    for i, step in enumerate(f["steps"], 1):
-                        st.markdown(f"{i}. {step}")
-            st.divider()
+            with st.expander(f"{_GROUP_ICONS.get(group, '•')}  {group}",
+                             expanded=(group in _open)):
+                for f in fields:
+                    key = f["key"]
+                    current = st_common.current_value(key)
+                    label = f["label"] + ("  ·  *required*" if f.get("required") else "")
+                    help_txt = _field_help(f)
+                    if f.get("multiline"):
+                        # Pre-fill with the *active* values (defaults included) so
+                        # the box is never confusingly blank; clearing resets it.
+                        prefill = current
+                        if not current and key == "LINKEDIN_QUERIES":
+                            prefill = "\n".join(config.LINKEDIN_QUERIES)
+                        elif not current and key == "TARGET_TITLES":
+                            prefill = ", ".join(config.TARGET_TITLES)
+                        overrides[key] = st.text_area(
+                            label, value=prefill, help=help_txt,
+                            placeholder="Clear this box to reset to the built-in defaults.",
+                            height=130, key=f"in_{key}",
+                        )
+                    elif f.get("secret"):
+                        overrides[key] = st.text_input(
+                            label, value="", type="password",
+                            placeholder="•••• already set" if current else "",
+                            help=help_txt, key=f"in_{key}",
+                        )
+                    else:
+                        # Non-secret: prefill with the current value, or the built-in
+                        # default (so e.g. the Apify actor shows its default value).
+                        overrides[key] = st.text_input(
+                            label, value=current or f.get("default", ""),
+                            help=help_txt, key=f"in_{key}",
+                        )
         saved = st.form_submit_button("💾 Save for this session", type="primary",
                                       use_container_width=True)
 
@@ -137,23 +160,24 @@ def render():
         st.rerun()
 
     # ── Secrets template for Streamlit Cloud ───────────────────────────────
-    st.subheader("3 · Streamlit Cloud secrets template")
-    st.caption("Copy this into your app's **Settings → Secrets** box and fill in "
-               "the values. It already reflects your chosen source; delete any "
-               "optional lines you don't use.")
-    defaults = {
-        "LINKEDIN_SOURCE": source,
-        "APIFY_ACTOR": "apimaestro/linkedin-posts-search-scraper-no-cookies",
-        "GEMINI_MODEL": "gemini-2.5-flash",
-        "LINKEDIN_RECENCY": "w",
-        "LINKEDIN_RESULTS_PER_Q": "20",
-        "LAYOFF_US_ONLY": "false",
-        "LOCATION_INCLUDE_UNKNOWN": "true",
-        "ENRICH_LOCATION": "true",
-    }
-    template_lines = []
-    for f in st_common.CONFIG_KEYS:
-        if f.get("backend", source) != source:
-            continue
-        template_lines.append(f'{f["key"]} = "{defaults.get(f["key"], "")}"')
-    st.code("\n".join(template_lines), language="toml")
+    with st.expander("3 · Streamlit Cloud secrets template"):
+        st.caption("Copy this into your app's **Settings → Secrets** box and fill "
+                   "in the values. It already reflects your chosen source; delete "
+                   "any optional lines you don't use.")
+        defaults = {
+            "LINKEDIN_SOURCE": source,
+            "APIFY_ACTOR": "apimaestro/linkedin-posts-search-scraper-no-cookies",
+            "GEMINI_MODEL": "gemini-2.5-flash",
+            "LINKEDIN_RECENCY_DAYS": "2",
+            "LINKEDIN_RESULTS_PER_Q": "20",
+            "LAYOFF_US_ONLY": "true",
+            "REQUIRE_TARGET_TITLE": "false",
+            "LOCATION_INCLUDE_UNKNOWN": "true",
+            "ENRICH_LOCATION": "true",
+        }
+        template_lines = []
+        for f in st_common.CONFIG_KEYS:
+            if f.get("backend", source) != source:
+                continue
+            template_lines.append(f'{f["key"]} = "{defaults.get(f["key"], "")}"')
+        st.code("\n".join(template_lines), language="toml")

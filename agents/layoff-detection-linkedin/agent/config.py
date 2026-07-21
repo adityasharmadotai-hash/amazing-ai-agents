@@ -73,20 +73,13 @@ _DEFAULT_TITLES = [
     "Solutions Architect", "Technical Architect",
 ]
 
-# Default query set — BROAD nets, not per-title. The Gemini extractor reads the
-# full post + headline and maps the role to a TARGET_TITLE; the filter enforces
-# location + title. Override via LINKEDIN_QUERIES (one per line / pipe-separated).
+# Default query set — LEAN & CHEAP. Each line is one paid search, so we keep it
+# to two broad keyword/hashtag nets that capture any "open to work" layoff post
+# (no per-role word — role narrowing, if wanted, is done by REQUIRE_TARGET_TITLE
+# below, not by paying for extra searches). Override via LINKEDIN_QUERIES.
 _DEFAULT_QUERIES = [
-    '"open to work" "software engineer" (laid off OR "impacted by the layoffs" OR layoff)',
-    '"open to work" (developer OR engineer) "laid off" (software OR tech)',
-    '"impacted by the layoffs" ("software engineer" OR "software developer" OR developer)',
-    '"recently laid off" "open to work" (software OR engineer OR developer)',
-    '#opentowork #layoff (software OR engineer OR developer)',
-    '"open to work" "full stack" (laid off OR layoff OR "impacted by the layoffs")',
-    '"open to work" (devops OR "site reliability" OR cloud OR platform OR infrastructure) engineer (laid off OR layoff)',
-    '"open to work" (qa OR test OR "quality assurance" OR security) engineer (laid off OR layoff)',
-    '"open to work" (android OR ios OR mobile OR frontend OR backend) developer (laid off OR layoff)',
-    '"open to work" (embedded OR firmware OR systems OR automation OR architect) (laid off OR layoff)',
+    '"open to work" ("laid off" OR "impacted by the layoffs" OR layoff OR layoffs)',
+    '#opentowork (#layoff OR #layoffs OR "laid off")',
 ]
 
 
@@ -100,8 +93,8 @@ def refresh() -> None:
     global ENRICH_LOCATION, APIFY_PROFILE_ACTOR
     global APIFY_POST_COST_PER_1K, APIFY_PROFILE_COST_PER_1K
     global GEMINI_IN_COST_PER_1M, GEMINI_OUT_COST_PER_1M, SERPAPI_COST_PER_SEARCH
-    global GEMINI_MODEL, LINKEDIN_RECENCY, LINKEDIN_RESULTS_PER_Q
-    global LAYOFF_US_ONLY, SCAN_INTERVAL_HOURS
+    global GEMINI_MODEL, LINKEDIN_RECENCY, LINKEDIN_RECENCY_DAYS, LINKEDIN_RESULTS_PER_Q
+    global LAYOFF_US_ONLY, SCAN_INTERVAL_HOURS, REQUIRE_TARGET_TITLE
     global TARGET_TITLES, _TITLES_LOWER
     global TARGET_LOCATIONS, _LOCATIONS_LOWER, LOCATION_INCLUDE_UNKNOWN
     global LINKEDIN_QUERIES
@@ -135,10 +128,24 @@ def refresh() -> None:
 
     # Tuning knobs
     GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+    # Recency: LINKEDIN_RECENCY_DAYS is the primary, user-facing control (default
+    # 2 = only posts from the last 2 days -> fresher leads, lower cost). When it
+    # is > 0 the SerpAPI backend uses an exact N-day Google date range; the Apify
+    # backend maps it to the nearest bucket (24h/week/month/year). The legacy
+    # single-letter LINKEDIN_RECENCY (d/w/m/y) is only used as a fallback when
+    # LINKEDIN_RECENCY_DAYS is set to 0.
+    LINKEDIN_RECENCY_DAYS = _int("LINKEDIN_RECENCY_DAYS", 2)
     LINKEDIN_RECENCY = os.getenv("LINKEDIN_RECENCY", "w")
     LINKEDIN_RESULTS_PER_Q = _int("LINKEDIN_RESULTS_PER_Q", 20)
-    LAYOFF_US_ONLY = _bool("LAYOFF_US_ONLY", False)
+    # Default to USA-only: we only want US-based candidates, and biasing the
+    # search to the US (serp_geo -> gl=us) avoids paying to examine foreign
+    # posts. Override with LAYOFF_US_ONLY=false or a custom TARGET_LOCATIONS.
+    LAYOFF_US_ONLY = _bool("LAYOFF_US_ONLY", True)
     SCAN_INTERVAL_HOURS = _int("SCAN_INTERVAL_HOURS", 4)
+    # When False (default), ANY laid-off "open to work" individual in the target
+    # location is a qualified lead — the role does NOT have to match TARGET_TITLES.
+    # Set REQUIRE_TARGET_TITLE=true to go back to software-only validation.
+    REQUIRE_TARGET_TITLE = _bool("REQUIRE_TARGET_TITLE", False)
 
     # Target titles
     _titles_raw = os.getenv("TARGET_TITLES", "").strip()
