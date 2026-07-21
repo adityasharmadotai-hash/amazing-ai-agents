@@ -38,6 +38,18 @@ def _parse_list(raw: str) -> list[str]:
     return [s.strip() for s in raw.split(",") if s.strip()]
 
 
+def _parse_locations(raw: str) -> list[str]:
+    """Split target locations on pipe / semicolon / newline ONLY.
+
+    Unlike `_parse_list`, this does NOT split on commas, so a place name that
+    contains a comma — "San Francisco, California" — is kept as a single
+    location instead of being torn into "San Francisco" and "California".
+    """
+    for sep in ("|", "\n", ";"):
+        raw = raw.replace(sep, "\x00")
+    return [s.strip() for s in raw.split("\x00") if s.strip()]
+
+
 # ── Immutable constants ──────────────────────────────────────────────────────
 _US_ALIASES = {"united states", "usa", "us", "u.s.", "u.s.a.", "america"}
 _UNKNOWN_LOC = {"", "unknown", "none", "n/a", "null", "remote", "worldwide", "global"}
@@ -133,10 +145,12 @@ def refresh() -> None:
     TARGET_TITLES = _parse_list(_titles_raw) if _titles_raw else list(_DEFAULT_TITLES)
     _TITLES_LOWER = {t.lower() for t in TARGET_TITLES}
 
-    # Target locations (blank = worldwide; falls back to US when LAYOFF_US_ONLY)
+    # Target locations (blank = worldwide; falls back to US when LAYOFF_US_ONLY).
+    # Cities/regions are allowed ("San Francisco, California"), so we split on
+    # pipe/semicolon/newline only — NOT commas (those belong inside a place name).
     _loc_raw = os.getenv("TARGET_LOCATIONS", "").strip()
     if _loc_raw:
-        TARGET_LOCATIONS = _parse_list(_loc_raw)
+        TARGET_LOCATIONS = _parse_locations(_loc_raw)
     elif LAYOFF_US_ONLY:
         TARGET_LOCATIONS = ["United States"]
     else:
@@ -157,22 +171,58 @@ def is_target_title(title: str | None) -> bool:
     return bool(title) and title.strip().lower() in _TITLES_LOWER
 
 
+def _loc_match_terms(loc_lower: str) -> list[str]:
+    """Terms that count as a match for one target location.
+
+    Supports city/region entries, not just countries. For "san francisco,
+    california" we match the whole string OR the primary component before the
+    first comma ("san francisco"), so a record whose location reads "San
+    Francisco Bay Area" or "San Francisco, CA, United States" still matches
+    despite the differing formatting. Short fragments (<3 chars) are dropped to
+    avoid spurious substring hits.
+    """
+    primary = loc_lower.split(",")[0].strip()
+    terms = {loc_lower, primary}
+    return [t for t in terms if len(t) >= 3]
+
+
 def location_ok(rec: dict) -> bool:
     """True if a record's location matches the target locations (or if no
-    location filter is configured, i.e. worldwide)."""
+    location filter is configured, i.e. worldwide). Matches at country, state,
+    or city granularity (see `_loc_match_terms`)."""
     if not _LOCATIONS_LOWER:
         return True
+    # US-alias targets ("United States", "USA", …) are satisfied by the is_us
+    # flag. City/state targets are NOT — they must actually appear in the text.
     if rec.get("is_us") and any(c in _US_ALIASES for c in _LOCATIONS_LOWER):
         return True
     hay = " ".join(str(rec.get(k) or "") for k in ("country", "location")).lower()
-    if any(c in hay for c in _LOCATIONS_LOWER):
-        return True
+    for c in _LOCATIONS_LOWER:
+        if any(term in hay for term in _loc_match_terms(c)):
+            return True
     # Benefit of the doubt: unknown/unstated country passes when enabled.
     if LOCATION_INCLUDE_UNKNOWN:
         country = (rec.get("country") or "").strip().lower()
         if country in _UNKNOWN_LOC:
             return True
     return False
+
+
+def location_query() -> str:
+    """A search fragment that biases the LinkedIn query toward the target
+    locations, e.g. `("San Francisco" OR "New York")`. Empty when searching
+    worldwide, or when the US as a whole is the only target (in which case
+    `serp_geo()` already applies a geographic bias and we don't want to force
+    the literal words "United States" into every indexed post)."""
+    if not _LOCATIONS_LOWER or all(c in _US_ALIASES for c in _LOCATIONS_LOWER):
+        return ""
+    terms: list[str] = []
+    for loc in TARGET_LOCATIONS:
+        primary = loc.split(",")[0].strip()
+        if primary:
+            terms.append(f'"{primary}"')
+    terms = list(dict.fromkeys(terms))  # de-dupe, preserve order
+    return "(" + " OR ".join(terms) + ")" if terms else ""
 
 
 def serp_geo() -> tuple[str | None, str | None]:

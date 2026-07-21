@@ -9,6 +9,8 @@ the pipeline is identical.
 from __future__ import annotations
 
 import logging
+import re
+from urllib.parse import urlsplit
 
 import httpx
 
@@ -19,10 +21,33 @@ log = logging.getLogger(__name__)
 _SERPAPI = "https://serpapi.com/search.json"
 
 
+def _profile_url_from_post(post_url: str) -> str:
+    """Derive the author's profile URL from a LinkedIn post URL.
+
+    Post URLs look like '.../posts/<author-handle>_<slug>-activity-<id>' — the
+    segment before the first '_' is the author's public handle, so
+    'https://www.linkedin.com/in/<handle>' is their profile. This lets the
+    SerpAPI backend feed the profile-based location lookup the same way the
+    Apify backend does. Returns '' when the URL isn't a recognizable post URL.
+    """
+    try:
+        path = urlsplit(post_url).path
+    except Exception:  # noqa: BLE001
+        return ""
+    m = re.search(r"/posts/([^/_]+)_", path)
+    if not m:
+        return ""
+    return f"https://www.linkedin.com/in/{m.group(1)}"
+
+
 def _fetch(query: str) -> list[dict]:
+    loc = config.location_query()
+    q = f'site:linkedin.com/posts {query}'
+    if loc:
+        q = f"{q} {loc}"          # bias toward the target city/region
     params = {
         "engine": "google",
-        "q": f'site:linkedin.com/posts {query}',
+        "q": q,
         "num": config.LINKEDIN_RESULTS_PER_Q,
         "api_key": config.SERPAPI_KEY,
         "tbs": f"qdr:{config.LINKEDIN_RECENCY}",  # recency filter d/w/m/y
@@ -61,7 +86,8 @@ def search_linkedin_posts() -> list[dict]:
                 continue
             seen.add(url)
             text = " ".join(filter(None, [r.get("title"), r.get("snippet")]))
-            out.append({"url": url, "text": text, "source": "linkedin"})
+            out.append({"url": url, "text": text, "source": "linkedin",
+                        "profile_url": _profile_url_from_post(url)})
     log.info("LinkedIn: %d unique candidate posts", len(out))
     return out
 
@@ -83,14 +109,17 @@ def fetch_single(url: str) -> dict | None:
     except httpx.HTTPError as exc:
         log.warning("SerpAPI single fetch failed: %s", exc)
         return None
+    profile_url = _profile_url_from_post(url)
     for r in resp.json().get("organic_results", []) or []:
         if r.get("link") == url or url in (r.get("link") or ""):
             text = " ".join(filter(None, [r.get("title"), r.get("snippet")]))
-            return {"url": url, "text": text, "source": "linkedin"}
+            return {"url": url, "text": text, "source": "linkedin",
+                    "profile_url": profile_url}
     # Fall back to whatever the top result described.
     results = resp.json().get("organic_results", [])
     if results:
         r = results[0]
         text = " ".join(filter(None, [r.get("title"), r.get("snippet")]))
-        return {"url": url, "text": text, "source": "linkedin"}
+        return {"url": url, "text": text, "source": "linkedin",
+                "profile_url": profile_url}
     return None

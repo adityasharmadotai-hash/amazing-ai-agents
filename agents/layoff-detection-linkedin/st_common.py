@@ -156,17 +156,23 @@ CONFIG_KEYS: list[dict] = [
     },
     {
         "key": "TARGET_LOCATIONS",
-        "label": "Target locations / countries",
+        "label": "Target locations (city, region, or country)",
         "group": "Search & targeting",
         "secret": False,
         "required": False,
-        "help": "Only keep candidates in these countries (comma-separated). "
-                "Leave blank to keep candidates worldwide. This overrides the "
-                "'US only' toggle below.",
+        "help": "Where candidates should be based. Accepts cities, regions, or "
+                "countries — e.g. `San Francisco, California` or `United States`. "
+                "The location is added to the LinkedIn search AND used to filter "
+                "results. Leave blank for worldwide. Overrides the 'US only' toggle.",
         "steps": [
-            "Comma-separate the countries to keep, e.g. `United States, Canada`.",
+            "Enter one or more places, semicolon- or pipe-separated (commas stay "
+            "inside a place name), e.g. `San Francisco, California | New York, NY`.",
+            "A city like `San Francisco, California` also matches `San Francisco "
+            "Bay Area` and `San Francisco, CA`.",
+            "For precise city targeting, turn **Keep unknown-location candidates** "
+            "OFF (Tuning) and keep **Resolve unknown locations** ON so the app "
+            "looks up each person's real city from their profile.",
             "Leave blank to include candidates from anywhere in the world.",
-            "Country names are matched loosely (e.g. `United States` also matches `USA`).",
         ],
     },
     # ---- Optional ----

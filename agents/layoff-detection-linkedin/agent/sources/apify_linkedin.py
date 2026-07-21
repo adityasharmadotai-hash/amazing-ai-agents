@@ -96,9 +96,11 @@ def search_linkedin_posts() -> list[dict]:
     """Run every configured query through the Apify actor; dedupe by URL."""
     seen: set[str] = set()
     out: list[dict] = []
+    loc = config.location_query()
     for query in config.LINKEDIN_QUERIES:
+        keyword = f"{query} {loc}".strip() if loc else query
         payload = {
-            "keyword": query,
+            "keyword": keyword,
             "sort_type": "date_posted",
             "date_filter": _date_filter(),
             "limit": config.LINKEDIN_RESULTS_PER_Q,

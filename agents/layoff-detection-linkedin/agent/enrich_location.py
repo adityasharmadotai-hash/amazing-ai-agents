@@ -43,6 +43,18 @@ def looks_us(location: str | None) -> bool:
     return any(re.search(rf"\b{re.escape(s)}\b", t) for s in _US_STATES)
 
 
+def _handle(profile_url: str) -> str:
+    """Extract the LinkedIn vanity handle from a profile URL.
+
+    The `linkedin-profile-detail` actor's `username` input wants the bare
+    handle (e.g. 'jane-doe'), not the full 'https://linkedin.com/in/jane-doe'
+    URL. Falls back to the trimmed input if no '/in/<handle>' is found (it may
+    already be a bare handle).
+    """
+    m = re.search(r"/in/([^/?#]+)", profile_url)
+    return m.group(1) if m else profile_url.strip().strip("/")
+
+
 def _run_profile(username: str) -> list[dict]:
     url = _API.format(actor=config.APIFY_PROFILE_ACTOR.replace("/", "~"))
     headers = {"Authorization": f"Bearer {config.APIFY_TOKEN}",
@@ -67,7 +79,7 @@ def resolve_country(profile_url: str) -> dict | None:
     if profile_url in _cache:
         return _cache[profile_url]
 
-    items = _run_profile(profile_url)
+    items = _run_profile(_handle(profile_url))
     result = None
     if items:
         it = items[0]

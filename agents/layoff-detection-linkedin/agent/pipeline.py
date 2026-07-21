@@ -33,9 +33,13 @@ def process_candidate(c: dict) -> dict | None:
         return None
     rec["source"] = c.get("source", "linkedin")
     # Only spend a profile lookup when the post didn't reveal a country and the
-    # role is a target one (no point locating a non-software person).
+    # role is a target one (no point locating a non-software person). We
+    # deliberately do NOT gate on location_ok() here: in the default worldwide
+    # config (and whenever LOCATION_INCLUDE_UNKNOWN is on) an unknown-country
+    # record already "passes" location_ok, which would skip enrichment for
+    # exactly the records that need it — leaving the Location column empty.
     country = (rec.get("country") or "").strip().lower()
-    if (country in _UNKNOWN and not extract.config.location_ok(rec)
+    if (country in _UNKNOWN
             and c.get("profile_url") and rec.get("is_individual")
             and extract.config.is_target_title(rec.get("role_category"))):
         loc = enrich_location.resolve_country(c["profile_url"])
