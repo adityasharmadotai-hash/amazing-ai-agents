@@ -165,17 +165,36 @@ CONFIG_KEYS: list[dict] = [
         "required": False,
         "help": "Where candidates should be based. Accepts cities, regions, or "
                 "countries — e.g. `San Francisco, California` or `United States`. "
-                "The location is added to the LinkedIn search AND used to filter "
-                "results. Leave blank for worldwide. Overrides the 'US only' toggle.",
+                "By default this only *filters* results (broad search); flip "
+                "**Add location to the search query** below to also narrow the "
+                "search. Leave blank for worldwide. Overrides the 'US only' toggle.",
         "steps": [
             "Enter one or more places, semicolon- or pipe-separated (commas stay "
             "inside a place name), e.g. `San Francisco, California | New York, NY`.",
             "A city like `San Francisco, California` also matches `San Francisco "
             "Bay Area` and `San Francisco, CA`.",
-            "For precise city targeting, turn **Keep unknown-location candidates** "
-            "OFF (Tuning) and keep **Resolve unknown locations** ON so the app "
-            "looks up each person's real city from their profile.",
+            "If you get too few results, keep **Add location to the search query** "
+            "OFF and **Keep unknown-location candidates** ON.",
             "Leave blank to include candidates from anywhere in the world.",
+        ],
+    },
+    {
+        "key": "LOCATION_IN_SEARCH",
+        "label": "Add location to the search query (true/false)",
+        "group": "Search & targeting",
+        "secret": False,
+        "required": False,
+        "default": "false",
+        "help": "**false** (default): the location only *filters* results, so the "
+                "search stays broad and returns many more posts. **true**: the "
+                "location is forced into the search query — very precise, but "
+                "usually very few results, because most posts don't spell out the "
+                "person's city in text Google can index.",
+        "steps": [
+            "`false` (recommended) — more leads; the city is applied as a filter.",
+            "`true` — only posts that literally mention the city; expect few hits.",
+            "Turn ON only with the **Apify** backend or when you truly need strict "
+            "in-city matching.",
         ],
     },
     # ---- Optional ----

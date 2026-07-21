@@ -166,11 +166,15 @@ def render():
                 st.code(logs or "(no output)", language="text")
 
     # ── What this scan looks for (collapsible) ─────────────────────────────
+    role_required = config.REQUIRE_TARGET_TITLE
+    role_summary = (f"{len(config.TARGET_TITLES)} role"
+                    f"{'s' if len(config.TARGET_TITLES) != 1 else ''}"
+                    + ("" if role_required else ", labels only"))
+    loc_mode = "in search+filter" if config.LOCATION_IN_SEARCH else "filter only"
     with st.expander(
         f"🔎 What this scan looks for — {len(config.LINKEDIN_QUERIES)} "
         f"keyword{'s' if len(config.LINKEDIN_QUERIES) != 1 else ''} · "
-        f"{len(config.TARGET_TITLES)} role{'s' if len(config.TARGET_TITLES) != 1 else ''} · "
-        f"{locs}"
+        f"{role_summary} · {locs} ({loc_mode})"
     ):
         kw_col, role_col = st.columns(2)
         with kw_col:
@@ -178,7 +182,11 @@ def render():
             for q in config.LINKEDIN_QUERIES:
                 st.markdown(f"- `{q}`")
         with role_col:
-            st.markdown("**🎯 Target roles**")
+            if role_required:
+                st.markdown("**🎯 Target roles** — only these are kept")
+            else:
+                st.markdown("**🎯 Target roles** — _labels only; every laid-off "
+                            "person is kept regardless of role_")
             st.markdown(
                 " ".join(
                     f"<span style='display:inline-block;background:#efedff;"

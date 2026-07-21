@@ -172,6 +172,7 @@ def render():
             "LINKEDIN_RESULTS_PER_Q": "20",
             "LAYOFF_US_ONLY": "true",
             "REQUIRE_TARGET_TITLE": "false",
+            "LOCATION_IN_SEARCH": "false",
             "LOCATION_INCLUDE_UNKNOWN": "true",
             "ENRICH_LOCATION": "true",
         }

@@ -97,6 +97,7 @@ def refresh() -> None:
     global LAYOFF_US_ONLY, SCAN_INTERVAL_HOURS, REQUIRE_TARGET_TITLE
     global TARGET_TITLES, _TITLES_LOWER
     global TARGET_LOCATIONS, _LOCATIONS_LOWER, LOCATION_INCLUDE_UNKNOWN
+    global LOCATION_IN_SEARCH
     global LINKEDIN_QUERIES
 
     # Required
@@ -164,6 +165,11 @@ def refresh() -> None:
         TARGET_LOCATIONS = []
     _LOCATIONS_LOWER = [c.lower() for c in TARGET_LOCATIONS]
     LOCATION_INCLUDE_UNKNOWN = _bool("LOCATION_INCLUDE_UNKNOWN", True)
+    # Whether to add the target location to the SEARCH query. OFF (default) keeps
+    # the search broad and applies location only as a filter — far more results.
+    # ON forces the location words into every query (precise, but few results,
+    # since most posts don't spell out the person's city in the indexed text).
+    LOCATION_IN_SEARCH = _bool("LOCATION_IN_SEARCH", False)
 
     # Queries (one per line / pipe-separated; commas are NOT separators)
     raw = os.getenv("LINKEDIN_QUERIES", "").strip().replace("\n", "|")
@@ -217,10 +223,14 @@ def location_ok(rec: dict) -> bool:
 
 def location_query() -> str:
     """A search fragment that biases the LinkedIn query toward the target
-    locations, e.g. `("San Francisco" OR "New York")`. Empty when searching
-    worldwide, or when the US as a whole is the only target (in which case
-    `serp_geo()` already applies a geographic bias and we don't want to force
-    the literal words "United States" into every indexed post)."""
+    locations, e.g. `("San Francisco" OR "New York")`. Empty when:
+      - LOCATION_IN_SEARCH is OFF (default — location is a filter, not a search
+        term, which keeps recall high), or
+      - searching worldwide, or
+      - the US as a whole is the only target (serp_geo() already geo-biases, and
+        we don't want to force the literal words "United States" into posts)."""
+    if not LOCATION_IN_SEARCH:
+        return ""
     if not _LOCATIONS_LOWER or all(c in _US_ALIASES for c in _LOCATIONS_LOWER):
         return ""
     terms: list[str] = []
