@@ -14,6 +14,7 @@ from agent import config
 _SOURCE_LABELS = {
     "serpapi": "🟢  SerpAPI — free tier, fastest to set up (recommended to start)",
     "apify": "🔵  Apify — paid, full LinkedIn post scraping (more volume)",
+    "gemini": "🟣  Gemini web search — no extra key, uses your Gemini key",
 }
 _GROUP_ICONS = {
     "Required": "🔑",
@@ -50,10 +51,11 @@ def render():
     # ── Step 1: choose the LinkedIn data source ────────────────────────────
     st.subheader("1 · Choose your LinkedIn data source")
     current_source = st_common.current_source()
+    _options = ["serpapi", "apify", "gemini"]
     source = st.radio(
         "How should the app find LinkedIn posts?",
-        options=["serpapi", "apify"],
-        index=0 if current_source == "serpapi" else 1,
+        options=_options,
+        index=_options.index(current_source) if current_source in _options else 0,
         format_func=lambda s: _SOURCE_LABELS[s],
         key="source_radio",
     )
@@ -64,9 +66,14 @@ def render():
     if source == "serpapi":
         st.info("**SerpAPI mode:** you only need a SerpAPI key below — Apify is "
                 "not used at all. Great for getting started for free.", icon="🟢")
-    else:
+    elif source == "apify":
         st.info("**Apify mode:** you need an Apify token below. Apify scrapes full "
                 "LinkedIn posts (higher volume, paid per use).", icon="🔵")
+    else:
+        st.info("**Gemini web search mode:** no extra key needed — this reuses your "
+                "Gemini API key to search Google for LinkedIn posts. Coverage "
+                "depends on what Google surfaces, and each query spends Gemini "
+                "tokens (shown under Gemini spend on the dashboard).", icon="🟣")
 
     # ── Live status ────────────────────────────────────────────────────────
     missing = config.missing_required()

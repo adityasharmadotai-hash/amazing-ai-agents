@@ -69,15 +69,18 @@ CONFIG_KEYS: list[dict] = [
     # ---- LinkedIn backend ----
     {
         "key": "LINKEDIN_SOURCE",
-        "label": "LinkedIn backend (serpapi | apify)",
+        "label": "LinkedIn backend (serpapi | apify | gemini)",
         "group": "LinkedIn source",
         "secret": False,
         "required": True,
         "help": "`serpapi` = cheap Google-indexed snippets. `apify` = full "
-                "LinkedIn post scrape (paid, more volume).",
+                "LinkedIn post scrape (paid, more volume). `gemini` = Gemini's "
+                "built-in Google Search (no extra key — reuses your Gemini key).",
         "steps": [
-            "Type `serpapi` to start cheap/free, or `apify` for full scraping.",
-            "Then fill in the matching key below (SerpAPI **or** Apify).",
+            "Type `serpapi` to start cheap/free, `apify` for full scraping, or "
+            "`gemini` to search via Gemini (no extra key).",
+            "Then fill in the matching key below (SerpAPI or Apify; Gemini needs "
+            "none beyond your Gemini API key).",
         ],
     },
     {
@@ -392,9 +395,9 @@ def current_value(key: str) -> str:
 
 
 def current_source() -> str:
-    """The selected LinkedIn backend — 'serpapi' (default) or 'apify'."""
+    """The selected LinkedIn backend — 'serpapi' (default), 'apify' or 'gemini'."""
     src = (current_value("LINKEDIN_SOURCE") or "serpapi").strip().lower()
-    return src if src in ("serpapi", "apify") else "serpapi"
+    return src if src in ("serpapi", "apify", "gemini") else "serpapi"
 
 
 # ── Brand design system ──────────────────────────────────────────────────────

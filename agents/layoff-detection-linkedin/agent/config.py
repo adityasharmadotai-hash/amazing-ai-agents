@@ -271,6 +271,8 @@ def missing_required() -> list[str]:
     }
     if LINKEDIN_SOURCE == "apify":
         required["APIFY_TOKEN"] = APIFY_TOKEN
+    elif LINKEDIN_SOURCE == "gemini":
+        pass  # Gemini search reuses GEMINI_API_KEY — no extra key needed.
     else:
         required["SERPAPI_KEY"] = SERPAPI_KEY
     return [k for k, v in required.items() if not v]

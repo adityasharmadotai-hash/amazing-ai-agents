@@ -61,7 +61,8 @@ def _delete_dialog():
 
 def render():
     # ── Hero ───────────────────────────────────────────────────────────────
-    src_badge = "🟢 SerpAPI" if config.LINKEDIN_SOURCE == "serpapi" else "🔵 Apify"
+    src_badge = {"serpapi": "🟢 SerpAPI", "apify": "🔵 Apify",
+                 "gemini": "🟣 Gemini search"}.get(config.LINKEDIN_SOURCE, "🟢 SerpAPI")
     locs = ", ".join(config.TARGET_LOCATIONS) or "🌍 Worldwide"
     st_common.hero(
         "LayoffScout AI",

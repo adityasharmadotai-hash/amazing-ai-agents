@@ -100,12 +100,16 @@ def _fetch(query: str) -> list[dict]:
 def search_linkedin_posts() -> list[dict]:
     """Run every configured query and return de-duplicated raw candidates.
 
-    Dispatches to the Apify backend when LINKEDIN_SOURCE=apify, else SerpAPI.
+    Dispatches to the Apify backend when LINKEDIN_SOURCE=apify, the Gemini
+    Google-Search backend when LINKEDIN_SOURCE=gemini, else SerpAPI.
     Each candidate: {"url", "text", "source": "linkedin"}.
     """
     if config.LINKEDIN_SOURCE == "apify":
         from . import apify_linkedin
         return apify_linkedin.search_linkedin_posts()
+    if config.LINKEDIN_SOURCE == "gemini":
+        from . import gemini_search
+        return gemini_search.search_linkedin_posts()
 
     seen: set[str] = set()
     out: list[dict] = []
@@ -127,6 +131,9 @@ def fetch_single(url: str) -> dict | None:
     if config.LINKEDIN_SOURCE == "apify":
         from . import apify_linkedin
         return apify_linkedin.fetch_single(url)
+    if config.LINKEDIN_SOURCE == "gemini":
+        from . import gemini_search
+        return gemini_search.fetch_single(url)
 
     params = {
         "engine": "google",
