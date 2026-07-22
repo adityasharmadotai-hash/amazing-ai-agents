@@ -103,6 +103,7 @@ def refresh() -> None:
     global WIZA_API_KEY, NEWSAPI_KEY
     global LINKEDIN_SOURCE, APIFY_TOKEN, APIFY_ACTOR, APIFY_DATE_FILTER
     global ENRICH_LOCATION, APIFY_PROFILE_ACTOR
+    global PERPLEXITY_API_KEY, PERPLEXITY_COST_PER_SEARCH
     global APIFY_POST_COST_PER_1K, APIFY_PROFILE_COST_PER_1K
     global GEMINI_IN_COST_PER_1M, GEMINI_OUT_COST_PER_1M, SERPAPI_COST_PER_SEARCH
     global GEMINI_MODEL, LINKEDIN_RECENCY, LINKEDIN_RECENCY_DAYS, LINKEDIN_RESULTS_PER_Q
@@ -132,12 +133,18 @@ def refresh() -> None:
     APIFY_PROFILE_ACTOR = os.getenv("APIFY_PROFILE_ACTOR",
                                     "apimaestro/linkedin-profile-detail")
 
+    # Perplexity web-search backend (uses the /search endpoint — no model param)
+    PERPLEXITY_API_KEY = os.getenv("PERPLEXITY_API_KEY", "")
+
     # Cost-estimate rates (USD)
     APIFY_POST_COST_PER_1K = _float("APIFY_POST_COST_PER_1K", 3.0)
     APIFY_PROFILE_COST_PER_1K = _float("APIFY_PROFILE_COST_PER_1K", 5.0)
     GEMINI_IN_COST_PER_1M = _float("GEMINI_IN_COST_PER_1M", 0.30)
     GEMINI_OUT_COST_PER_1M = _float("GEMINI_OUT_COST_PER_1M", 2.50)
     SERPAPI_COST_PER_SEARCH = _float("SERPAPI_COST_PER_SEARCH", 0.01)
+    # Perplexity Sonar bills per request + tokens; a per-search estimate keeps the
+    # dashboard simple. Override PERPLEXITY_COST_PER_SEARCH to match your plan.
+    PERPLEXITY_COST_PER_SEARCH = _float("PERPLEXITY_COST_PER_SEARCH", 0.006)
 
     # Tuning knobs
     GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
@@ -273,6 +280,8 @@ def missing_required() -> list[str]:
         required["APIFY_TOKEN"] = APIFY_TOKEN
     elif LINKEDIN_SOURCE == "gemini":
         pass  # Gemini search reuses GEMINI_API_KEY — no extra key needed.
+    elif LINKEDIN_SOURCE == "perplexity":
+        required["PERPLEXITY_API_KEY"] = PERPLEXITY_API_KEY
     else:
         required["SERPAPI_KEY"] = SERPAPI_KEY
     return [k for k, v in required.items() if not v]

@@ -42,10 +42,13 @@ _URL_RE = re.compile(
 )
 
 # Grounding tool specs to try, most-modern first. Strings and dicts are both
-# accepted by different SDK versions; the last entry (None) is the ungrounded
-# fallback so the source still returns *something* if grounding is unavailable.
+# accepted by different SDK versions. There is deliberately NO ungrounded
+# fallback: without a live web search the model FABRICATES real-looking-but-fake
+# post URLs (right handle + made-up activity id), which is worse than returning
+# nothing — those dead links pollute the leads table. If no grounded call
+# succeeds, the source returns 0 posts and tells the user to switch backends.
 _TOOL_SPECS = ([{"google_search": {}}], "google_search_retrieval",
-               [{"google_search_retrieval": {}}], None)
+               [{"google_search_retrieval": {}}])
 
 
 def _recency_days() -> int:
@@ -114,23 +117,24 @@ def _generate(prompt: str) -> str:
     last_exc: Exception | None = None
     for tool in _TOOL_SPECS:
         try:
-            kwargs = {"system_instruction": _SYSTEM}
-            if tool is not None:
-                kwargs["tools"] = tool
-            model = genai.GenerativeModel(config.GEMINI_MODEL, **kwargs)
+            model = genai.GenerativeModel(config.GEMINI_MODEL,
+                                          system_instruction=_SYSTEM, tools=tool)
             resp = model.generate_content(prompt)
             reply = _strip_fence(resp.text or "")
             _record_usage(prompt, reply)
-            if tool is None:
-                log.info("Gemini search ran WITHOUT grounding (no search tool "
-                         "accepted by this model/SDK) — coverage may be limited.")
             return reply
         except Exception as exc:  # noqa: BLE001 — try the next tool spec
             last_exc = exc
             log.debug("Gemini search tool spec %r failed: %s", tool, exc)
             continue
-    log.warning("Gemini search failed for every tool spec: %s", last_exc)
-    return ""
+    # Every grounded attempt failed — do NOT fall back to ungrounded generation,
+    # which would hallucinate fake post URLs. Signal failure so the caller can
+    # warn the user instead of storing garbage links.
+    log.warning("Gemini grounding unavailable on this SDK/model (%s). The pinned "
+                "google-generativeai==0.8.3 cannot use Google Search with "
+                "gemini-2.5 models. Returning no posts — switch the LinkedIn "
+                "source to Perplexity or SerpAPI for real URLs.", last_exc)
+    raise RuntimeError("gemini-grounding-unavailable") from last_exc
 
 
 def _candidates_from_reply(reply: str) -> list[dict]:
@@ -165,11 +169,23 @@ def _candidates_from_reply(reply: str) -> list[dict]:
 
 
 def search_linkedin_posts() -> list[dict]:
-    """Run every configured query through Gemini search; dedupe by URL."""
+    """Run every configured query through Gemini search; dedupe by URL.
+
+    If Gemini grounding is unavailable (the pinned legacy SDK can't use Google
+    Search with gemini-2.5 models), returns [] rather than risk hallucinated URLs.
+    """
     seen: set[str] = set()
     out: list[dict] = []
     for query in config.LINKEDIN_QUERIES:
-        reply = _generate(_build_prompt(query))
+        try:
+            reply = _generate(_build_prompt(query))
+        except RuntimeError:
+            # Grounding unavailable — _generate already logged the fix. Bail on the
+            # whole run: without a live search every query would only fabricate URLs.
+            log.warning("Gemini source produced no posts because Google Search "
+                        "grounding is not available. Switch the LinkedIn source to "
+                        "Perplexity or SerpAPI to get real, working post URLs.")
+            return []
         cands = _candidates_from_reply(reply)
         log.info("Gemini search %r -> %d candidate(s)", query[:60], len(cands))
         for c in cands:
@@ -180,10 +196,9 @@ def search_linkedin_posts() -> list[dict]:
             out.append({"url": url, "text": c["text"], "source": "linkedin",
                         "profile_url": _profile_url_from_post(url)})
     if not out:
-        log.warning("Gemini search returned 0 posts. Likely causes: the model "
-                    "couldn't ground on Google Search (check GEMINI_MODEL supports "
-                    "grounding), the recency window is too narrow, or nothing "
-                    "matched. Try a wider window or a simpler query.")
+        log.warning("Gemini search returned 0 posts. Likely causes: the recency "
+                    "window is too narrow or nothing matched. Try a wider window "
+                    "or a simpler query.")
     log.info("Gemini LinkedIn: %d unique candidate post(s)", len(out))
     return out
 
@@ -200,7 +215,12 @@ def fetch_single(url: str) -> dict | None:
         'Return STRICT JSON only: {"text": "one sentence with the person\'s name, '
         'role/title, company, and layoff signal"}. No prose, no markdown.'
     )
-    reply = _generate(prompt)
+    # Here the URL is user-supplied (real), so grounding failure is non-fatal:
+    # fall back to a bare candidate and let the extractor mine the URL slug.
+    try:
+        reply = _generate(prompt)
+    except RuntimeError:
+        reply = ""
     text = ""
     try:
         data = json.loads(reply)

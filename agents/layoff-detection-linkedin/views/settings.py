@@ -15,6 +15,7 @@ _SOURCE_LABELS = {
     "serpapi": "🟢  SerpAPI — free tier, fastest to set up (recommended to start)",
     "apify": "🔵  Apify — paid, full LinkedIn post scraping (more volume)",
     "gemini": "🟣  Gemini web search — no extra key, uses your Gemini key",
+    "perplexity": "🟠  Perplexity web search — live search with citations (needs a key)",
 }
 _GROUP_ICONS = {
     "Required": "🔑",
@@ -51,7 +52,7 @@ def render():
     # ── Step 1: choose the LinkedIn data source ────────────────────────────
     st.subheader("1 · Choose your LinkedIn data source")
     current_source = st_common.current_source()
-    _options = ["serpapi", "apify", "gemini"]
+    _options = ["serpapi", "apify", "gemini", "perplexity"]
     source = st.radio(
         "How should the app find LinkedIn posts?",
         options=_options,
@@ -69,11 +70,17 @@ def render():
     elif source == "apify":
         st.info("**Apify mode:** you need an Apify token below. Apify scrapes full "
                 "LinkedIn posts (higher volume, paid per use).", icon="🔵")
-    else:
+    elif source == "gemini":
         st.info("**Gemini web search mode:** no extra key needed — this reuses your "
                 "Gemini API key to search Google for LinkedIn posts. Coverage "
                 "depends on what Google surfaces, and each query spends Gemini "
                 "tokens (shown under Gemini spend on the dashboard).", icon="🟣")
+    else:
+        st.info("**Perplexity web search mode:** add a Perplexity API key below. "
+                "Uses Perplexity's Search API for a live web search that returns "
+                "real LinkedIn post URLs — fresh, no scraper — restricted to the "
+                "US when **US only** is on. Billed per search (shown under "
+                "Perplexity spend on the dashboard).", icon="🟠")
 
     # ── Live status ────────────────────────────────────────────────────────
     missing = config.missing_required()

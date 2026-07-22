@@ -110,6 +110,9 @@ def search_linkedin_posts() -> list[dict]:
     if config.LINKEDIN_SOURCE == "gemini":
         from . import gemini_search
         return gemini_search.search_linkedin_posts()
+    if config.LINKEDIN_SOURCE == "perplexity":
+        from . import perplexity_search
+        return perplexity_search.search_linkedin_posts()
 
     seen: set[str] = set()
     out: list[dict] = []
@@ -134,6 +137,9 @@ def fetch_single(url: str) -> dict | None:
     if config.LINKEDIN_SOURCE == "gemini":
         from . import gemini_search
         return gemini_search.fetch_single(url)
+    if config.LINKEDIN_SOURCE == "perplexity":
+        from . import perplexity_search
+        return perplexity_search.fetch_single(url)
 
     params = {
         "engine": "google",

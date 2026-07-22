@@ -69,18 +69,19 @@ CONFIG_KEYS: list[dict] = [
     # ---- LinkedIn backend ----
     {
         "key": "LINKEDIN_SOURCE",
-        "label": "LinkedIn backend (serpapi | apify | gemini)",
+        "label": "LinkedIn backend (serpapi | apify | gemini | perplexity)",
         "group": "LinkedIn source",
         "secret": False,
         "required": True,
         "help": "`serpapi` = cheap Google-indexed snippets. `apify` = full "
                 "LinkedIn post scrape (paid, more volume). `gemini` = Gemini's "
-                "built-in Google Search (no extra key — reuses your Gemini key).",
+                "built-in Google Search (no extra key — reuses your Gemini key). "
+                "`perplexity` = Perplexity web search (needs a Perplexity key).",
         "steps": [
-            "Type `serpapi` to start cheap/free, `apify` for full scraping, or "
-            "`gemini` to search via Gemini (no extra key).",
-            "Then fill in the matching key below (SerpAPI or Apify; Gemini needs "
-            "none beyond your Gemini API key).",
+            "Type `serpapi` (cheap/free), `apify` (full scraping), `gemini` "
+            "(Gemini search, no extra key), or `perplexity` (Perplexity search).",
+            "Then fill in the matching key below (SerpAPI / Apify / Perplexity; "
+            "Gemini needs none beyond your Gemini API key).",
         ],
     },
     {
@@ -124,6 +125,23 @@ CONFIG_KEYS: list[dict] = [
         "steps": [
             "Leave as `apimaestro/linkedin-posts-search-scraper-no-cookies` unless "
             "you have a preferred actor.",
+        ],
+    },
+    {
+        "key": "PERPLEXITY_API_KEY",
+        "label": "Perplexity API key",
+        "group": "LinkedIn source",
+        "backend": "perplexity",
+        "secret": True,
+        "required": False,
+        "help": "Required when the source is Perplexity. Uses Perplexity's Search "
+                "API to return real LinkedIn post URLs, filtered to your country "
+                "(US by default).",
+        "steps": [
+            "Sign up at https://www.perplexity.ai and open the API dashboard at "
+            "https://www.perplexity.ai/settings/api.",
+            "Add credit, then generate a key (it starts with `pplx-`).",
+            "Paste it here / add it to Streamlit secrets.",
         ],
     },
     # ---- Search & targeting (no keys — plain-English controls) ----
@@ -395,9 +413,10 @@ def current_value(key: str) -> str:
 
 
 def current_source() -> str:
-    """The selected LinkedIn backend — 'serpapi' (default), 'apify' or 'gemini'."""
+    """The selected LinkedIn backend — 'serpapi' (default), 'apify', 'gemini'
+    or 'perplexity'."""
     src = (current_value("LINKEDIN_SOURCE") or "serpapi").strip().lower()
-    return src if src in ("serpapi", "apify", "gemini") else "serpapi"
+    return src if src in ("serpapi", "apify", "gemini", "perplexity") else "serpapi"
 
 
 # ── Brand design system ──────────────────────────────────────────────────────

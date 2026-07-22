@@ -62,7 +62,8 @@ def _delete_dialog():
 def render():
     # ── Hero ───────────────────────────────────────────────────────────────
     src_badge = {"serpapi": "🟢 SerpAPI", "apify": "🔵 Apify",
-                 "gemini": "🟣 Gemini search"}.get(config.LINKEDIN_SOURCE, "🟢 SerpAPI")
+                 "gemini": "🟣 Gemini search",
+                 "perplexity": "🟠 Perplexity"}.get(config.LINKEDIN_SOURCE, "🟢 SerpAPI")
     locs = ", ".join(config.TARGET_LOCATIONS) or "🌍 Worldwide"
     st_common.hero(
         "LayoffScout AI",
@@ -210,7 +211,7 @@ def render():
             cost = u.get("cost", {}) or {}
             counts = u.get("counts", {}) or {}
             last = u.get("last", {}) or {}
-            m1, m2, m3, m4, m5 = st.columns(5)
+            m1, m2, m3, m4, m5, m6 = st.columns(6)
             m1.metric("Total spend", _money(cost.get("total")),
                       f"{u.get('scans', 0)} scans")
             m2.metric("Apify (scraping)", _money(cost.get("apify")),
@@ -219,8 +220,10 @@ def render():
                       f"{counts.get('gemini_calls', 0)} calls")
             m4.metric("SerpAPI", _money(cost.get("serpapi")),
                       f"{counts.get('serpapi_searches', 0)} searches")
+            m5.metric("Perplexity", _money(cost.get("perplexity")),
+                      f"{counts.get('perplexity_searches', 0)} searches")
             last_cost = (last.get("cost") or {}).get("total") if last else None
-            m5.metric("Last scan",
+            m6.metric("Last scan",
                       _money(last_cost) if last_cost is not None else "—",
                       f"+{last.get('new_leads', 0)} leads" if last else "no scans yet")
         except Exception as exc:  # usage log is local + optional

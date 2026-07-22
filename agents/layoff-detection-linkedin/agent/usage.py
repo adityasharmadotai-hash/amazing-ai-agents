@@ -22,7 +22,8 @@ _LOG = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                     "usage_log.json")
 
 _KEYS = ("apify_posts", "apify_profiles", "gemini_calls",
-         "gemini_in_tokens", "gemini_out_tokens", "serpapi_searches")
+         "gemini_in_tokens", "gemini_out_tokens", "serpapi_searches",
+         "perplexity_searches")
 
 _current: dict | None = None
 
@@ -45,8 +46,10 @@ def cost_of(counts: dict) -> dict:
     gemini = (counts.get("gemini_in_tokens", 0) / 1e6 * config.GEMINI_IN_COST_PER_1M
               + counts.get("gemini_out_tokens", 0) / 1e6 * config.GEMINI_OUT_COST_PER_1M)
     serp = counts.get("serpapi_searches", 0) * config.SERPAPI_COST_PER_SEARCH
+    pplx = counts.get("perplexity_searches", 0) * config.PERPLEXITY_COST_PER_SEARCH
     return {"apify": round(apify, 4), "gemini": round(gemini, 4),
-            "serpapi": round(serp, 4), "total": round(apify + gemini + serp, 4)}
+            "serpapi": round(serp, 4), "perplexity": round(pplx, 4),
+            "total": round(apify + gemini + serp + pplx, 4)}
 
 
 def _read_log() -> list[dict]:
