@@ -8,6 +8,7 @@ accepts the new keys and needs no extra dependency.
 from __future__ import annotations
 
 import logging
+from datetime import date
 from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
@@ -18,6 +19,33 @@ from . import config
 log = logging.getLogger(__name__)
 
 _TABLE = "layoff_posts"
+
+# Only a real YYYY-MM-DD survives into the `date` column. The LLM sometimes
+# returns "last week", "September 2025", "2025-09", "2024-13-99" or "" — any of
+# which makes PostgREST reject the WHOLE batch — so we validate with
+# date.fromisoformat and coerce anything invalid to null.
+def _clean_date(v: Any) -> str | None:
+    if not isinstance(v, str):
+        return None
+    v = v.strip()
+    try:
+        return date.fromisoformat(v).isoformat()
+    except ValueError:
+        return None
+
+
+def _clean_int(v: Any) -> int | None:
+    try:
+        return None if v in (None, "") else int(v)
+    except (ValueError, TypeError):
+        return None
+
+
+def _clean_float(v: Any) -> float | None:
+    try:
+        return None if v in (None, "") else float(v)
+    except (ValueError, TypeError):
+        return None
 
 
 def normalize_url(u: str | None) -> str | None:
@@ -66,6 +94,11 @@ def upsert_records(records: list[dict[str, Any]]) -> int:
         row["source_url"] = normalize_url(row.get("source_url"))
         row["open_to_work"] = bool(row.get("open_to_work"))
         row["is_qualified"] = bool(row.get("is_qualified"))
+        row["is_us"] = bool(row.get("is_us"))
+        # Coerce typed columns so one bad LLM value can't fail the whole batch.
+        row["event_date"] = _clean_date(row.get("event_date"))
+        row["headcount"] = _clean_int(row.get("headcount"))
+        row["confidence"] = _clean_float(row.get("confidence"))
         if row["source_url"] in seen:
             continue
         seen.add(row["source_url"])
