@@ -48,7 +48,7 @@ def _headers(extra: dict | None = None) -> dict:
 
 
 _FIELDS = ("source_url", "source", "company", "person_name", "role_hint",
-           "role_category", "country", "is_us", "headcount", "location",
+           "country", "is_us", "headcount", "location",
            "event_date", "open_to_work", "is_qualified", "summary", "confidence")
 
 
@@ -103,12 +103,13 @@ def list_records(limit: int = 200, company: str | None = None,
         raise RuntimeError(f"Supabase select failed {resp.status_code}: {resp.text[:200]}")
     rows = resp.json()
     # collapse the same person appearing in multiple posts (different URLs) —
-    # keep the newest (rows are ordered created_at desc).
+    # keep the newest (rows are ordered created_at desc). Company/announcement
+    # rows (no person_name) are never collapsed.
     seen: set = set()
     out = []
     for r in rows:
         name = (r.get("person_name") or "").strip().lower()
-        key = (name, r.get("role_category"))
+        key = (name, (r.get("company") or "").strip().lower())
         if name and key in seen:
             continue
         seen.add(key)

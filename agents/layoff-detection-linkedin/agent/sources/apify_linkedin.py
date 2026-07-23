@@ -74,6 +74,30 @@ def _simplify_keyword(query: str) -> str:
     return re.sub(r"\s+", " ", s).strip()
 
 
+def _keyword_variants(query: str) -> list[str]:
+    """Break one boolean query into several plain-keyword searches.
+
+    LinkedIn post search wants a simple phrase, not boolean logic. The old code
+    collapsed a whole query to ONE keyword (first alternative only), throwing away
+    every other OR-variant — a big coverage loss. Instead we pull out each quoted
+    phrase and hashtag as its own keyword, so `"laid off" OR "reduction in force"
+    OR #layoffs` becomes three separate searches. Falls back to the flattened
+    keyword when the query has no quotes/hashtags.
+    """
+    seen: set[str] = set()
+    variants: list[str] = []
+    for kw in re.findall(r'"([^"]+)"', query) + re.findall(r"#(\w+)", query):
+        kw = kw.strip()
+        if len(kw) >= 3 and kw.lower() not in seen:
+            seen.add(kw.lower())
+            variants.append(kw)
+    if not variants:
+        simplified = _simplify_keyword(query)
+        if simplified:
+            variants = [simplified]
+    return variants
+
+
 def _first(d: dict, *keys, default=""):
     """Return the first present, non-empty value among keys (supports a.b nesting)."""
     for k in keys:
@@ -175,9 +199,26 @@ def search_linkedin_posts() -> list[dict]:
     raw_total = 0
     first_dropped: dict | None = None
     loc = config.location_query()
+
+    # Build a global, deduped list of keyword variants across ALL queries, then
+    # cap the total number of Apify searches (each is one paid actor run).
+    variants: list[str] = []
+    seen_kw: set[str] = set()
     for query in config.LINKEDIN_QUERIES:
-        raw = f"{query} {loc}".strip() if loc else query
-        keyword = _simplify_keyword(raw)   # LinkedIn wants a plain keyword
+        for kw in _keyword_variants(query):
+            if kw.lower() not in seen_kw:
+                seen_kw.add(kw.lower())
+                variants.append(kw)
+    cap = max(1, config.APIFY_MAX_KEYWORD_VARIANTS)
+    if len(variants) > cap:
+        log.info("Apify: %d keyword variants found, capping to %d "
+                 "(raise APIFY_MAX_KEYWORD_VARIANTS for more coverage/cost).",
+                 len(variants), cap)
+        variants = variants[:cap]
+    log.info("Apify: running %d keyword search(es): %s", len(variants), variants)
+
+    for kw in variants:
+        keyword = f"{kw} {loc}".strip() if loc else kw
         payload = {
             "keyword": keyword,
             "sort_type": "date_posted",

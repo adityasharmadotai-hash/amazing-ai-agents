@@ -54,10 +54,10 @@ def _search_recency_filter() -> str:
 def _country_code() -> str | None:
     """ISO-3166 alpha-2 country to bias the search to, or None for worldwide.
 
-    Reuses the same US-only logic as the SerpAPI backend: when the US is the sole
-    target location (the default, via LAYOFF_US_ONLY), restrict the search to the
-    US so no other-country posts come back. City/region or worldwide targets
-    don't set a country here (location is applied as a downstream filter).
+    Reuses serp_geo(): when every target location is US-based (e.g. the default
+    "San Francisco, California"), restrict the search to the US so no
+    other-country posts come back. Worldwide targets don't set a country (the
+    city itself is applied as a downstream location filter).
     """
     gl, _ = config.serp_geo()
     return gl.upper() if gl else None

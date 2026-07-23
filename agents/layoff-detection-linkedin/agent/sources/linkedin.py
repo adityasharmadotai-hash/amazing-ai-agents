@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date, timedelta
 from urllib.parse import urlsplit
 
@@ -97,23 +98,8 @@ def _fetch(query: str) -> list[dict]:
     return out[:want]
 
 
-def search_linkedin_posts() -> list[dict]:
-    """Run every configured query and return de-duplicated raw candidates.
-
-    Dispatches to the Apify backend when LINKEDIN_SOURCE=apify, the Gemini
-    Google-Search backend when LINKEDIN_SOURCE=gemini, else SerpAPI.
-    Each candidate: {"url", "text", "source": "linkedin"}.
-    """
-    if config.LINKEDIN_SOURCE == "apify":
-        from . import apify_linkedin
-        return apify_linkedin.search_linkedin_posts()
-    if config.LINKEDIN_SOURCE == "gemini":
-        from . import gemini_search
-        return gemini_search.search_linkedin_posts()
-    if config.LINKEDIN_SOURCE == "perplexity":
-        from . import perplexity_search
-        return perplexity_search.search_linkedin_posts()
-
+def _serpapi_search() -> list[dict]:
+    """SerpAPI backend: run every query, dedupe by URL."""
     seen: set[str] = set()
     out: list[dict] = []
     for query in config.LINKEDIN_QUERIES:
@@ -125,19 +111,89 @@ def search_linkedin_posts() -> list[dict]:
             text = " ".join(filter(None, [r.get("title"), r.get("snippet")]))
             out.append({"url": url, "text": text, "source": "linkedin",
                         "profile_url": _profile_url_from_post(url)})
-    log.info("LinkedIn: %d unique candidate posts", len(out))
+    log.info("SerpAPI LinkedIn: %d unique candidate posts", len(out))
+    return out
+
+
+def _provider_search(name: str):
+    """Return the zero-arg search function for a provider name (or None)."""
+    if name == "serpapi":
+        return _serpapi_search
+    if name == "apify":
+        from . import apify_linkedin
+        return apify_linkedin.search_linkedin_posts
+    if name == "perplexity":
+        from . import perplexity_search
+        return perplexity_search.search_linkedin_posts
+    if name == "gemini":
+        from . import gemini_search
+        return gemini_search.search_linkedin_posts
+    return None
+
+
+def _norm_url(u: str | None) -> str:
+    """Normalize a post URL for cross-provider dedup (drop query/fragment/case)."""
+    if not u:
+        return ""
+    p = urlsplit(u.strip())
+    return f"{p.scheme.lower()}://{p.netloc.lower()}{p.path.rstrip('/')}"
+
+
+def search_linkedin_posts() -> list[dict]:
+    """Discover candidate posts from the active provider(s).
+
+    Resolves LINKEDIN_SOURCE via config.active_sources(): a single provider, or —
+    in "all"/merge mode — every provider with a key, run concurrently and merged.
+    Results are deduped across providers by normalized URL (keeping the richest
+    text on collision). Each candidate:
+    {"url", "text", "source": "linkedin", "profile_url"}.
+    """
+    sources = config.active_sources()
+    results: list[dict] = []
+    if len(sources) == 1:
+        fn = _provider_search(sources[0])
+        results = fn() if fn else []
+    else:
+        fns = {s: _provider_search(s) for s in sources}
+        with ThreadPoolExecutor(max_workers=max(2, len(sources))) as pool:
+            futs = {pool.submit(fn): s for s, fn in fns.items() if fn}
+            for fut in as_completed(futs):
+                s = futs[fut]
+                try:
+                    got = fut.result() or []
+                    results.extend(got)
+                    log.info("Provider %s -> %d candidate(s)", s, len(got))
+                except Exception as exc:  # noqa: BLE001 — one bad provider is OK
+                    log.warning("Provider %s failed: %s", s, exc)
+
+    best: dict[str, dict] = {}
+    for r in results:
+        key = _norm_url(r.get("url"))
+        if not key:
+            continue
+        cur = best.get(key)
+        if cur is None or len(r.get("text") or "") > len(cur.get("text") or ""):
+            best[key] = r
+    out = list(best.values())
+    log.info("LinkedIn (%s): %d unique candidate post(s) from %d raw",
+             "+".join(sources), len(out), len(results))
     return out
 
 
 def fetch_single(url: str) -> dict | None:
-    """Fetch one specific post URL (for the 'Analyze a URL' box)."""
-    if config.LINKEDIN_SOURCE == "apify":
+    """Fetch one specific post URL (for the 'Analyze a URL' box).
+
+    Uses the first active provider (config.active_sources()); in merge mode that
+    is the first available of serpapi/apify/perplexity.
+    """
+    name = config.active_sources()[0]
+    if name == "apify":
         from . import apify_linkedin
         return apify_linkedin.fetch_single(url)
-    if config.LINKEDIN_SOURCE == "gemini":
+    if name == "gemini":
         from . import gemini_search
         return gemini_search.fetch_single(url)
-    if config.LINKEDIN_SOURCE == "perplexity":
+    if name == "perplexity":
         from . import perplexity_search
         return perplexity_search.fetch_single(url)
 

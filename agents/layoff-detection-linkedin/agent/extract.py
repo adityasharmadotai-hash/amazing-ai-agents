@@ -62,34 +62,35 @@ Respond ONLY with a JSON object matching the requested schema."""
 _USER_TEMPLATE = """Analyze the post below.
 
 Return JSON with exactly these keys:
-- is_layoff (boolean): true only if this describes an actual layoff or someone \
-laid off / "open to work" because of one.
+- is_layoff (boolean): true if this describes an actual layoff event OR a person \
+affected by one (laid off, role eliminated, RIF, "open to work" due to a layoff, \
+or a company announcing/reporting layoffs).
 - is_individual (boolean): true if the post is by/about a specific laid-off \
-PERSON (a potential recruiting candidate), false if it is company news, \
-commentary, or an opinion piece.
-- company (string|null): the company that conducted the layoff.
+PERSON (a potential recruiting candidate); false if it is a company \
+announcement, news article, commentary, or opinion piece.
+- company (string|null): the company that conducted (or announced) the layoff.
 - person_name (string|null): the affected individual, if the poster IS the \
 laid-off person.
-- role_hint (string|null): the raw job title / function mentioned.
-- role_category (string|null): map role_hint to the SINGLE closest title from \
-the TARGET TITLES list below. Use the exact string from the list. If the role \
-does not clearly match one of the target titles, return null.
-- country (string|null): the person's country, normalized (e.g. "United \
-States", "India", "Germany"). Infer from location, "based in", or context.
-- is_us (boolean): true only if the person is based in the United States.
+- role_hint (string|null): the raw job title / function mentioned, verbatim.
+- country (string|null): normalized country (e.g. "United States", "India"). \
+Infer from any location text, "based in", city/state names, area codes, or \
+context. Use null only if there is truly no signal.
+- is_us (boolean): true only if the person/company is based in the United States.
+- location (string|null): the most specific place stated or implied — city \
+and/or state/region (e.g. "San Francisco, California", "Austin, TX", "Bay Area").
 - headcount (integer|null): number of people laid off, if stated.
-- location (string|null): city/state if stated.
-- event_date (string|null): ISO date (YYYY-MM-DD) of the layoff if inferable.
+- event_date (string|null): ISO date (YYYY-MM-DD) the layoff happened or was \
+announced. Infer from phrases like "yesterday", "last week", "today", or an \
+explicit date relative to the post; use null if not inferable.
 - open_to_work (boolean): true if the person signals they are job-seeking \
 (e.g. "#opentowork", "open to work", "looking for", "seeking new").
-- summary (string): one neutral sentence (max 30 words).
-- confidence (number): 0.0-1.0.
+- summary (string): one neutral sentence (max 30 words) naming the company and \
+who was affected.
+- confidence (number): 0.0-1.0 — how confident you are this is a real layoff post.
 
-TARGET TITLES (role_category must be one of these exact strings, or null):
-{titles}
-
-Use BOTH the snippet and the URL-derived keywords below — the keywords often \
-name the company/role even when the snippet is thin.
+Pay special attention to LOCATION and EVENT_DATE (the timeline): extract them \
+even when only implied. Use BOTH the snippet and the URL-derived keywords below \
+— the keywords often name the company/role/place even when the snippet is thin.
 
 POST SOURCE URL: {url}
 URL KEYWORDS: {slug}
@@ -108,8 +109,7 @@ def extract_record(text: str, url: str) -> dict[str, Any] | None:
         data = llm.complete_json(
             _SYSTEM,
             _USER_TEMPLATE.format(url=url, slug=slug or "(none)",
-                                  text=(text or "")[:6000],
-                                  titles=", ".join(config.TARGET_TITLES)),
+                                  text=(text or "")[:6000]),
         )
     except Exception as exc:  # noqa: BLE001 — one bad post shouldn't kill a scan
         global _last_error
@@ -126,16 +126,13 @@ def extract_record(text: str, url: str) -> dict[str, Any] | None:
 
 
 def is_relevant(rec: dict[str, Any]) -> bool:
-    """A record is a qualified recruiting lead if it is a laid-off individual in
-    a target location. When REQUIRE_TARGET_TITLE is on, the role must also map to
-    one of the TARGET_TITLES; otherwise any role qualifies (capture-everyone)."""
+    """A record is 'qualified' if it is a real layoff post in the target location.
+
+    Captures BOTH company/event announcements and laid-off individuals — role and
+    open-to-work are NO LONGER gates (they're stored as labels only). Location is
+    the only filter: the record must match a target location, or have an
+    unknown/unstated location when LOCATION_INCLUDE_UNKNOWN is on."""
     if not rec:
         return False
-    if not rec.get("is_individual"):
-        return False
-    if not config.location_ok(rec):
-        return False
-    if not config.REQUIRE_TARGET_TITLE:
-        return True
-    # trust the model's role_category, but re-validate against the canonical list
-    return config.is_target_title(rec.get("role_category"))
+    # extract_record already guarantees is_layoff; qualify on location alone.
+    return config.location_ok(rec)

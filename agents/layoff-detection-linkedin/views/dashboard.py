@@ -61,16 +61,19 @@ def _delete_dialog():
 
 def render():
     # ── Hero ───────────────────────────────────────────────────────────────
-    src_badge = {"serpapi": "🟢 SerpAPI", "apify": "🔵 Apify",
-                 "gemini": "🟣 Gemini search",
-                 "perplexity": "🟠 Perplexity"}.get(config.LINKEDIN_SOURCE, "🟢 SerpAPI")
+    _labels = {"serpapi": "SerpAPI", "apify": "Apify", "perplexity": "Perplexity",
+               "gemini": "Gemini"}
+    active = config.active_sources()
+    src_badge = ("⭐ " + " + ".join(_labels.get(s, s) for s in active)
+                 if config.LINKEDIN_SOURCE == "all"
+                 else _labels.get(config.LINKEDIN_SOURCE, config.LINKEDIN_SOURCE))
     locs = ", ".join(config.TARGET_LOCATIONS) or "🌍 Worldwide"
     st_common.hero(
         "LayoffScout AI",
-        "Finds software-engineering candidates from LinkedIn &amp; news layoff "
-        "posts, extracts them with AI, and stores qualified leads.",
+        "Finds layoff posts — companies announcing layoffs and laid-off people — "
+        "from LinkedIn &amp; news, extracts them with AI, and stores the leads.",
         badges=[f"Source · {src_badge}", f"🎯 {locs}",
-                f"Roles · {len(config.TARGET_TITLES)}"],
+                f"⏱ Last {config.LINKEDIN_RECENCY_DAYS}d"],
     )
 
     # Outcome of a delete that just happened (dialog closed via rerun).
@@ -98,8 +101,9 @@ def render():
     with c2:
         st.button("↻ Refresh", use_container_width=True)
     with c3:
-        validated_only = st.toggle("✅ Validated only", value=False,
-                                   help="Show only leads that match a target job role.")
+        validated_only = st.toggle("✅ In-location only", value=False,
+                                   help="Show only leads that matched your target "
+                                        "location filter.")
     with c4:
         otw_only = st.toggle("Open-to-work only", value=False)
 
@@ -126,82 +130,55 @@ def render():
             st.success(
                 f"✅ Scan complete — **{summary.get('new_leads', 0)} new lead(s) "
                 f"saved** to the database "
-                f"(**{summary.get('relevant_us_swe', 0)} validated** for a target "
-                f"role, of {summary.get('candidates', 0)} examined). "
+                f"(**{summary.get('qualified_in_location', 0)} in {locs}**, of "
+                f"{summary.get('candidates', 0)} examined). "
                 f"This scan cost **{_money(cost.get('total'))}**."
             )
             b = summary.get("breakdown", {}) or {}
-            role_gated = config.REQUIRE_TARGET_TITLE
-            role_clause = (f"**{b.get('target_role', 0)}** in a target role → "
-                           if role_gated else "")
-            gate_note = ("a lead must pass all three" if role_gated
-                         else "a lead must be an individual in " + locs)
             st.markdown(
                 f"**Why this number?** &nbsp; {summary.get('candidates', 0)} examined "
-                f"→ **{b.get('layoff_posts', 0)}** layoff posts → "
-                f"**{b.get('individuals', 0)}** individuals · "
-                f"**{b.get('in_location', 0)}** in {locs} · "
-                f"{role_clause}"
-                f"**{summary.get('relevant_us_swe', 0)} qualified** "
-                f"_({gate_note})_."
+                f"→ **{b.get('layoff_posts', 0)}** layoff posts "
+                f"(**{b.get('individuals', 0)}** people · "
+                f"**{b.get('companies', 0)}** company posts) → "
+                f"**{summary.get('qualified_in_location', 0)} in {locs}** "
+                f"_(the only gate is target location)_."
             )
-            if summary.get("relevant_us_swe", 0) == 0 and b:
-                stages = {
-                    "individuals": b.get("individuals", 0),
-                    "in a target location": b.get("in_location", 0),
-                }
-                if role_gated:                    # role is only a gate when required
-                    stages["in a target role"] = b.get("target_role", 0)
-                worst = min(stages, key=stages.get)
-                tips = {
-                    "individuals": "Most posts were company news, not people. Try "
-                    "more person-focused keywords like `\"open to work\"` / `#opentowork`.",
-                    "in a target location": "Locations couldn't be confirmed. Make "
-                    "sure **Keep unknown-location candidates** is ON (Settings → "
-                    "Tuning), clear **Target locations** for worldwide, or use **Apify**.",
-                    "in a target role": "Few posts matched your **Target roles**. "
-                    "Broaden the role list on Settings → *Search & targeting*.",
-                }
-                st.info(f"Biggest drop-off: **{worst}** — only {stages[worst]} of "
-                        f"{b.get('layoff_posts', 0)} passed. {tips[worst]}", icon="💡")
+            if summary.get("qualified_in_location", 0) == 0 and b:
+                if b.get("layoff_posts", 0) == 0:
+                    st.info("No layoff posts were found. Try a wider **recency "
+                            "window** (Settings → Tuning), add more provider keys "
+                            "for **All (merge)**, or broaden your **queries**.",
+                            icon="💡")
+                else:
+                    st.info(f"Found **{b.get('layoff_posts', 0)}** layoff posts but "
+                            f"**0 in {locs}**. Widen or clear **Target locations**, "
+                            "keep **Keep unknown-location candidates** ON, or enable "
+                            "**Resolve unknown locations** (Apify) in Settings → "
+                            "Tuning.", icon="💡")
             with st.expander("📜 Scan log"):
                 st.code(logs or "(no output)", language="text")
 
     # ── What this scan looks for (collapsible) ─────────────────────────────
-    role_required = config.REQUIRE_TARGET_TITLE
-    role_summary = (f"{len(config.TARGET_TITLES)} role"
-                    f"{'s' if len(config.TARGET_TITLES) != 1 else ''}"
-                    + ("" if role_required else ", labels only"))
     loc_mode = "in search+filter" if config.LOCATION_IN_SEARCH else "filter only"
+    providers = " + ".join(config.active_sources())
     with st.expander(
-        f"🔎 What this scan looks for — {len(config.LINKEDIN_QUERIES)} "
-        f"keyword{'s' if len(config.LINKEDIN_QUERIES) != 1 else ''} · "
-        f"{role_summary} · {locs} ({loc_mode})"
+        f"🔎 What this scan looks for — {providers} · "
+        f"{len(config.LINKEDIN_QUERIES)} "
+        f"quer{'ies' if len(config.LINKEDIN_QUERIES) != 1 else 'y'} · "
+        f"last {config.LINKEDIN_RECENCY_DAYS}d · {locs} ({loc_mode})"
     ):
-        kw_col, role_col = st.columns(2)
+        kw_col, meta_col = st.columns(2)
         with kw_col:
             st.markdown("**🔑 Search keywords / queries**")
             for q in config.LINKEDIN_QUERIES:
                 st.markdown(f"- `{q}`")
-        with role_col:
-            if role_required:
-                st.markdown("**🎯 Target roles** — only these are kept")
-            else:
-                st.markdown("**🎯 Target roles** — _labels only; every laid-off "
-                            "person is kept regardless of role_")
-            st.markdown(
-                " ".join(
-                    f"<span style='display:inline-block;background:#efedff;"
-                    f"color:#5a4bd6;border:1px solid #e0ddff;border-radius:999px;"
-                    f"padding:2px 10px;margin:0 4px 6px 0;font-size:12px;"
-                    f"font-weight:600'>{t}</span>"
-                    for t in config.TARGET_TITLES
-                ),
-                unsafe_allow_html=True,
-            )
-            st.markdown(f"**🌍 Locations:** {locs}")
-        st.caption("Change any of these on the ⚙️ **Settings** page → "
-                   "*Search & targeting*.")
+        with meta_col:
+            st.markdown(f"**🔌 Providers merged:** {providers}")
+            st.markdown(f"**🌍 Locations:** {locs} _({loc_mode})_")
+            st.markdown(f"**⏱ Recency:** last {config.LINKEDIN_RECENCY_DAYS} days")
+            st.markdown("**🎯 Kept:** every layoff post (company or individual) in "
+                        "the target location — no role filter.")
+        st.caption("Change any of these on the ⚙️ **Settings** page.")
 
     # ── Spend ──────────────────────────────────────────────────────────────
     with st.container(border=True):
@@ -252,20 +229,22 @@ def render():
         if rows:
             n_valid = sum(1 for r in rows if r.get("is_qualified"))
             st.caption(
-                f"**{len(rows)}** lead(s) saved · **{n_valid}** validated for the "
-                f"target role"
-                + (" · validated only" if validated_only else "")
+                f"**{len(rows)}** lead(s) saved · **{n_valid}** in-location"
+                + (" · in-location only" if validated_only else "")
                 + (" · open-to-work only" if otw_only else "")
             )
             df = pd.DataFrame(rows)
+            # Rank most-confident first so the strongest layoff posts surface.
+            if "confidence" in df.columns:
+                df = df.sort_values("confidence", ascending=False, na_position="last")
             show_cols = [c for c in [
-                "person_name", "role_category", "company", "location", "is_us",
-                "is_qualified", "open_to_work", "summary", "source_url",
+                "person_name", "company", "role_hint", "location", "event_date",
+                "is_us", "open_to_work", "confidence", "summary", "source_url",
             ] if c in df.columns]
             view = df[show_cols].rename(columns={
-                "person_name": "Person", "role_category": "Role",
-                "company": "Company", "location": "Location", "is_us": "US",
-                "is_qualified": "Validated", "open_to_work": "Open?",
+                "person_name": "Person", "company": "Company", "role_hint": "Role",
+                "location": "Location", "event_date": "Layoff date", "is_us": "US",
+                "open_to_work": "Open?", "confidence": "Conf.",
                 "summary": "Summary", "source_url": "Post",
             })
             st.dataframe(
@@ -298,14 +277,14 @@ def render():
             with st.spinner("Analyzing that post…"):
                 rec = analyze_url(url.strip())
             if rec:
-                st.success(f"✅ {rec.get('person_name') or 'Lead'} — "
-                           f"{rec.get('role_category') or '—'} at "
+                st.success(f"✅ {rec.get('person_name') or rec.get('company') or 'Lead'} — "
+                           f"{rec.get('role_hint') or '—'} at "
                            f"{rec.get('company') or '—'} "
                            f"({rec.get('location') or '—'})")
                 st.json(rec)
             else:
-                st.info("ℹ️ Not a layoff post, not a target role, or the URL was "
-                        "unreachable — nothing stored.")
+                st.info("ℹ️ Not a layoff post, or the URL was unreachable — "
+                        "nothing stored.")
 
     with tab_enrich:
         st.caption("Turn a LinkedIn profile into a verified work email (requires a "

@@ -12,10 +12,11 @@ import st_common
 from agent import config
 
 _SOURCE_LABELS = {
-    "serpapi": "🟢  SerpAPI — free tier, fastest to set up (recommended to start)",
+    "all": "⭐  All (merge) — combine every provider you have a key for (max coverage)",
+    "serpapi": "🟢  SerpAPI — free tier, fastest to set up",
     "apify": "🔵  Apify — paid, full LinkedIn post scraping (more volume)",
-    "gemini": "🟣  Gemini web search — no extra key, uses your Gemini key",
     "perplexity": "🟠  Perplexity web search — live search with citations (needs a key)",
+    "gemini": "🟣  Gemini web search — no extra key, but can't find LinkedIn posts",
 }
 _GROUP_ICONS = {
     "Required": "🔑",
@@ -52,7 +53,7 @@ def render():
     # ── Step 1: choose the LinkedIn data source ────────────────────────────
     st.subheader("1 · Choose your LinkedIn data source")
     current_source = st_common.current_source()
-    _options = ["serpapi", "apify", "gemini", "perplexity"]
+    _options = ["all", "serpapi", "apify", "perplexity", "gemini"]
     source = st.radio(
         "How should the app find LinkedIn posts?",
         options=_options,
@@ -64,23 +65,28 @@ def render():
         st_common.apply_overrides({"LINKEDIN_SOURCE": source})
         st.rerun()
 
-    if source == "serpapi":
-        st.info("**SerpAPI mode:** you only need a SerpAPI key below — Apify is "
-                "not used at all. Great for getting started for free.", icon="🟢")
+    if source == "all":
+        active = ", ".join(config.active_sources()) or "none yet"
+        st.info("**All (merge) mode — recommended.** Runs every provider you have "
+                "a key for (SerpAPI + Apify + Perplexity) at once and dedupes the "
+                "results — the widest coverage. Add keys below for each provider "
+                f"you want included. **Currently active:** {active}. Gemini is "
+                "excluded (it can't find LinkedIn posts).", icon="⭐")
+    elif source == "serpapi":
+        st.info("**SerpAPI mode:** you only need a SerpAPI key below. Cheap Google-"
+                "indexed snippets — good for getting started.", icon="🟢")
     elif source == "apify":
         st.info("**Apify mode:** you need an Apify token below. Apify scrapes full "
-                "LinkedIn posts (higher volume, paid per use).", icon="🔵")
-    elif source == "gemini":
-        st.info("**Gemini web search mode:** no extra key needed — this reuses your "
-                "Gemini API key to search Google for LinkedIn posts. Coverage "
-                "depends on what Google surfaces, and each query spends Gemini "
-                "tokens (shown under Gemini spend on the dashboard).", icon="🟣")
-    else:
+                "LinkedIn posts (highest volume, paid per use).", icon="🔵")
+    elif source == "perplexity":
         st.info("**Perplexity web search mode:** add a Perplexity API key below. "
-                "Uses Perplexity's Search API for a live web search that returns "
-                "real LinkedIn post URLs — fresh, no scraper — restricted to the "
-                "US when **US only** is on. Billed per search (shown under "
-                "Perplexity spend on the dashboard).", icon="🟠")
+                "Live web search returning real LinkedIn post URLs — fresh, no "
+                "scraper. Billed per search.", icon="🟠")
+    else:
+        st.info("**Gemini web search mode:** no extra key needed, but note Google "
+                "Search can't reach individual LinkedIn posts, so this usually "
+                "returns 0. Use **All** or another provider for real coverage.",
+                icon="🟣")
 
     # ── Live status ────────────────────────────────────────────────────────
     missing = config.missing_required()
@@ -109,10 +115,16 @@ def render():
                "**LinkedIn source** are open; expand the others only to change "
                "them. Hover the **?** on any field for step-by-step help.")
 
-    # Only show the key for the chosen backend; hide the other one entirely.
-    visible = [f for f in st_common.CONFIG_KEYS
-               if f["key"] != "LINKEDIN_SOURCE"
-               and f.get("backend", source) == source]
+    # Show a field when it isn't backend-specific, OR its backend matches the
+    # chosen source, OR we're in "all" (merge) mode — then show every provider's
+    # key so the user can supply all the ones they want merged.
+    def _field_visible(f: dict) -> bool:
+        if f["key"] == "LINKEDIN_SOURCE":
+            return False
+        backend = f.get("backend")
+        return backend is None or source == "all" or backend == source
+
+    visible = [f for f in st_common.CONFIG_KEYS if _field_visible(f)]
 
     groups: dict[str, list[dict]] = {}
     for field in visible:
@@ -138,12 +150,19 @@ def render():
                         prefill = current
                         if not current and key == "LINKEDIN_QUERIES":
                             prefill = "\n".join(config.LINKEDIN_QUERIES)
-                        elif not current and key == "TARGET_TITLES":
-                            prefill = ", ".join(config.TARGET_TITLES)
                         overrides[key] = st.text_area(
                             label, value=prefill, help=help_txt,
                             placeholder="Clear this box to reset to the built-in defaults.",
                             height=130, key=f"in_{key}",
+                        )
+                    elif f.get("choices"):
+                        # Fixed-choice dropdown (e.g. recency days).
+                        opts = f["choices"]
+                        cur = current or f.get("default", opts[0])
+                        idx = opts.index(cur) if cur in opts else 0
+                        overrides[key] = st.selectbox(
+                            label, options=opts, index=idx, help=help_txt,
+                            key=f"in_{key}",
                         )
                     elif f.get("secret"):
                         overrides[key] = st.text_input(
@@ -182,17 +201,18 @@ def render():
             "LINKEDIN_SOURCE": source,
             "APIFY_ACTOR": "apimaestro/linkedin-posts-search-scraper-no-cookies",
             "GEMINI_MODEL": "gemini-2.5-flash",
-            "LINKEDIN_RECENCY_DAYS": "2",
-            "LINKEDIN_RESULTS_PER_Q": "20",
-            "LAYOFF_US_ONLY": "true",
-            "REQUIRE_TARGET_TITLE": "false",
+            "LINKEDIN_RECENCY_DAYS": "3",
+            "LINKEDIN_RESULTS_PER_Q": "30",
+            "APIFY_MAX_KEYWORD_VARIANTS": "8",
+            "TARGET_LOCATIONS": "San Francisco, California",
             "LOCATION_IN_SEARCH": "false",
             "LOCATION_INCLUDE_UNKNOWN": "true",
             "ENRICH_LOCATION": "true",
         }
         template_lines = []
         for f in st_common.CONFIG_KEYS:
-            if f.get("backend", source) != source:
+            backend = f.get("backend")
+            if backend is not None and source != "all" and backend != source:
                 continue
             template_lines.append(f'{f["key"]} = "{defaults.get(f["key"], "")}"')
         st.code("\n".join(template_lines), language="toml")

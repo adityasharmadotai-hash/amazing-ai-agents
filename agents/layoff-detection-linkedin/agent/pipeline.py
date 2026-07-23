@@ -38,14 +38,12 @@ def process_candidate(c: dict) -> dict | None:
     # country record already "passes" location_ok, which would skip enrichment
     # for exactly the records that need it — leaving the Location column empty.
     #
-    # Role gate: only restrict enrichment to target-title people when the app is
-    # actually filtering by role (REQUIRE_TARGET_TITLE). In capture-everyone mode
-    # we want a location for every individual, so we enrich them all.
+    # Enrich every individual whose location the post didn't reveal — we want a
+    # location for everyone so the target-location filter works accurately.
+    # (Company/announcement posts have no personal profile to scrape.)
     country = (rec.get("country") or "").strip().lower()
-    role_ok = (not extract.config.REQUIRE_TARGET_TITLE
-               or extract.config.is_target_title(rec.get("role_category")))
     if (country in _UNKNOWN
-            and c.get("profile_url") and rec.get("is_individual") and role_ok):
+            and c.get("profile_url") and rec.get("is_individual")):
         loc = enrich_location.resolve_country(c["profile_url"])
         if loc:
             rec["country"] = loc.get("country") or rec.get("country")
@@ -95,23 +93,21 @@ def _run_scan_locked() -> dict[str, Any]:
         r["is_qualified"] = extract.is_relevant(r)
     relevant = [r for r in records if r["is_qualified"]]
     for r in relevant:
-        log.info("  ✓ %s — %s (%s)", r.get("person_name") or "?",
-                 r.get("role_category"), r.get("location") or "US")
+        log.info("  ✓ %s — %s (%s)", r.get("person_name") or r.get("company") or "?",
+                 r.get("role_hint") or "", r.get("location") or "?")
 
-    # Funnel breakdown — shows WHERE candidates drop off (a lead must pass all
-    # three: individual + target location + target role). Great for answering
-    # "why did I get 0 leads?".
+    # Funnel breakdown — shows WHERE candidates drop off. A post qualifies on
+    # LOCATION alone now (company or individual), so the only gate is in_location.
     breakdown = {
         "layoff_posts": len(records),
         "individuals": sum(1 for r in records if r.get("is_individual")),
+        "companies": sum(1 for r in records if not r.get("is_individual")),
         "in_location": sum(1 for r in records if extract.config.location_ok(r)),
-        "target_role": sum(1 for r in records
-                           if extract.config.is_target_title(r.get("role_category"))),
     }
-    log.info("Funnel: %d layoff posts | %d individuals | %d in-location | "
-             "%d target-role -> %d qualified", breakdown["layoff_posts"],
-             breakdown["individuals"], breakdown["in_location"],
-             breakdown["target_role"], len(relevant))
+    log.info("Funnel: %d layoff posts | %d individuals | %d company posts | "
+             "%d in-location -> %d qualified", breakdown["layoff_posts"],
+             breakdown["individuals"], breakdown["companies"],
+             breakdown["in_location"], len(relevant))
 
     stored = store.upsert_records(records)   # save ALL leads, not just validated
     after = len(store.list_records(limit=1000))
@@ -126,7 +122,7 @@ def _run_scan_locked() -> dict[str, Any]:
     summary = {
         "candidates": len(candidates),
         "layoff_records": len(records),
-        "relevant_us_swe": len(relevant),
+        "qualified_in_location": len(relevant),
         "new_leads": max(0, after - before),
         "stored": stored,
         "cost": meter["cost"],

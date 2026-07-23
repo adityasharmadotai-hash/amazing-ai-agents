@@ -69,19 +69,19 @@ CONFIG_KEYS: list[dict] = [
     # ---- LinkedIn backend ----
     {
         "key": "LINKEDIN_SOURCE",
-        "label": "LinkedIn backend (serpapi | apify | gemini | perplexity)",
+        "label": "LinkedIn backend (all | serpapi | apify | perplexity | gemini)",
         "group": "LinkedIn source",
         "secret": False,
         "required": True,
-        "help": "`serpapi` = cheap Google-indexed snippets. `apify` = full "
-                "LinkedIn post scrape (paid, more volume). `gemini` = Gemini's "
-                "built-in Google Search (no extra key — reuses your Gemini key). "
-                "`perplexity` = Perplexity web search (needs a Perplexity key).",
+        "help": "`all` (recommended) = merge every provider you have a key for "
+                "(SerpAPI + Apify + Perplexity), run together and dedupe — max "
+                "coverage. Or pick one: `serpapi` (cheap Google snippets), `apify` "
+                "(full scrape, most volume), `perplexity` (live web search). "
+                "`gemini` can't find LinkedIn posts and is excluded from `all`.",
         "steps": [
-            "Type `serpapi` (cheap/free), `apify` (full scraping), `gemini` "
-            "(Gemini search, no extra key), or `perplexity` (Perplexity search).",
-            "Then fill in the matching key below (SerpAPI / Apify / Perplexity; "
-            "Gemini needs none beyond your Gemini API key).",
+            "Leave as `all` to merge every keyed provider for maximum coverage.",
+            "Or type a single provider name to use just that one.",
+            "Fill in a key below for each provider you want `all` to use.",
         ],
     },
     {
@@ -152,30 +152,13 @@ CONFIG_KEYS: list[dict] = [
         "secret": False,
         "required": False,
         "multiline": True,
-        "help": "What to search for. One query per line. Leave blank to use the "
-                "built-in layoff / open-to-work query set.",
+        "help": "What to search for. One query per line, covering BOTH company "
+                "layoff announcements and laid-off individuals. Leave blank to use "
+                "the built-in broad layoff query set.",
         "steps": [
             "Write one search query per line (Google-style operators work).",
-            'Example: `\"open to work\" \"data scientist\" (laid off OR layoff)`',
-            "Leave blank to use the default set that targets laid-off software engineers.",
-        ],
-    },
-    {
-        "key": "TARGET_TITLES",
-        "label": "Target job titles / roles to keep",
-        "group": "Search & targeting",
-        "secret": False,
-        "required": False,
-        "multiline": True,
-        "help": "Used to label each lead's Role column. Only acts as a hard "
-                "filter when **Require target role** (Tuning) is ON — otherwise "
-                "every laid-off person is kept regardless of role. Comma- or "
-                "newline-separated; blank = default 36 software titles.",
-        "steps": [
-            "List the roles you want, comma- or newline-separated.",
-            "Example: `Data Scientist, Machine Learning Engineer, Data Analyst`",
-            "These only restrict leads if **Require target role** is ON (Tuning).",
-            "Leave blank to keep the default software-engineering titles.",
+            'Example: `(#layoffs OR \"layoffs at\" OR \"laid off\")`',
+            "Leave blank to use the default broad layoff-coverage set.",
         ],
     },
     {
@@ -184,11 +167,11 @@ CONFIG_KEYS: list[dict] = [
         "group": "Search & targeting",
         "secret": False,
         "required": False,
-        "help": "Where candidates should be based. Accepts cities, regions, or "
+        "help": "Where leads should be based. Accepts cities, regions, or "
                 "countries — e.g. `San Francisco, California` or `United States`. "
-                "By default this only *filters* results (broad search); flip "
-                "**Add location to the search query** below to also narrow the "
-                "search. Leave blank for worldwide. Overrides the 'US only' toggle.",
+                "**Default: San Francisco, California.** This *filters* results "
+                "(broad search kept); flip **Add location to the search query** "
+                "below to also narrow the search. Leave blank for worldwide.",
         "steps": [
             "Enter one or more places, semicolon- or pipe-separated (commas stay "
             "inside a place name), e.g. `San Francisco, California | New York, NY`.",
@@ -196,7 +179,7 @@ CONFIG_KEYS: list[dict] = [
             "Bay Area` and `San Francisco, CA`.",
             "If you get too few results, keep **Add location to the search query** "
             "OFF and **Keep unknown-location candidates** ON.",
-            "Leave blank to include candidates from anywhere in the world.",
+            "Leave blank to include leads from anywhere in the world.",
         ],
     },
     {
@@ -266,14 +249,14 @@ CONFIG_KEYS: list[dict] = [
         "group": "Tuning",
         "secret": False,
         "required": False,
-        "default": "2",
-        "help": "How fresh posts must be. Default **2** = only the last 2 days "
-                "(fresher leads + lower cost). Increase for more volume.",
+        "default": "3",
+        "choices": ["1", "2", "3", "4", "7", "14", "30"],
+        "help": "How fresh posts must be. **Default 3** = only the last 3 days. "
+                "Pick a larger window for more volume (and cost).",
         "steps": [
-            "`2` (default) searches the last 2 days.",
-            "Use e.g. `1`, `3`, `7`, or `30` for a different window.",
-            "SerpAPI honours the exact number; Apify rounds to its nearest bucket "
-            "(24h / week / month / year).",
+            "`3` (default) searches the last 3 days.",
+            "SerpAPI honours the exact number; Apify/Perplexity round to the "
+            "nearest bucket (24h / week / month / year).",
         ],
     },
     {
@@ -282,38 +265,23 @@ CONFIG_KEYS: list[dict] = [
         "group": "Tuning",
         "secret": False,
         "required": False,
-        "default": "20",
-        "help": "How many results to pull per search query (higher = more cost).",
-        "steps": ["`20` is a sensible default; lower it to `10` to cut cost."],
+        "default": "30",
+        "help": "How many results to pull per search per provider (higher = more "
+                "coverage and more cost).",
+        "steps": ["`30` is a sensible default; lower it to cut cost."],
     },
     {
-        "key": "LAYOFF_US_ONLY",
-        "label": "US only (true/false)",
+        "key": "APIFY_MAX_KEYWORD_VARIANTS",
+        "label": "Apify keyword searches per scan",
         "group": "Tuning",
         "secret": False,
         "required": False,
-        "default": "true",
-        "help": "Shortcut for US-only. Default is **true** (only US candidates, and "
-                "the search is biased to the US to avoid paying for foreign posts). "
-                "For finer control use **Target locations** above, which overrides "
-                "this.",
-        "steps": ["`true` (default) keeps only US leads; `false` searches worldwide."],
-    },
-    {
-        "key": "REQUIRE_TARGET_TITLE",
-        "label": "Require target role (true/false)",
-        "group": "Tuning",
-        "secret": False,
-        "required": False,
-        "default": "false",
-        "help": "When **false** (default), every laid-off 'open to work' individual "
-                "in your target location is a qualified lead, any job. When "
-                "**true**, only people whose role matches **Target job titles** are "
-                "validated (software-engineering focus).",
-        "steps": [
-            "`false` (default) — capture everyone laid off, regardless of role.",
-            "`true` — restrict validated leads to your Target job titles list.",
-        ],
+        "default": "8",
+        "help": "Apify only: how many distinct keyword searches to run per scan "
+                "(each is one paid actor run). Keyword variants are pulled from "
+                "your queries, deduped, then capped here. Higher = more coverage "
+                "and more cost.",
+        "steps": ["`8` balances coverage and cost; lower it to cut Apify spend."],
     },
     {
         "key": "LOCATION_INCLUDE_UNKNOWN",
@@ -413,10 +381,10 @@ def current_value(key: str) -> str:
 
 
 def current_source() -> str:
-    """The selected LinkedIn backend — 'serpapi' (default), 'apify', 'gemini'
-    or 'perplexity'."""
-    src = (current_value("LINKEDIN_SOURCE") or "serpapi").strip().lower()
-    return src if src in ("serpapi", "apify", "gemini", "perplexity") else "serpapi"
+    """The selected LinkedIn backend — 'all' (default, merge every keyed
+    provider), or a single 'serpapi' / 'apify' / 'perplexity' / 'gemini'."""
+    src = (current_value("LINKEDIN_SOURCE") or "all").strip().lower()
+    return src if src in ("all", "serpapi", "apify", "gemini", "perplexity") else "all"
 
 
 # ── Brand design system ──────────────────────────────────────────────────────
