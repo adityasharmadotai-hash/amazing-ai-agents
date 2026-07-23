@@ -40,6 +40,14 @@ def add(key: str, n: int = 1) -> None:
             _current[key] += n
 
 
+def current_cost() -> float:
+    """Estimated USD spent so far in the in-progress scan (0 outside a scan).
+    Used by the company-expansion budget governor."""
+    with _lock:
+        counts = dict(_current or {})
+    return cost_of(counts)["total"] if counts else 0.0
+
+
 def cost_of(counts: dict) -> dict:
     apify = (counts.get("apify_posts", 0) / 1000 * config.APIFY_POST_COST_PER_1K
              + counts.get("apify_profiles", 0) / 1000 * config.APIFY_PROFILE_COST_PER_1K)

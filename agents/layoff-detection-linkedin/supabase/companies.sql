@@ -30,6 +30,16 @@ create table if not exists public.companies (
 create index if not exists companies_confidence_idx
     on public.companies (confidence desc);
 
+-- Location awareness: does this company have any post in the target location
+-- (e.g. San Francisco / California)? Lets the dashboard filter the company view.
+-- Safe to run on an existing companies table (IF NOT EXISTS).
+alter table public.companies
+    add column if not exists in_location boolean default false,
+    add column if not exists in_location_posts integer default 0;
+
+create index if not exists companies_in_location_idx
+    on public.companies (in_location);
+
 -- keep updated_at fresh on upsert (reuses the touch fn from layoff_posts.sql;
 -- redefined here so this file can run standalone)
 create or replace function public.touch_updated_at()

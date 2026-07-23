@@ -6,7 +6,7 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
-from . import companies, enrich_location, extract, store, usage
+from . import companies, config, discovery, enrich_location, extract, store, usage
 from .sources import linkedin, news
 
 _VALID_ROLES = {"employee", "recruiter", "founder", "company", "news", "other"}
@@ -79,23 +79,63 @@ def _run_scan_locked() -> dict[str, Any]:
     extract.reset_error()
     before = len(store.list_records(limit=1000))
 
-    log.info("▶ Scan started — collecting posts from LinkedIn + News…")
+    # ── PASS 1: base query dictionary ──────────────────────────────────────
+    log.info("▶ Scan started — PASS 1: collecting posts from LinkedIn + News…")
     candidates = _collect()
-    log.info("Collected %d candidate posts. Extracting with AI + resolving "
-             "locations…", len(candidates))
+    log.info("PASS 1 collected %d candidate posts. Extracting with AI…",
+             len(candidates))
 
     records: list[dict] = []
-    # Extraction is LLM-bound; a small thread pool keeps latency down.
     with ThreadPoolExecutor(max_workers=5) as pool:
         for rec in pool.map(process_candidate, candidates):
             if rec:
                 records.append(rec)
-    log.info("Found %d layoff posts; applying US + software-title filter…",
-             len(records))
+    first_pass_records = len(records)
+    first_pass_companies = len({r.get("company_key") for r in records
+                                if r.get("company_key")})
+    log.info("PASS 1: %d layoff posts, %d distinct companies.",
+             first_pass_records, first_pass_companies)
 
-    # Validate each extracted lead against the target job role (+ location) and
-    # tag it. We STORE EVERY lead (not just the validated ones) so nothing is
-    # lost; `is_qualified` marks which ones match the target role.
+    # ── PASS 2: company expansion ──────────────────────────────────────────
+    disc_metrics: dict[str, Any] = {
+        "first_pass_posts": first_pass_records,
+        "first_pass_companies": first_pass_companies,
+        "companies_expanded": 0, "expansion_searches": 0,
+        "expansion_posts": 0, "budget_hit": False,
+    }
+    if config.EXPANSION_ENABLED and records:
+        seen_urls = {linkedin._norm_url(c.get("url")) for c in candidates
+                     if c.get("url")}
+        targets = discovery.select_companies(records)
+        log.info("PASS 2: expanding up to %d of %d discovered companies "
+                 "(budget $%.2f)…", min(len(targets), config.EXPANSION_MAX_COMPANIES),
+                 len(targets), config.SCAN_BUDGET_USD)
+        exp_candidates = discovery.run_expansion(targets, seen_urls, disc_metrics)
+        candidates = candidates + exp_candidates
+        if exp_candidates:
+            with ThreadPoolExecutor(max_workers=5) as pool:
+                for rec in pool.map(process_candidate, exp_candidates):
+                    if rec:
+                        records.append(rec)
+        log.info("PASS 2: expanded %d companies (%d searches) -> +%d posts "
+                 "(%d after extraction)%s.",
+                 disc_metrics["companies_expanded"],
+                 disc_metrics["expansion_searches"], len(exp_candidates),
+                 len(records) - first_pass_records,
+                 " [budget hit]" if disc_metrics["budget_hit"] else "")
+    disc_metrics["expansion_records"] = len(records) - first_pass_records
+
+    # Posts found by provider (across both passes), for the metrics panel.
+    prov_counts: dict[str, int] = {}
+    for c in candidates:
+        p = c.get("provider") or c.get("source") or "unknown"
+        prov_counts[p] = prov_counts.get(p, 0) + 1
+    disc_metrics["by_provider"] = prov_counts
+
+    log.info("Found %d layoff posts total; qualifying…", len(records))
+
+    # Validate each extracted lead (location gate) and tag it. We STORE EVERY
+    # record; `is_qualified` marks which ones match the target location.
     for r in records:
         r["is_qualified"] = extract.is_relevant(r)
     relevant = [r for r in records if r["is_qualified"]]
@@ -140,6 +180,7 @@ def _run_scan_locked() -> dict[str, Any]:
         "cost": meter["cost"],
         "usage": meter["counts"],
         "breakdown": breakdown,
+        "discovery": disc_metrics,
     }
     # If every post produced 0 records AND the LLM was erroring, surface it — this
     # is almost always a bad GEMINI_API_KEY or model, not "no layoffs found".

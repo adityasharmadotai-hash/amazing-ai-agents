@@ -84,7 +84,8 @@ _FIELDS = ("source_url", "source", "company", "company_key", "poster_role",
 # Fields written to the company-rollup table (see agent/companies.py).
 _COMPANY_FIELDS = ("company_key", "company_name", "employee_posts",
                    "recruiter_posts", "founder_posts", "announcement_posts",
-                   "news_posts", "total_posts", "confidence", "locations")
+                   "news_posts", "total_posts", "confidence", "locations",
+                   "in_location", "in_location_posts")
 
 
 def upsert_records(records: list[dict[str, Any]]) -> int:
@@ -142,7 +143,8 @@ def upsert_records(records: list[dict[str, Any]]) -> int:
 def posts_for_rollup() -> list[dict]:
     """Every stored post with just the fields the company rollup needs (no dedup,
     all rows). Used by agent.companies.rebuild()."""
-    params = {"select": "company_key,poster_role,company,location", "limit": "10000"}
+    params = {"select": "company_key,poster_role,company,location,country,is_us",
+              "limit": "10000"}
     resp = httpx.get(f"{_base()}/{_TABLE}", params=params, headers=_headers(), timeout=30)
     if resp.status_code >= 300:
         raise RuntimeError(f"Supabase rollup select failed {resp.status_code}: {resp.text[:200]}")
@@ -155,8 +157,10 @@ def upsert_companies(rows: list[dict[str, Any]]) -> int:
                for r in rows if r.get("company_key")]
     for p in payload:
         p["confidence"] = _clean_float(p.get("confidence"))
+        p["in_location"] = bool(p.get("in_location"))
         for c in ("employee_posts", "recruiter_posts", "founder_posts",
-                  "announcement_posts", "news_posts", "total_posts"):
+                  "announcement_posts", "news_posts", "total_posts",
+                  "in_location_posts"):
             p[c] = _clean_int(p.get(c)) or 0
     if not payload:
         return 0
@@ -169,8 +173,12 @@ def upsert_companies(rows: list[dict[str, Any]]) -> int:
     return len(payload)
 
 
-def list_companies(limit: int = 300, min_confidence: float | None = None) -> list[dict]:
-    """Discovered companies, ranked by confidence then post volume."""
+def list_companies(limit: int = 300, min_confidence: float | None = None,
+                   in_location: bool | None = None) -> list[dict]:
+    """Discovered companies, ranked by confidence then post volume.
+
+    in_location=True returns only companies with at least one post in the target
+    location (e.g. SF/California)."""
     params = {
         "select": "*",
         "order": "confidence.desc,total_posts.desc",
@@ -178,6 +186,8 @@ def list_companies(limit: int = 300, min_confidence: float | None = None) -> lis
     }
     if min_confidence is not None:
         params["confidence"] = f"gte.{min_confidence}"
+    if in_location is not None:
+        params["in_location"] = f"eq.{str(in_location).lower()}"
     resp = httpx.get(f"{_base()}/{_COMPANIES_TABLE}", params=params,
                      headers=_headers(), timeout=30)
     if resp.status_code >= 300:

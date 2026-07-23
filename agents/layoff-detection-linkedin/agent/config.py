@@ -59,34 +59,35 @@ _UNKNOWN_LOC = {"", "unknown", "none", "n/a", "null", "remote", "worldwide", "gl
 # returns 0) — but it stays selectable explicitly for anyone who wants it.
 _ALL_PROVIDERS = ("serpapi", "apify", "perplexity", "gemini")
 
-# Default query set — MANY independent searches, each a real phrase people
-# actually post, to discover companies (large and small) from layoff posts. Mixes
-# employee language ("my last day at…", "impacted by layoffs") with layoff
-# keywords and company/event phrasing. Each line is one search per provider
-# (SerpAPI paginates it, Apify expands its variants, Perplexity runs it once), so
-# more lines = more coverage but more cost. Override via LINKEDIN_QUERIES; trim
-# lines to cut cost.
-_DEFAULT_QUERIES = [
-    # ── Employee language (rarely uses hashtags — this is where small startups
-    #    surface). Each names the employer, which the extractor pulls out.
-    '"my last day at"',
-    '"today was my last day"',
-    '"unfortunately I was laid off"',
-    '"I was impacted by the layoffs"',
-    '"affected by the recent layoffs"',
-    '"part of the layoffs at"',
-    '"my role was eliminated"',
-    '"my position was eliminated"',
-    # ── Core layoff keywords.
-    '"laid off"',
-    '"reduction in force"',
-    '"workforce reduction"',
-    '"impacted by layoffs"',
-    # ── Job-seeking + layoff (classic recruiting lead).
-    '"open to work" ("laid off" OR layoff OR "let go")',
-    # ── Company / event announcements + hashtags.
-    '(#layoffs OR #layoff OR "layoffs at" OR "laying off" OR "cutting jobs")',
-]
+# Query dictionary — MANY phrases, each searched INDEPENDENTLY (never combined
+# into one boolean query). Grouped for clarity; flattened into the default
+# LINKEDIN_QUERIES below. Employee language is where small/unknown startups
+# surface (the extractor pulls the employer name out of the post). Override the
+# active set via LINKEDIN_QUERIES; trim it to cut cost.
+QUERY_DICTIONARY: dict[str, list[str]] = {
+    "employee": [
+        '"today was my last day"', '"my last day at"', '"my final day"',
+        '"my role was eliminated"', '"my position was eliminated"',
+        '"I got laid off"', '"I was laid off"', '"unfortunately I was laid off"',
+        '"affected by the layoffs"', '"impacted by the layoffs"',
+        '"impacted by layoffs"', '"part of the layoffs"',
+        '"looking for new opportunities"', '"open to work"',
+    ],
+    "company": [
+        '"layoffs"', '"laying off"', '"layoffs at"', '"downsizing"',
+        '"restructuring"', '"reduction in force"', '"workforce reduction"',
+        '"headcount reduction"', '"cost cutting"',
+    ],
+    "startup": [
+        '"cash runway"', '"burn reduction"', '"strategic restructuring"',
+        '"organizational changes"', '"team reduction"',
+    ],
+    "hashtag": ['#layoffs', '#layoff', '#opentowork'],
+}
+
+# Flattened default active query set (every phrase, deduped, order preserved).
+_DEFAULT_QUERIES = list(dict.fromkeys(
+    q for group in QUERY_DICTIONARY.values() for q in group))
 
 
 def refresh() -> None:
@@ -105,6 +106,8 @@ def refresh() -> None:
     global TARGET_LOCATIONS, _LOCATIONS_LOWER, LOCATION_INCLUDE_UNKNOWN
     global LOCATION_IN_SEARCH
     global LINKEDIN_QUERIES, APIFY_MAX_KEYWORD_VARIANTS
+    global EXPANSION_ENABLED, EXPANSION_MAX_COMPANIES, EXPANSION_QUERIES_PER_COMPANY
+    global SCAN_BUDGET_USD
 
     # Required
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
@@ -157,6 +160,19 @@ def refresh() -> None:
     # paid actor run). Variants are pulled from all queries, deduped, then capped
     # here. Higher = more coverage, more cost.
     APIFY_MAX_KEYWORD_VARIANTS = _int("APIFY_MAX_KEYWORD_VARIANTS", 8)
+
+    # ── Company-expansion (second-pass discovery) ──────────────────────────
+    # After the first pass discovers companies, expand the strongest ones with
+    # per-company searches ("<company> layoffs", site:linkedin.com/posts <company>…).
+    EXPANSION_ENABLED = _bool("EXPANSION_ENABLED", True)
+    # Cap the number of companies expanded per scan (each costs several searches).
+    EXPANSION_MAX_COMPANIES = _int("EXPANSION_MAX_COMPANIES", 10)
+    # How many expansion queries to run per company (capped against the template).
+    EXPANSION_QUERIES_PER_COMPANY = _int("EXPANSION_QUERIES_PER_COMPANY", 3)
+    # Hard spend ceiling (USD) for the EXPANSION phase: before expanding each
+    # company we check the running scan cost and abort expansion once it crosses
+    # this. Pass-1 (the base dictionary) is bounded by the query set + caps.
+    SCAN_BUDGET_USD = _float("SCAN_BUDGET_USD", 3.0)
     SCAN_INTERVAL_HOURS = _int("SCAN_INTERVAL_HOURS", 4)
 
     # Target locations (blank = worldwide). Cities/regions are allowed
@@ -166,9 +182,15 @@ def refresh() -> None:
     if _loc_raw:
         TARGET_LOCATIONS = _parse_locations(_loc_raw)
     else:
-        TARGET_LOCATIONS = ["San Francisco, California"]
+        # San Francisco OR anywhere in California. The "California" entry matches
+        # any California location; the SF entry catches "San Francisco, CA" /
+        # "San Francisco Bay Area" where the word "California" isn't spelled out.
+        TARGET_LOCATIONS = ["San Francisco, California", "California"]
     _LOCATIONS_LOWER = [c.lower() for c in TARGET_LOCATIONS]
-    LOCATION_INCLUDE_UNKNOWN = _bool("LOCATION_INCLUDE_UNKNOWN", True)
+    # Default False: "only SF/California" means a record must actually match one
+    # of the target locations — unknown-location posts are NOT given the benefit
+    # of the doubt. Set LOCATION_INCLUDE_UNKNOWN=true to loosen (more volume).
+    LOCATION_INCLUDE_UNKNOWN = _bool("LOCATION_INCLUDE_UNKNOWN", False)
     # Whether to add the target location to the SEARCH query. OFF (default) keeps
     # the search broad and applies location only as a filter — far more results.
     # ON forces the location words into every query (precise, but few results,
