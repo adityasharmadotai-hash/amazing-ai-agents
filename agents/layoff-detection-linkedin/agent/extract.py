@@ -68,7 +68,15 @@ or a company announcing/reporting layoffs).
 - is_individual (boolean): true if the post is by/about a specific laid-off \
 PERSON (a potential recruiting candidate); false if it is a company \
 announcement, news article, commentary, or opinion piece.
-- company (string|null): the company that conducted (or announced) the layoff.
+- poster_role (string): who wrote the post — one of exactly: "employee" (the \
+laid-off person themselves), "recruiter" (a recruiter/talent person referencing \
+it), "founder" (a founder/CEO/exec of the company), "company" (an official \
+company account/announcement), "news" (a journalist/news outlet), or "other" \
+(commentary/opinion/third party).
+- company (string|null): the company where the layoff happened. Extract it even \
+from casual employee phrasing — "my last day at ACME", "impacted by layoffs at \
+Retell AI", "after ACME's restructuring", or an @-tagged company all name the \
+employer. Return the cleanest common company name (e.g. "Retell AI").
 - person_name (string|null): the affected individual, if the poster IS the \
 laid-off person.
 - role_hint (string|null): the raw job title / function mentioned, verbatim.

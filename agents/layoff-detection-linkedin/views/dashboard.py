@@ -129,7 +129,8 @@ def render():
             cost = summary.get("cost", {}) or {}
             st.success(
                 f"✅ Scan complete — **{summary.get('new_leads', 0)} new lead(s) "
-                f"saved** to the database "
+                f"saved** · **{summary.get('companies_discovered', 0)} companies "
+                f"discovered** "
                 f"(**{summary.get('qualified_in_location', 0)} in {locs}**, of "
                 f"{summary.get('candidates', 0)} examined). "
                 f"This scan cost **{_money(cost.get('total'))}**."
@@ -207,9 +208,57 @@ def render():
             st.caption(f"Usage stats unavailable: {exc}")
 
     # ── Tabs ───────────────────────────────────────────────────────────────
-    tab_leads, tab_analyze, tab_enrich, tab_history = st.tabs(
-        ["🎯 Leads", "🔗 Analyze a post", "✉️ Enrich", "📊 History"]
+    tab_companies, tab_leads, tab_analyze, tab_enrich, tab_history = st.tabs(
+        ["🏢 Companies", "🎯 Leads", "🔗 Analyze a post", "✉️ Enrich", "📊 History"]
     )
+
+    with tab_companies:
+        st.caption("Companies discovered from layoff posts, ranked by confidence. "
+                   "Confidence rises when multiple independent signals — several "
+                   "employees, a recruiter, a founder, a news article — name the "
+                   "same company.")
+        min_conf = st.slider("Minimum confidence", 0.0, 1.0, 0.0, 0.05,
+                             key="company_min_conf")
+        try:
+            comps = store.list_companies(limit=500,
+                                         min_confidence=min_conf or None)
+        except Exception as exc:
+            comps = []
+            st.info("No company data yet. Run the **`supabase/companies.sql`** "
+                    "migration in Supabase, then click **Scan New Data**.\n\n"
+                    f"_Details: {exc}_")
+        if comps:
+            st.caption(f"**{len(comps)}** compan{'y' if len(comps) == 1 else 'ies'} "
+                       "discovered.")
+            cdf = pd.DataFrame(comps)
+            show = [c for c in [
+                "company_name", "confidence", "total_posts", "employee_posts",
+                "recruiter_posts", "founder_posts", "announcement_posts",
+                "news_posts", "locations",
+            ] if c in cdf.columns]
+            cview = cdf[show].rename(columns={
+                "company_name": "Company", "confidence": "Confidence",
+                "total_posts": "Posts", "employee_posts": "Employees",
+                "recruiter_posts": "Recruiters", "founder_posts": "Founders",
+                "announcement_posts": "Announcements", "news_posts": "News",
+                "locations": "Locations",
+            })
+            # ProgressColumn shows the value via `format`, so scale 0–1 to 0–100.
+            if "Confidence" in cview.columns:
+                cview["Confidence"] = (cview["Confidence"].fillna(0) * 100).round()
+            st.dataframe(
+                cview, use_container_width=True, hide_index=True,
+                column_config={"Confidence": st.column_config.ProgressColumn(
+                    "Confidence", min_value=0, max_value=100, format="%.0f%%")},
+            )
+            st.download_button("⤓ Download companies CSV",
+                               cview.to_csv(index=False).encode("utf-8"),
+                               "discovered_companies.csv", "text/csv",
+                               use_container_width=True)
+        elif not missing:
+            st.info("No companies discovered yet — click **⚡ Scan New Data** "
+                    "above (and make sure you've run `supabase/companies.sql`).",
+                    icon="🏢")
 
     with tab_leads:
         try:

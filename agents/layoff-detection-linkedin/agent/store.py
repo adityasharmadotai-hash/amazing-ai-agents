@@ -75,9 +75,16 @@ def _headers(extra: dict | None = None) -> dict:
     return h
 
 
-_FIELDS = ("source_url", "source", "company", "person_name", "role_hint",
-           "country", "is_us", "headcount", "location",
+_COMPANIES_TABLE = "companies"
+
+_FIELDS = ("source_url", "source", "company", "company_key", "poster_role",
+           "person_name", "role_hint", "country", "is_us", "headcount", "location",
            "event_date", "open_to_work", "is_qualified", "summary", "confidence")
+
+# Fields written to the company-rollup table (see agent/companies.py).
+_COMPANY_FIELDS = ("company_key", "company_name", "employee_posts",
+                   "recruiter_posts", "founder_posts", "announcement_posts",
+                   "news_posts", "total_posts", "confidence", "locations")
 
 
 def upsert_records(records: list[dict[str, Any]]) -> int:
@@ -111,9 +118,71 @@ def upsert_records(records: list[dict[str, Any]]) -> int:
     headers = _headers({"Prefer": "resolution=merge-duplicates,return=minimal"})
     resp = httpx.post(url, json=rows, headers=headers, timeout=30)
     if resp.status_code >= 300:
+        # Graceful fallback: if the Company Discovery columns haven't been migrated
+        # yet (supabase/companies.sql), drop them and retry so core scanning still
+        # works — you just don't get the company rollup until you run the migration.
+        body = resp.text[:300]
+        if ("company_key" in body or "poster_role" in body
+                or "column" in body.lower()):
+            log.warning("Company columns missing — run supabase/companies.sql. "
+                        "Storing posts WITHOUT company_key/poster_role for now. "
+                        "Supabase said: %s", body)
+            slim = [{k: v for k, v in r.items()
+                     if k not in ("company_key", "poster_role")} for r in rows]
+            resp = httpx.post(url, json=slim, headers=headers, timeout=30)
+            if resp.status_code < 300:
+                log.info("Stored %d records (without company fields)", len(slim))
+                return len(slim)
         raise RuntimeError(f"Supabase upsert failed {resp.status_code}: {resp.text[:200]}")
     log.info("Stored %d layoff records", len(rows))
     return len(rows)
+
+
+# ── Company rollup (Company Discovery Engine) ────────────────────────────────
+def posts_for_rollup() -> list[dict]:
+    """Every stored post with just the fields the company rollup needs (no dedup,
+    all rows). Used by agent.companies.rebuild()."""
+    params = {"select": "company_key,poster_role,company,location", "limit": "10000"}
+    resp = httpx.get(f"{_base()}/{_TABLE}", params=params, headers=_headers(), timeout=30)
+    if resp.status_code >= 300:
+        raise RuntimeError(f"Supabase rollup select failed {resp.status_code}: {resp.text[:200]}")
+    return resp.json()
+
+
+def upsert_companies(rows: list[dict[str, Any]]) -> int:
+    """Upsert the company rollup rows (on company_key). Returns rows sent."""
+    payload = [{k: r.get(k) for k in _COMPANY_FIELDS}
+               for r in rows if r.get("company_key")]
+    for p in payload:
+        p["confidence"] = _clean_float(p.get("confidence"))
+        for c in ("employee_posts", "recruiter_posts", "founder_posts",
+                  "announcement_posts", "news_posts", "total_posts"):
+            p[c] = _clean_int(p.get(c)) or 0
+    if not payload:
+        return 0
+    url = f"{_base()}/{_COMPANIES_TABLE}?on_conflict=company_key"
+    headers = _headers({"Prefer": "resolution=merge-duplicates,return=minimal"})
+    resp = httpx.post(url, json=payload, headers=headers, timeout=30)
+    if resp.status_code >= 300:
+        raise RuntimeError(f"Supabase companies upsert failed {resp.status_code}: {resp.text[:200]}")
+    log.info("Rolled up %d companies", len(payload))
+    return len(payload)
+
+
+def list_companies(limit: int = 300, min_confidence: float | None = None) -> list[dict]:
+    """Discovered companies, ranked by confidence then post volume."""
+    params = {
+        "select": "*",
+        "order": "confidence.desc,total_posts.desc",
+        "limit": str(limit),
+    }
+    if min_confidence is not None:
+        params["confidence"] = f"gte.{min_confidence}"
+    resp = httpx.get(f"{_base()}/{_COMPANIES_TABLE}", params=params,
+                     headers=_headers(), timeout=30)
+    if resp.status_code >= 300:
+        raise RuntimeError(f"Supabase companies select failed {resp.status_code}: {resp.text[:200]}")
+    return resp.json()
 
 
 def list_records(limit: int = 200, company: str | None = None,

@@ -59,28 +59,33 @@ _UNKNOWN_LOC = {"", "unknown", "none", "n/a", "null", "remote", "worldwide", "gl
 # returns 0) — but it stays selectable explicitly for anyone who wants it.
 _ALL_PROVIDERS = ("serpapi", "apify", "perplexity", "gemini")
 
-# Default query set — BROAD layoff coverage for BOTH company/event announcements
-# AND laid-off individuals. Deliberately does NOT require "open to work" (that
-# gate was excluding the large majority of layoff posts). Each line is one search
-# per provider (SerpAPI paginates it, Apify expands its OR-variants, Perplexity
-# runs it as one search), so more lines = more coverage but more cost. Override
-# via LINKEDIN_QUERIES; trim lines to cut cost.
+# Default query set — MANY independent searches, each a real phrase people
+# actually post, to discover companies (large and small) from layoff posts. Mixes
+# employee language ("my last day at…", "impacted by layoffs") with layoff
+# keywords and company/event phrasing. Each line is one search per provider
+# (SerpAPI paginates it, Apify expands its variants, Perplexity runs it once), so
+# more lines = more coverage but more cost. Override via LINKEDIN_QUERIES; trim
+# lines to cut cost.
 _DEFAULT_QUERIES = [
-    # Individuals: laid off AND job-seeking (the classic recruiting lead).
-    '("laid off" OR "impacted by the layoffs" OR "let go" OR "lost my job" OR '
-    '"role was eliminated") ("open to work" OR "seeking new" OR "new opportunities")',
-    # Individuals via hashtags.
-    '#opentowork (#layoff OR #layoffs OR "laid off" OR "let go")',
-    # Broad individual layoff mentions — NO open-to-work gate (captures people who
-    # just announce they were laid off without the exact phrase).
-    '("laid off" OR "impacted by layoffs" OR "affected by the layoffs" OR '
-    '"part of the layoffs" OR "recently laid off" OR "just got laid off")',
-    # Company / event announcements (names the company doing the layoffs).
-    '(#layoffs OR #layoff OR "layoffs at" OR "laying off" OR "reduction in force" '
-    'OR "workforce reduction" OR "cutting jobs" OR "job cuts")',
-    # Reorg / RIF phrasing companies and employees use.
-    '("reduction in force" OR "we had to let go" OR "difficult decision to reduce" '
-    'OR "position was eliminated" OR "no longer with" OR "restructuring")',
+    # ── Employee language (rarely uses hashtags — this is where small startups
+    #    surface). Each names the employer, which the extractor pulls out.
+    '"my last day at"',
+    '"today was my last day"',
+    '"unfortunately I was laid off"',
+    '"I was impacted by the layoffs"',
+    '"affected by the recent layoffs"',
+    '"part of the layoffs at"',
+    '"my role was eliminated"',
+    '"my position was eliminated"',
+    # ── Core layoff keywords.
+    '"laid off"',
+    '"reduction in force"',
+    '"workforce reduction"',
+    '"impacted by layoffs"',
+    # ── Job-seeking + layoff (classic recruiting lead).
+    '"open to work" ("laid off" OR layoff OR "let go")',
+    # ── Company / event announcements + hashtags.
+    '(#layoffs OR #layoff OR "layoffs at" OR "laying off" OR "cutting jobs")',
 ]
 
 

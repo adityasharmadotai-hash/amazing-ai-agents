@@ -6,8 +6,10 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
-from . import enrich_location, extract, store, usage
+from . import companies, enrich_location, extract, store, usage
 from .sources import linkedin, news
+
+_VALID_ROLES = {"employee", "recruiter", "founder", "company", "news", "other"}
 
 log = logging.getLogger(__name__)
 
@@ -49,6 +51,11 @@ def process_candidate(c: dict) -> dict | None:
             rec["country"] = loc.get("country") or rec.get("country")
             rec["location"] = loc.get("location") or rec.get("location")
             rec["is_us"] = loc.get("is_us", rec.get("is_us"))
+    # Company Discovery: derive the canonical company key and sanitize poster_role
+    # so posts roll up into the companies table.
+    rec["company_key"] = companies.normalize_key(rec.get("company"))
+    role = str(rec.get("poster_role") or "").strip().lower()
+    rec["poster_role"] = role if role in _VALID_ROLES else "other"
     return rec
 
 
@@ -111,8 +118,12 @@ def _run_scan_locked() -> dict[str, Any]:
 
     stored = store.upsert_records(records)   # save ALL leads, not just validated
     after = len(store.list_records(limit=1000))
-    log.info("Stored %d leads (%d validated, %d new). Scan complete.",
-             stored, len(relevant), max(0, after - before))
+    # Company Discovery rollup — recompute the companies table from all posts so
+    # confidence accumulates across scans. Non-fatal if the table isn't migrated.
+    n_companies = companies.rebuild()
+    log.info("Stored %d leads (%d validated, %d new); rolled up %d companies. "
+             "Scan complete.", stored, len(relevant), max(0, after - before),
+             n_companies)
 
     meter = usage.finish_scan(extra={
         "examined": len(candidates),
@@ -124,6 +135,7 @@ def _run_scan_locked() -> dict[str, Any]:
         "layoff_records": len(records),
         "qualified_in_location": len(relevant),
         "new_leads": max(0, after - before),
+        "companies_discovered": n_companies,
         "stored": stored,
         "cost": meter["cost"],
         "usage": meter["counts"],
