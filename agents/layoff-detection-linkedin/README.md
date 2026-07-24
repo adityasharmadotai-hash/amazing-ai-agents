@@ -15,6 +15,9 @@ When a company has layoffs, the affected people are some of the strongest hires 
 
 The hard part isn't reading a post — a good LLM does that easily. The hard part is **discovery**: reliably *finding* the posts in the first place, especially for **small startups and private companies** that never make the news. LayoffScout treats this as a search-and-coverage problem: it merges multiple search providers, extracts the company and person with AI, then runs a **second-pass expansion search** for each discovered company to surface posts the generic search missed.
 
+<img width="1822" height="741" alt="image" src="https://github.com/user-attachments/assets/5fed1ff0-ddfd-4de1-8b9a-e50c5c892217" />
+
+
 > [!NOTE]
 > The full engineering story — including what broke and why — is in **[DEVELOPMENT_JOURNEY.md](DEVELOPMENT_JOURNEY.md)**.
 
