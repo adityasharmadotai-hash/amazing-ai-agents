@@ -192,8 +192,9 @@ def _to_candidate(item: dict) -> dict | None:
             "profile_url": str(profile_url), "author_name": str(author)}
 
 
-def search_linkedin_posts() -> list[dict]:
-    """Run every configured query through the Apify actor; dedupe by URL."""
+def search_linkedin_posts(queries: list[str] | None = None) -> list[dict]:
+    """Run every configured query through the Apify actor; dedupe by URL.
+    `queries` overrides LINKEDIN_QUERIES (used by company-expansion)."""
     seen: set[str] = set()
     out: list[dict] = []
     raw_total = 0
@@ -204,7 +205,7 @@ def search_linkedin_posts() -> list[dict]:
     # cap the total number of Apify searches (each is one paid actor run).
     variants: list[str] = []
     seen_kw: set[str] = set()
-    for query in config.LINKEDIN_QUERIES:
+    for query in (queries if queries is not None else config.LINKEDIN_QUERIES):
         for kw in _keyword_variants(query):
             if kw.lower() not in seen_kw:
                 seen_kw.add(kw.lower())

@@ -98,11 +98,11 @@ def _fetch(query: str) -> list[dict]:
     return out[:want]
 
 
-def _serpapi_search() -> list[dict]:
+def _serpapi_search(queries: list[str] | None = None) -> list[dict]:
     """SerpAPI backend: run every query, dedupe by URL."""
     seen: set[str] = set()
     out: list[dict] = []
-    for query in config.LINKEDIN_QUERIES:
+    for query in (queries if queries is not None else config.LINKEDIN_QUERIES):
         for r in _fetch(query):
             url = r.get("link")
             if not url or url in seen:
@@ -139,28 +139,35 @@ def _norm_url(u: str | None) -> str:
     return f"{p.scheme.lower()}://{p.netloc.lower()}{p.path.rstrip('/')}"
 
 
-def search_linkedin_posts() -> list[dict]:
+def search_linkedin_posts(queries: list[str] | None = None) -> list[dict]:
     """Discover candidate posts from the active provider(s).
 
     Resolves LINKEDIN_SOURCE via config.active_sources(): a single provider, or —
     in "all"/merge mode — every provider with a key, run concurrently and merged.
+    `queries` overrides the default LINKEDIN_QUERIES (used by company-expansion).
     Results are deduped across providers by normalized URL (keeping the richest
-    text on collision). Each candidate:
-    {"url", "text", "source": "linkedin", "profile_url"}.
+    text on collision) and tagged with the provider that found them. Each
+    candidate: {"url", "text", "source": "linkedin", "profile_url", "provider"}.
     """
     sources = config.active_sources()
     results: list[dict] = []
+
+    def _run(name: str) -> list[dict]:
+        fn = _provider_search(name)
+        got = (fn(queries) if fn else []) or []
+        for r in got:
+            r.setdefault("provider", name)
+        return got
+
     if len(sources) == 1:
-        fn = _provider_search(sources[0])
-        results = fn() if fn else []
+        results = _run(sources[0])
     else:
-        fns = {s: _provider_search(s) for s in sources}
         with ThreadPoolExecutor(max_workers=max(2, len(sources))) as pool:
-            futs = {pool.submit(fn): s for s, fn in fns.items() if fn}
+            futs = {pool.submit(_run, s): s for s in sources}
             for fut in as_completed(futs):
                 s = futs[fut]
                 try:
-                    got = fut.result() or []
+                    got = fut.result()
                     results.extend(got)
                     log.info("Provider %s -> %d candidate(s)", s, len(got))
                 except Exception as exc:  # noqa: BLE001 — one bad provider is OK

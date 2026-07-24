@@ -144,6 +144,21 @@ def render():
                 f"**{summary.get('qualified_in_location', 0)} in {locs}** "
                 f"_(the only gate is target location)_."
             )
+            d = summary.get("discovery", {}) or {}
+            if d:
+                st.markdown(
+                    f"**🔭 Discovery** &nbsp; Pass 1: **{d.get('first_pass_posts', 0)}** "
+                    f"posts · **{d.get('first_pass_companies', 0)}** companies &nbsp;→&nbsp; "
+                    f"Expansion: **{d.get('companies_expanded', 0)}** companies "
+                    f"re-searched ({d.get('expansion_searches', 0)} searches) "
+                    f"→ **+{d.get('expansion_records', 0)}** more posts"
+                    + ("  ⚠️ _budget cap hit_" if d.get("budget_hit") else "")
+                )
+                by_prov = d.get("by_provider") or {}
+                if by_prov:
+                    st.caption("Posts by provider: " + " · ".join(
+                        f"**{k}** {v}" for k, v in sorted(
+                            by_prov.items(), key=lambda kv: -kv[1])))
             if summary.get("qualified_in_location", 0) == 0 and b:
                 if b.get("layoff_posts", 0) == 0:
                     st.info("No layoff posts were found. Try a wider **recency "
@@ -217,11 +232,19 @@ def render():
                    "Confidence rises when multiple independent signals — several "
                    "employees, a recruiter, a founder, a news article — name the "
                    "same company.")
-        min_conf = st.slider("Minimum confidence", 0.0, 1.0, 0.0, 0.05,
-                             key="company_min_conf")
+        fc1, fc2 = st.columns([2, 1])
+        with fc1:
+            min_conf = st.slider("Minimum confidence", 0.0, 1.0, 0.0, 0.05,
+                                 key="company_min_conf")
+        with fc2:
+            loc_label = f"📍 {locs} only"
+            sf_only = st.toggle(loc_label, value=True, key="company_loc_only",
+                                help="Show only companies with at least one post in "
+                                     "your target location.")
         try:
             comps = store.list_companies(limit=500,
-                                         min_confidence=min_conf or None)
+                                         min_confidence=min_conf or None,
+                                         in_location=True if sf_only else None)
         except Exception as exc:
             comps = []
             st.info("No company data yet. Run the **`supabase/companies.sql`** "
@@ -232,16 +255,16 @@ def render():
                        "discovered.")
             cdf = pd.DataFrame(comps)
             show = [c for c in [
-                "company_name", "confidence", "total_posts", "employee_posts",
-                "recruiter_posts", "founder_posts", "announcement_posts",
-                "news_posts", "locations",
+                "company_name", "confidence", "total_posts", "in_location_posts",
+                "employee_posts", "recruiter_posts", "founder_posts",
+                "announcement_posts", "news_posts", "locations",
             ] if c in cdf.columns]
             cview = cdf[show].rename(columns={
                 "company_name": "Company", "confidence": "Confidence",
-                "total_posts": "Posts", "employee_posts": "Employees",
-                "recruiter_posts": "Recruiters", "founder_posts": "Founders",
-                "announcement_posts": "Announcements", "news_posts": "News",
-                "locations": "Locations",
+                "total_posts": "Posts", "in_location_posts": "In-loc",
+                "employee_posts": "Employees", "recruiter_posts": "Recruiters",
+                "founder_posts": "Founders", "announcement_posts": "Announcements",
+                "news_posts": "News", "locations": "Locations",
             })
             # ProgressColumn shows the value via `format`, so scale 0–1 to 0–100.
             if "Confidence" in cview.columns:

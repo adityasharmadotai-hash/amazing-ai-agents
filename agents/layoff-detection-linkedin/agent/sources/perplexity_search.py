@@ -119,15 +119,16 @@ def _candidates_from_results(body: dict) -> list[dict]:
     return out
 
 
-def search_linkedin_posts() -> list[dict]:
-    """Run every configured query through Perplexity /search; dedupe by URL."""
+def search_linkedin_posts(queries: list[str] | None = None) -> list[dict]:
+    """Run every configured query through Perplexity /search; dedupe by URL.
+    `queries` overrides LINKEDIN_QUERIES (used by company-expansion)."""
     if not config.PERPLEXITY_API_KEY:
         log.warning("Perplexity source selected but PERPLEXITY_API_KEY is unset.")
         return []
     country = _country_code()
     seen: set[str] = set()
     out: list[dict] = []
-    for query in config.LINKEDIN_QUERIES:
+    for query in (queries if queries is not None else config.LINKEDIN_QUERIES):
         body = _post(_search_payload(query))
         cands = _candidates_from_results(body)
         log.info("Perplexity search %r (country=%s) -> %d candidate(s)",

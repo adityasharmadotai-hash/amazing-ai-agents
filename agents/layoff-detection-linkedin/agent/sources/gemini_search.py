@@ -168,15 +168,16 @@ def _candidates_from_reply(reply: str) -> list[dict]:
     return out
 
 
-def search_linkedin_posts() -> list[dict]:
+def search_linkedin_posts(queries: list[str] | None = None) -> list[dict]:
     """Run every configured query through Gemini search; dedupe by URL.
+    `queries` overrides LINKEDIN_QUERIES (used by company-expansion).
 
     If Gemini grounding is unavailable (the pinned legacy SDK can't use Google
     Search with gemini-2.5 models), returns [] rather than risk hallucinated URLs.
     """
     seen: set[str] = set()
     out: list[dict] = []
-    for query in config.LINKEDIN_QUERIES:
+    for query in (queries if queries is not None else config.LINKEDIN_QUERIES):
         try:
             reply = _generate(_build_prompt(query))
         except RuntimeError:

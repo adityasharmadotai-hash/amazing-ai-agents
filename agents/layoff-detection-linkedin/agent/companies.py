@@ -21,6 +21,8 @@ from __future__ import annotations
 import logging
 import re
 
+from . import config
+
 log = logging.getLogger(__name__)
 
 # Corporate suffixes stripped during canonicalization. NOTE: we deliberately keep
@@ -107,6 +109,9 @@ def company_row(key: str, posts: list[dict]) -> dict:
     for p in posts:
         role = (p.get("poster_role") or "other").strip().lower()
         counts[role if role in counts else "other"] += 1
+    # A company is "in-location" (e.g. SF/California) if any of its posts match
+    # the configured target-location filter — same logic used for lead qualifying.
+    in_loc_posts = sum(1 for p in posts if config.location_ok(p))
     return {
         "company_key": key,
         "company_name": _best_name(posts) or key,
@@ -118,6 +123,8 @@ def company_row(key: str, posts: list[dict]) -> dict:
         "total_posts": len(posts),
         "confidence": confidence(counts),
         "locations": _locations(posts),
+        "in_location_posts": in_loc_posts,
+        "in_location": in_loc_posts > 0,
     }
 
 
