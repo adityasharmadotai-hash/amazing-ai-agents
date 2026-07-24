@@ -202,9 +202,9 @@ Contributions are welcome — this is a real, imperfect, in-progress system.
 
 ## 📚 Tutorial
 
-New to the stack? Follow the full step-by-step build guide:
+New to the stack? Follow the full step-by-step build guide in this repo:
 
-👉 **[Complete Tutorial](https://github.com/adityasharmadotai-hash/docs-reader-rag-agent/blob/main/TUTORIAL.md)** &nbsp;·&nbsp; and the local **[TUTORIAL.md](TUTORIAL.md)** in this repo.
+👉 **[Read the Tutorial →](TUTORIAL.md)**
 
 ---
 
