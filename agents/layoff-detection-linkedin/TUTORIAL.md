@@ -1,608 +1,411 @@
 # 🎓 Build LayoffScout AI — Step-by-Step Tutorial
 
-> A complete, beginner-friendly walkthrough. By the end you'll have a live,
-> public Streamlit app that scrapes layoff posts, reads them with AI, and builds a
-> filtered candidate list — deployed for free and ready to share on LinkedIn.
+> A complete, beginner-friendly walkthrough. By the end you'll have a live Streamlit app that discovers companies having layoffs across multiple search providers, reads each post with AI, scores companies by confidence, and stores everything in a database — deployed for free.
+
+> ⭐ **Star the repo:** https://github.com/adityasharmadotai-hash/amazing-ai-agents
+> 💼 **Follow on LinkedIn:** https://www.linkedin.com/in/aditya-hicounselor/
+> 📺 **Subscribe on YouTube:** https://www.youtube.com/channel/UCPjQtVNUrf7EKrm8ZoqrCAQ
+> 🚀 **Looking for jobs at top AI companies in the U.S.?** [Apply here](https://docs.google.com/forms/d/e/1FAIpQLSc3gJssBV3B25EZ3sYA7Qcen9NbtOB_wgQaturfB7lTXuAdLQ/viewform)
 
 ---
 
-⭐ **Star the repo:** https://github.com/adityasharmadotai-hash/amazing-ai-agents
-💼 **Follow on LinkedIn:** https://www.linkedin.com/in/aditya-hicounselor/
-📺 **Subscribe on YouTube:** https://www.youtube.com/channel/UCPjQtVNUrf7EKrm8ZoqrCAQ
-🚀 **Looking for jobs at top AI companies in the U.S.? Apply here:** https://docs.google.com/forms/d/e/1FAIpQLSc3gJssBV3B25EZ3sYA7Qcen9NbtOB_wgQaturfB7lTXuAdLQ/viewform
+## 📑 Table of Contents
+
+1. [What We're Building and Why](#1-what-were-building-and-why)
+2. [How It Works](#2-how-it-works)
+3. [Prerequisites Checklist](#3-prerequisites-checklist)
+4. [Project Setup](#4-project-setup)
+5. [The Files, Explained (with code)](#5-the-files-explained-with-code)
+   - [5.1 `agent/llm.py` — the shared AI client](#51-agentllmpy--the-shared-ai-client)
+   - [5.2 `agent/config.py` — settings & the query dictionary](#52-agentconfigpy--settings--the-query-dictionary)
+   - [5.3 `agent/sources/` — the provider interface](#53-agentsources--the-provider-interface)
+   - [5.4 `agent/extract.py` — post → structured data](#54-agentextractpy--post--structured-data)
+   - [5.5 `agent/companies.py` — normalization & confidence](#55-agentcompaniespy--normalization--confidence)
+   - [5.6 `agent/discovery.py` — the expansion engine](#56-agentdiscoverypy--the-expansion-engine)
+   - [5.7 `agent/pipeline.py` — the two-pass orchestrator](#57-agentpipelinepy--the-two-pass-orchestrator)
+   - [5.8 `agent/store.py` — saving to Supabase](#58-agentstorepy--saving-to-supabase)
+   - [5.9 `views/dashboard.py` + `streamlit_app.py` — the UI](#59-viewsdashboardpy--streamlit_apppy--the-ui)
+6. [How to Run Locally](#6-how-to-run-locally)
+7. [How to Deploy on Streamlit Cloud](#7-how-to-deploy-on-streamlit-cloud)
+8. [Common Errors and Fixes](#8-common-errors-and-fixes)
+9. [What You Learned](#9-what-you-learned)
+10. [What's Next](#10-whats-next)
 
 ---
 
-## 📑 Table of contents
+## 1. What We're Building and Why
 
-1. [What we're building and why](#1-what-were-building-and-why)
-2. [How it works (flow diagram)](#2-how-it-works)
-3. [Prerequisites checklist](#3-prerequisites-checklist)
-4. [Project setup](#4-project-setup)
-5. [Getting your API keys](#5-getting-your-api-keys)
-6. [Each file explained (with code)](#6-each-file-explained)
-   - [6.1 `agent/config.py`](#61-agentconfigpy--all-settings-in-one-place)
-   - [6.2 `agent/llm.py`](#62-agentllmpy--talking-to-gemini)
-   - [6.3 `agent/extract.py` (concept)](#63-agentextractpy--post--structured-record)
-   - [6.4 `agent/store.py`](#64-agentstorepy--saving-to-supabase)
-   - [6.5 `agent/usage.py`](#65-agentusagepy--tracking-cost)
-   - [6.6 `agent/pipeline.py`](#66-agentpipelinepy--the-orchestra-conductor)
-   - [6.7 `st_common.py`](#67-st_commonpy--bridging-secrets-and-config)
-   - [6.8 `streamlit_app.py`](#68-streamlit_apppy--the-dashboard)
-   - [6.9 `views/settings.py`](#69-viewssettingspy--the-settings-page)
-7. [How to run locally](#7-how-to-run-locally)
-8. [How to deploy on Streamlit Cloud](#8-how-to-deploy-on-streamlit-cloud)
-9. [Common errors and fixes](#9-common-errors-and-fixes)
-10. [What you learned](#10-what-you-learned)
-11. [What's next](#11-whats-next)
+We're building **LayoffScout AI** — a system that automatically discovers companies having layoffs and surfaces the affected talent, focused on **San Francisco & California**.
+
+**The core insight:** the hard part is *not* reading a post — any modern LLM does that. The hard part is **discovery**: reliably *finding* the posts, especially from **small startups** that never appear on layoffs.fyi or in the news. So this project is a **search-and-coverage** problem that uses an LLM for one step, not an "LLM project."
+
+By the end you'll understand a real production pattern: **multiple search providers → AI extraction → normalization → expansion → confidence scoring → database → dashboard.**
 
 ---
 
-## 1. What we're building and why
-
-We're building an **AI agent** — a program that uses a Large Language Model (LLM)
-to make decisions and extract information from messy, real-world data.
-
-**The scenario:** every time a tech company announces layoffs, hundreds of engineers
-post about it on LinkedIn ("I was impacted by the recent layoffs", "#OpenToWork").
-A recruiter would love a clean, filtered list of those people — but reading posts by
-hand is slow.
-
-**Our agent does it automatically:**
-
-- Finds recent layoff / open-to-work posts.
-- Uses **Google Gemini** to read each post and pull out structured facts.
-- Keeps only **US-based software engineers**.
-- Saves them to a database and shows them in a dashboard.
-- Optionally finds each person's **work email**.
-
-**Why this is a great project to learn from:** it touches everything a modern AI
-app needs — web data, an LLM, filtering logic, a database, cost tracking, a UI, and
-cloud deployment — but each piece is small and readable.
-
----
-
-## 2. How it works
+## 2. How It Works
 
 ```mermaid
 flowchart TD
-    A[⚡ User clicks Scan] --> B[Collect recent posts]
-    B --> B1[LinkedIn · SerpAPI or Apify]
-    B --> B2[News · NewsAPI optional]
-    B1 --> C[🤖 Gemini reads each post]
-    B2 --> C
-    C --> D{US-based software engineer?}
-    D -- no --> X[Discard]
-    D -- location unknown --> E[Scrape profile for country]
-    E --> D
-    D -- yes --> F[(🗄️ Supabase database)]
-    F --> G[📊 Dashboard: table, cost, CSV]
-    G --> H[✉️ Optional: Wiza → work email]
+    P[🔌 Search Providers] --> C[📥 Candidate Collection]
+    C --> E[🤖 AI Extraction]
+    E --> N[🏷️ Company Normalization]
+    N --> X[🔎 Company Expansion Search]
+    X --> M[🔗 Merge + Deduplicate]
+    M --> S[⚖️ Confidence Scoring]
+    S --> DB[(🏢 Supabase)]
+    DB --> UI[📊 Dashboard]
+    style P fill:#6d5efc,color:#fff
+    style E fill:#8b5cf6,color:#fff
+    style X fill:#f59e0b,color:#fff
+    style S fill:#22c55e,color:#fff
+    style DB fill:#ec4899,color:#fff
 ```
 
-Read it as: **collect → understand with AI → filter → store → display → enrich.**
+One scan runs **two passes**:
+- **Pass 1** searches a dictionary of layoff phrases across every provider you have a key for.
+- **Pass 2** takes the companies it just discovered and searches *for each one directly* to find more posts.
 
 ---
 
-## 3. Prerequisites checklist
+## 3. Prerequisites Checklist
 
-Before you start, make sure you have:
+- [ ] **Python 3.12** installed (`python --version`)
+- [ ] A code editor (VS Code recommended)
+- [ ] A free **Google Gemini** API key → https://aistudio.google.com/app/apikey
+- [ ] A free **Supabase** account → https://supabase.com
+- [ ] At least one search key: **SerpAPI** (easiest/free tier), **Apify**, or **Perplexity**
+- [ ] Basic comfort with the terminal (copy/paste is fine!)
 
-- [ ] **Python 3.10 or newer** — check with `python --version`.
-- [ ] **A code editor** — VS Code is great and free.
-- [ ] **A GitHub account** — for storing code and deploying.
-- [ ] **Basic terminal comfort** — running commands like `cd` and `pip install`.
-- [ ] **~30 minutes** and a willingness to copy-paste API keys.
-
-**Accounts you'll create (all have free tiers):**
-
-- [ ] Google AI Studio (Gemini) — **required**
-- [ ] Supabase (database) — **required**
-- [ ] SerpAPI **or** Apify (LinkedIn search) — **required, pick one**
-- [ ] NewsAPI — optional
-- [ ] Wiza — optional (email enrichment)
-
-You don't need to sign up for everything up front — the app's **Settings** page
-tells you exactly how to get each key when you need it.
+> [!TIP]
+> Start with just **Gemini + Supabase + SerpAPI**. You can add Apify and Perplexity later — the app merges whatever keys you provide.
 
 ---
 
-## 4. Project setup
-
-If you're cloning the finished project:
+## 4. Project Setup
 
 ```bash
+# 1. Clone
 git clone https://github.com/adityasharmadotai-hash/amazing-ai-agents.git
-cd amazing-ai-agents/layoff-detection-linkedin
-```
+cd amazing-ai-agents/agents/layoff-detection-linkedin
 
-Create and activate a **virtual environment** (an isolated space for this project's
-Python packages):
-
-```bash
+# 2. Create a virtual environment
 python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
 
-# Windows (PowerShell):
-.venv\Scripts\Activate.ps1
-
-# macOS / Linux:
-source .venv/bin/activate
-```
-
-Install the dependencies:
-
-```bash
+# 3. Install dependencies
 pip install -r requirements.txt
+
+# 4. Copy the env template
+cp .env.example .env
 ```
 
-`requirements.txt` looks like this — each line is a package we depend on:
-
-```text
-streamlit==1.39.0            # the web UI + hosting
-pandas==2.2.3                # tables and CSV export
-httpx==0.27.2                # making HTTP/API calls
-pydantic==2.9.2              # data validation
-python-dotenv==1.0.1         # reading a local .env file
-google-generativeai==0.8.3   # the Gemini client
-tenacity==9.0.0              # automatic retries on flaky calls
-```
+Now open `.env` and fill in the three **required** keys (`GEMINI_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`) plus at least one search key. Then, in the Supabase **SQL Editor**, run both `supabase/layoff_posts.sql` and `supabase/companies.sql` to create the tables.
 
 ---
 
-## 5. Getting your API keys
+## 5. The Files, Explained (with code)
 
-An **API key** is like a password that lets your app use someone else's service.
-Here's how to get each one. (These same steps appear inside the app's **Settings**
-page, so you never have to leave the app.)
+The app is organized as a small **`agent/`** package (all the logic) plus a thin **`views/`** UI layer. Data flows one way: providers → extraction → companies → store → dashboard.
 
-### 🔑 Google Gemini (required — the AI brain)
+### 5.1 `agent/llm.py` — the shared AI client
 
-1. Go to **https://aistudio.google.com/app/apikey**
-2. Sign in with a Google account.
-3. Click **Create API key** and pick/create a project.
-4. Copy the key (starts with `AIza…`).
-
-### 🗄️ Supabase (required — the database)
-
-1. Create a free project at **https://supabase.com**.
-2. Open **Project Settings → Data API** and copy the **Project URL**
-   (`https://xxxx.supabase.co`).
-3. Open **Project Settings → API keys** and copy the **service_role** key
-   (the powerful server-side one — keep it secret).
-4. Open the **SQL Editor**, paste the contents of `supabase/layoff_posts.sql`, and run it.
-
-### 🔎 SerpAPI (required if you choose the cheap LinkedIn backend)
-
-1. Sign up free at **https://serpapi.com**.
-2. Copy your **API key** from the dashboard.
-
-### 🕷️ Apify (alternative LinkedIn backend — full scrape, paid)
-
-1. Create an account at **https://apify.com**.
-2. Go to **Settings → Integrations → API tokens** and copy the token.
-
-### 📰 NewsAPI (optional) & ✉️ Wiza (optional)
-
-- NewsAPI: register at **https://newsapi.org** and copy the key.
-- Wiza: sign up at **https://wiza.co**, then **Settings → API** to generate a key.
-
-> 💡 **Tip:** Start with just Gemini + Supabase + SerpAPI. You can add the rest later.
-
----
-
-## 6. Each file explained
-
-We'll go from the innermost logic outward to the UI. The design principle is:
-**the `agent/` package knows nothing about Streamlit** — it's pure Python you could
-reuse from a script, an API, or a notebook. Streamlit is just one "face" on top.
-
-### 6.1 `agent/config.py` — all settings in one place
-
-Every setting comes from an **environment variable**, read once here and exposed as a
-typed value. This means the rest of the code never calls `os.getenv` directly.
+Every AI call goes through one function, so there's exactly one place that talks to Gemini.
 
 ```python
-import os
-from dotenv import load_dotenv
-
-load_dotenv()  # read a local .env file, if present
-
-# Required
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-SUPABASE_URL = os.getenv("SUPABASE_URL", "")
-SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY", "")
-
-# LinkedIn backend: "serpapi" (cheap) or "apify" (full scrape)
-LINKEDIN_SOURCE = os.getenv("LINKEDIN_SOURCE", "serpapi").strip().lower()
-
-def missing_required() -> list[str]:
-    """Which required keys are still empty? The UI uses this to warn the user."""
-    required = {
-        "GEMINI_API_KEY": GEMINI_API_KEY,
-        "SUPABASE_URL": SUPABASE_URL,
-        "SUPABASE_SERVICE_KEY": SUPABASE_SERVICE_KEY,
-    }
-    if LINKEDIN_SOURCE == "apify":
-        required["APIFY_TOKEN"] = APIFY_TOKEN
-    else:
-        required["SERPAPI_KEY"] = SERPAPI_KEY
-    return [k for k, v in required.items() if not v]
-```
-
-**Key idea:** `missing_required()` is *source-aware* — it only requires the SerpAPI
-key if you chose SerpAPI, and the Apify token if you chose Apify. The dashboard uses
-this to show a friendly "add your keys" warning instead of crashing.
-
-`config.py` also defines `TARGET_TITLES` (36 software-engineering job titles) and the
-default LinkedIn search queries. Those two lists are what make the filter "US software
-engineers" possible.
-
-### 6.2 `agent/llm.py` — talking to Gemini
-
-There is exactly **one** place in the whole app that talks to the LLM. That's a great
-pattern: if you ever switch models, you change one file.
-
-```python
-import json
-import google.generativeai as genai
-from tenacity import retry, stop_after_attempt, wait_exponential
-from . import config
-
-@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, max=10))
 def complete_json(system: str, user: str) -> dict | list:
-    """Send a prompt to Gemini and parse the reply as JSON."""
-    genai.configure(api_key=config.GEMINI_API_KEY)
+    """Send a prompt and parse the model's reply as JSON.
+    Retries up to 3x only on non-JSON replies; API errors propagate immediately."""
+    _ensure_configured()
+    genai = _get_genai()
     model = genai.GenerativeModel(
         config.GEMINI_MODEL,
         system_instruction=system,
         generation_config={"response_mime_type": "application/json"},
     )
     resp = model.generate_content(user)
-    return json.loads(resp.text)
-```
-
-**Plain-English explanation:**
-
-- `system_instruction` tells Gemini *who it is* ("You are an extraction engine…").
-- `response_mime_type: "application/json"` forces the model to reply with clean JSON,
-  so we can `json.loads()` it directly instead of guessing.
-- `@retry(...)` (from the `tenacity` library) automatically re-tries up to 3 times
-  with increasing delays if the call fails — LLM APIs occasionally hiccup.
-
-### 6.3 `agent/extract.py` — post → structured record
-
-`extract.py` builds the prompt that turns one raw post into a structured record. It
-asks Gemini for fields like `person_name`, `role_category`, `company`, `is_us`,
-`open_to_work`, and `summary`, then applies the **relevance filter**:
-
-```python
-def is_relevant(rec: dict) -> bool:
-    """Keep only US-based individuals in a target software role."""
-    return (
-        rec.get("is_individual")
-        and config.is_target_title(rec.get("role_category"))
-        and (rec.get("is_us") or not config.LAYOFF_US_ONLY)
-    )
-```
-
-**Why a separate filter?** The LLM extracts *everything*; the plain-Python filter
-decides what to *keep*. Separating "understand" from "decide" keeps each part simple
-and testable.
-
-### 6.4 `agent/store.py` — saving to Supabase
-
-We talk to Supabase's REST API (PostgREST) directly with `httpx` — no heavy SDK.
-
-```python
-import httpx
-from . import config
-
-def upsert_records(records: list[dict]) -> int:
-    """Insert or update leads, deduped on their post URL."""
-    url = f"{config.SUPABASE_URL}/rest/v1/layoff_posts?on_conflict=source_url"
-    headers = {
-        "apikey": config.SUPABASE_SERVICE_KEY,
-        "Authorization": f"Bearer {config.SUPABASE_SERVICE_KEY}",
-        "Prefer": "resolution=merge-duplicates,return=minimal",
-    }
-    resp = httpx.post(url, json=records, headers=headers, timeout=30)
-    resp.raise_for_status()
-    return len(records)
+    raw = _strip_code_fence(resp.text or "")
+    return json.loads(raw)
 ```
 
 **Key ideas:**
+- `response_mime_type="application/json"` forces Gemini to return valid JSON — no fragile text parsing.
+- `google.generativeai` is imported **lazily** (inside a function). Importing it at startup pulls in heavy C-extensions that were crashing the Streamlit Cloud health check.
 
-- `on_conflict=source_url` + `merge-duplicates` = **upsert**. If we see the same post
-  twice, we update the existing row instead of creating a duplicate. This is why you
-  can scan repeatedly without piling up copies.
-- The `service_role` key goes in the `apikey` and `Authorization` headers — that's
-  what authorizes writes.
+### 5.2 `agent/config.py` — settings & the query dictionary
 
-### 6.5 `agent/usage.py` — tracking cost
-
-Every scraping call and AI call costs a little money. `usage.py` counts them and
-estimates the dollar cost using rates from `config.py`.
+All configuration comes from **environment variables**, computed once in a `refresh()` function so the Settings page can change a key and re-read live. The heart of discovery is the **query dictionary** — many phrases, each searched *independently*:
 
 ```python
-def cost_of(counts: dict) -> dict:
-    apify = counts.get("apify_posts", 0) / 1000 * config.APIFY_POST_COST_PER_1K
-    gemini = counts.get("gemini_in_tokens", 0) / 1e6 * config.GEMINI_IN_COST_PER_1M
-    serp = counts.get("serpapi_searches", 0) * config.SERPAPI_COST_PER_SEARCH
-    return {"total": round(apify + gemini + serp, 4), ...}
+QUERY_DICTIONARY = {
+    "employee": [
+        '"today was my last day"', '"my last day at"', '"my final day"',
+        '"I got laid off"', '"impacted by the layoffs"', '"open to work"', ...
+    ],
+    "company": ['"layoffs"', '"reduction in force"', '"workforce reduction"', ...],
+    "startup": ['"cash runway"', '"burn reduction"', '"strategic restructuring"', ...],
+    "hashtag": ['#layoffs', '#layoff', '#opentowork'],
+}
 ```
 
-A scan is wrapped in `start_scan()` / `finish_scan()`, and each result is appended to
-a local `usage_log.json` so the dashboard can show per-scan and cumulative spend.
-
-### 6.6 `agent/pipeline.py` — the orchestra conductor
-
-This ties everything together into one function, `run_scan()`:
+**Why this matters:** the original app used a few broad boolean queries. Employee language like `"today was my last day"` is how you find *small startups* — those posts name the employer, and the LLM extracts it. `config.py` also holds the expansion + budget knobs:
 
 ```python
-def _run_scan_locked():
-    usage.start_scan()
-    candidates = _collect()                       # 1. gather posts (LinkedIn + News)
-    records = [process_candidate(c) for c in candidates]  # 2. AI-extract each
-    relevant = [r for r in records if extract.is_relevant(r)]  # 3. filter
-    stored = store.upsert_records(relevant)        # 4. save
-    meter = usage.finish_scan(...)                 # 5. cost report
-    return {"new_leads": ..., "cost": meter["cost"], ...}
+EXPANSION_ENABLED = _bool("EXPANSION_ENABLED", True)
+EXPANSION_MAX_COMPANIES = _int("EXPANSION_MAX_COMPANIES", 10)
+EXPANSION_QUERIES_PER_COMPANY = _int("EXPANSION_QUERIES_PER_COMPANY", 3)
+SCAN_BUDGET_USD = _float("SCAN_BUDGET_USD", 3.0)   # hard ceiling for expansion
 ```
 
-**Notice the four clean stages: collect → extract → filter → store.** A `threading.Lock`
-guarantees only one scan runs at a time (so the shared cost meter never gets corrupted).
-There's also `analyze_url()` — the same pipeline for a single pasted post.
+### 5.3 `agent/sources/` — the provider interface
 
-### 6.7 `st_common.py` — bridging secrets and config
-
-Here's a subtle-but-important piece. The `agent` package reads **environment
-variables**. But Streamlit Cloud provides secrets through `st.secrets`, not env vars.
-`st_common.py` bridges the two:
+Every provider exposes the **same function shape**, so adding a new one is trivial and the orchestrator can merge them. Each returns a list of `{"url", "text", "source", "provider"}`:
 
 ```python
-import os, importlib
-import streamlit as st
-
-def bootstrap_env():
-    """Copy keys from st.secrets into os.environ before agent is imported."""
-    for key in _ALL_KEYS:
-        if key in st.secrets and not os.environ.get(key):
-            os.environ[key] = str(st.secrets[key])
-
-def apply_overrides(values: dict):
-    """Set keys typed on the Settings page, then hot-reload config."""
-    for key, val in values.items():
-        os.environ[key] = val
-    importlib.reload(importlib.import_module("agent.config"))
+def search_linkedin_posts(queries: list[str] | None = None) -> list[dict]:
+    ...
 ```
 
-**Why the `importlib.reload`?** `config.py` reads its values *once, at import time*.
-When a user types a new key on the Settings page, we set the env var **and reload the
-config module** so the whole app instantly sees the new value — no restart needed.
-
-`st_common.py` also holds `CONFIG_KEYS`: a list describing every setting (its label,
-whether it's a secret, and the numbered steps to generate it). The Settings page loops
-over this list to build itself — so the instructions and the form never drift apart.
-
-### 6.8 `streamlit_app.py` — the dashboard
-
-This is the file Streamlit runs. The **order of the first few lines matters**:
+The orchestrator in `linkedin.py` runs every active provider concurrently and de-dupes across them by normalized URL:
 
 ```python
-import streamlit as st
-import st_common
-
-st.set_page_config(page_title="LayoffScout AI", page_icon="🎯", layout="wide")
-st_common.bootstrap_env()                 # ← copy secrets → env FIRST
-
-from agent import config, enrich, store, usage   # ← import agent AFTER
-from agent.pipeline import analyze_url, run_scan
+def search_linkedin_posts(queries=None) -> list[dict]:
+    sources = config.active_sources()          # e.g. ["serpapi", "apify", "perplexity"]
+    results = []
+    with ThreadPoolExecutor(max_workers=max(2, len(sources))) as pool:
+        futs = {pool.submit(_run, s): s for s in sources}
+        for fut in as_completed(futs):
+            results.extend(fut.result())
+    # keep the richest text on URL collision
+    best = {}
+    for r in results:
+        key = _norm_url(r.get("url"))
+        if key and (key not in best or len(r["text"]) > len(best[key]["text"])):
+            best[key] = r
+    return list(best.values())
 ```
 
-We call `bootstrap_env()` **before** importing `agent`, so that when `config.py` runs,
-the environment variables are already populated from `st.secrets`.
+**The providers:**
 
-The rest of the file is UI:
+| Provider | Strength | Weakness |
+| --- | --- | --- |
+| **SerpAPI** | Cheap, easy | Thin snippets; only Google-indexed posts |
+| **Apify** | Full post text, most volume | Paid per post |
+| **Perplexity** | Real URLs + citations | Few results per query |
+| **Gemini** | No extra key | ❌ Can't find LinkedIn posts (kept for extraction only) |
+| **NewsAPI** | Named-company events | Only big companies |
 
-- A **⚡ Scan New Data** button that calls `run_scan()` inside `st.spinner(...)` and
-  shows a success banner with the new-lead count and cost.
-- **Metric cards** (`st.metric`) for total spend, Apify, Gemini, and SerpAPI costs.
-- A **leads table** (`st.dataframe`) built from `store.list_records(...)`, with a
-  clickable post link and a **Download CSV** button.
-- Forms to **Analyze one URL** and **Enrich a profile** into a work email.
+### 5.4 `agent/extract.py` — post → structured data
+
+This is where the LLM turns messy post text into a clean record. The prompt asks for exact JSON keys and — crucially — extracts the **employer from casual phrasing** and classifies the **poster's role**:
+
+```text
+- poster_role (string): "employee" / "recruiter" / "founder" / "company" / "news" / "other"
+- company (string|null): the company where the layoff happened. Extract it even
+  from casual phrasing — "my last day at ACME", "impacted by layoffs at Retell AI".
+- location (string|null): city/state, e.g. "San Francisco, California"
+- event_date (string|null): ISO date (YYYY-MM-DD) the layoff happened
+```
+
+A tiny but important trick — `slug_text()` recovers keywords from the **URL** itself when the snippet is thin:
 
 ```python
-if st.button("⚡ Scan New Data", type="primary"):
-    with st.spinner("Scraping, extracting with AI, resolving locations…"):
-        summary, logs = _capture_scan()   # runs run_scan(), captures its logs
-    st.success(f"✅ {summary['new_leads']} new leads · cost {summary['cost']['total']}")
+# .../posts/jane_i-was-impacted-by-the-layoffs-across-xbox-activity-7479...
+# -> "i was impacted by the layoffs across xbox"
 ```
 
-`_capture_scan()` is a small helper that attaches a logging handler while the scan
-runs, so we can show the pipeline's log output in an expander — a nice touch that makes
-the agent feel transparent.
+### 5.5 `agent/companies.py` — normalization & confidence
 
-### 6.9 `views/settings.py` — the settings page
+The company — not the post — is the primary entity. Two pure functions do the heavy lifting.
 
-`streamlit_app.py` is a small **router** that uses `st.navigation` to register two
-pages — `views/dashboard.py` and `views/settings.py` — with clean names and icons in
-the sidebar. Our Settings page:
-
-1. Shows a **live status** — green if all required keys are set, a warning otherwise.
-2. Renders a form by looping over `st_common.CONFIG_KEYS`, grouping fields into
-   *Required*, *LinkedIn source*, *Optional*, and *Tuning*.
-3. Under each field, an expander shows the **numbered "how to generate it" steps**.
-4. On **Save**, it calls `apply_overrides(...)` to set the keys for the session.
-5. At the bottom, it prints a ready-to-paste **TOML secrets template** for Streamlit
-   Cloud.
+**Normalization** collapses name variants to one key:
 
 ```python
-for group, fields in groups.items():
-    st.subheader(group)
-    for f in fields:
-        overrides[f["key"]] = st.text_input(
-            f["label"],
-            type="password" if f["secret"] else "default",
-            help=f["help"],
-        )
-        with st.expander(f"How to get: {f['label']}"):
-            for i, step in enumerate(f["steps"], 1):
-                st.markdown(f"{i}. {step}")
+def normalize_key(name: str | None) -> str:
+    # "Retell AI" / "Retell.ai" / "Retell, Inc." -> "retell ai" / "retell"
+    s = name.strip().lower()
+    s = re.sub(r"[^\w\s&-]", " ", s)                 # drop punctuation
+    tokens = [t for t in s.split() if t and t not in _SUFFIXES]  # drop Inc/LLC/…
+    return " ".join(tokens).strip()
 ```
 
-**Why data-driven?** Because the form is generated from `CONFIG_KEYS`, adding a new
-API key later means adding *one dictionary entry* — the input box, the help text, and
-the instructions all appear automatically.
+**Confidence** is a **noisy-OR** over independent signals — many weak signals stack, one strong signal lands high:
 
-#### 🛠️ Retargeting the app without code
+```python
+_WEIGHTS = {"news": 0.80, "company": 0.80, "founder": 0.70,
+            "recruiter": 0.45, "employee": 0.38, "other": 0.12}
 
-The Settings page has a **Search & targeting** section so *any* user can repurpose the
-app without touching Python:
+def confidence(counts: dict[str, int]) -> float:
+    p_not_real = 1.0
+    for role, n in counts.items():
+        p_not_real *= (1.0 - _WEIGHTS.get(role, 0.12)) ** n
+    return round(1.0 - p_not_real, 4)
+```
 
-- **Search keywords / queries** — one search query per line. This is literally what
-  gets sent to LinkedIn. Want laid-off *data scientists*? Write
-  `"open to work" "data scientist" (laid off OR layoff)`.
-- **Target job titles / roles to keep** — the list the AI maps each person's role to.
-  Blank = the default 36 software titles; set it to `Data Scientist, ML Engineer` to
-  keep those instead.
-- **Target locations / countries** — comma-separated countries to keep (e.g.
-  `United States, Canada`); blank = worldwide.
+> 1 employee post → **38%** · 1 news article → **80%** · 8 employees + 2 recruiters + 1 founder → **~99%**.
 
-Under the hood these are just three settings (`LINKEDIN_QUERIES`, `TARGET_TITLES`,
-`TARGET_LOCATIONS`) that `agent/config.py` reads, and the filter in
-`agent/extract.py` (`is_relevant` → `config.location_ok(...)` +
-`config.is_target_title(...)`) enforces. Because the whole `agent` package reads
-config *at call time*, editing these on the Settings page takes effect on the very
-next scan — no restart.
+### 5.6 `agent/discovery.py` — the expansion engine
+
+Once Pass 1 finds companies, this searches for each one directly — the biggest coverage win. A **budget governor** stops it from running away:
+
+```python
+def run_expansion(company_names, seen_urls, metrics):
+    from .sources import linkedin
+    budget = config.SCAN_BUDGET_USD
+    for name in company_names[:config.EXPANSION_MAX_COMPANIES]:
+        if budget and usage.current_cost() >= budget:      # ⛔ hard stop
+            metrics["budget_hit"] = True
+            break
+        queries = expansion_queries(name)   # '"Retell AI" layoffs', etc.
+        for c in linkedin.search_linkedin_posts(queries=queries):
+            u = linkedin._norm_url(c["url"])
+            if u and u not in seen_urls:      # only NEW posts
+                seen_urls.add(u)
+                out.append(c)
+```
+
+### 5.7 `agent/pipeline.py` — the two-pass orchestrator
+
+`run_scan()` ties it all together: collect → extract (Pass 1) → expand → extract (Pass 2) → qualify → store → roll up companies. It also logs **first-pass vs expansion** counts:
+
+```python
+# PASS 1
+candidates = _collect()
+records = [process_candidate(c) for c in candidates]   # (threaded)
+
+# PASS 2 — expansion
+if config.EXPANSION_ENABLED and records:
+    targets = discovery.select_companies(records)
+    exp = discovery.run_expansion(targets, seen_urls, disc_metrics)
+    records += [process_candidate(c) for c in exp]
+
+# qualify (location gate), store, and rebuild the company rollup
+for r in records:
+    r["is_qualified"] = extract.is_relevant(r)
+store.upsert_records(records)
+companies.rebuild()
+```
+
+### 5.8 `agent/store.py` — saving to Supabase
+
+We talk to Postgres via **raw `httpx` + PostgREST** (no ORM, no `supabase-py`). A key defensive detail: **validate typed columns** so one bad LLM value can't fail the whole batch:
+
+```python
+def _clean_date(v):
+    # LLM sometimes returns "September 2025" or "" — a Postgres `date` column
+    # rejects those and kills the ENTIRE batch. Coerce anything invalid to null.
+    try:
+        return date.fromisoformat(v.strip()).isoformat()
+    except (ValueError, AttributeError):
+        return None
+```
+
+Companies get their own rollup table with `confidence`, per-signal counts, and an `in_location` flag (used to filter the Companies view to SF/California).
+
+### 5.9 `views/dashboard.py` + `streamlit_app.py` — the UI
+
+`streamlit_app.py` is a thin router using **callable pages** (functions, not file paths — file paths break in a repo subdirectory on Streamlit Cloud):
+
+```python
+pages = [
+    st.Page(dashboard.render, title="Dashboard", icon="🎯", default=True),
+    st.Page(settings.render, title="Settings", icon="⚙️"),
+]
+st.navigation(pages).run()
+```
+
+`dashboard.py` renders the **Scan** button, the **Companies** and **Leads** tabs, cost metrics, and a single-post analyzer. Running a scan is one call:
+
+```python
+summary = run_scan()   # returns counts, cost, and discovery metrics
+```
 
 ---
 
-## 7. How to run locally
-
-1. Make sure your virtual environment is active and dependencies are installed
-   (Section 4).
-2. Add your keys — either copy `.streamlit/secrets.toml.example` to
-   `.streamlit/secrets.toml` and fill it in, **or** just run the app and use the
-   Settings page.
-3. Start it:
-
-   ```bash
-   streamlit run streamlit_app.py
-   ```
-
-4. Your browser opens `http://localhost:8501`.
-5. Go to **⚙️ Settings**, confirm the status is green, return to the dashboard, and
-   click **⚡ Scan New Data**.
-6. Try **Analyze one LinkedIn post** with a real `#OpenToWork` post URL to see a
-   single extraction end-to-end.
-
----
-
-## 8. How to deploy on Streamlit Cloud
-
-Streamlit Community Cloud hosts public apps for **free**, straight from GitHub.
-
-**Step 1 — Push to a public GitHub repo**
+## 6. How to Run Locally
 
 ```bash
-git init
-git add .
-git commit -m "Layoff detection agent"
-git branch -M main
-git remote add origin https://github.com/<your-username>/<your-repo>.git
-git push -u origin main
+streamlit run streamlit_app.py
 ```
 
-> ⚠️ Double-check that `.env` and `.streamlit/secrets.toml` are **not** committed —
-> `.gitignore` already excludes them. Your keys should never be in the repo.
-
-**Step 2 — Create the app**
-
-1. Go to **https://share.streamlit.io** and sign in with GitHub.
-2. Click **Create app → Deploy a public app from GitHub**.
-3. Choose your **repository** and **branch** (`main`).
-4. Set **Main file path** to `streamlit_app.py`.
-
-**Step 3 — Add your secrets**
-
-1. Click **Advanced settings → Secrets**.
-2. Paste your keys in TOML form (the Settings page generates this block for you, or
-   use `.streamlit/secrets.toml.example`):
-
-   ```toml
-   GEMINI_API_KEY = "AIza…"
-   SUPABASE_URL = "https://xxxx.supabase.co"
-   SUPABASE_SERVICE_KEY = "…"
-   LINKEDIN_SOURCE = "serpapi"
-   SERPAPI_KEY = "…"
-   ```
-
-**Step 4 — Deploy**
-
-Click **Deploy**. After ~1 minute you'll get a public URL like
-`https://your-app.streamlit.app`. Share it in your LinkedIn post! 🎉
-
-> To update the app later, just `git push` — Streamlit Cloud redeploys automatically.
+1. The app opens at `http://localhost:8501`.
+2. Go to **⚙️ Settings** and confirm your keys show as set (a ✅ appears when all required keys are present).
+3. Back on the **Dashboard**, click **⚡ Scan New Data**.
+4. Watch the **🏢 Companies** and **🎯 Leads** tabs fill in, and check the **Spend** panel.
 
 ---
 
-## 9. Common errors and fixes
+## 7. How to Deploy on Streamlit Cloud
 
-| Symptom | Likely cause | Fix |
-|--------|--------------|-----|
-| ⚠️ *"Missing required configuration"* banner | A required key isn't set | Open **Settings**, add the listed keys (Gemini, Supabase, and one LinkedIn key) |
-| `GEMINI_API_KEY is not set` | Gemini key missing/blank | Paste it on the Settings page or in secrets |
-| `Supabase select/upsert failed 401` | Wrong or missing service key | Use the **service_role** key, not the anon key |
-| `Supabase … failed 404` / table not found | You didn't create the table | Run `supabase/layoff_posts.sql` in the Supabase SQL Editor |
-| Scan finds **0 leads** | Quiet week, or filters too strict | On the Settings page: clear **Target locations** (worldwide), broaden **Target job titles**, tweak **Search keywords**, or widen `LINKEDIN_RECENCY` to `m` |
-| `ModuleNotFoundError: streamlit` | Dependencies not installed / venv not active | Activate the venv and run `pip install -r requirements.txt` |
-| Streamlit Cloud build fails | A package version issue | Check the build logs; make sure `requirements.txt` matches this repo |
-| Enrich returns *"no_api_key"* | Wiza key not set | Add `WIZA_API_KEY` (this feature is optional) |
-| Secrets changes don't take effect | Old session cached | On Cloud, save secrets then **Reboot** the app; locally, restart `streamlit run` |
+1. Push your fork to GitHub.
+2. Go to [share.streamlit.io](https://share.streamlit.io) → **Create app**.
+3. Point it at `agents/layoff-detection-linkedin/streamlit_app.py`.
+4. **Advanced settings → Python version → `3.12`** ⚠️ (see errors below — this one matters).
+5. Deploy. Then open **⋮ → Settings → Secrets** and paste your keys in TOML form:
 
----
+```toml
+GEMINI_API_KEY = "AIza..."
+SUPABASE_URL = "https://xxxx.supabase.co"
+SUPABASE_SERVICE_KEY = "sb_secret_..."
+SERPAPI_KEY = "..."
+LINKEDIN_SOURCE = "all"
+TARGET_LOCATIONS = "San Francisco, California | California"
+```
 
-## 10. What you learned
-
-By building this, you now understand how to:
-
-- ✅ Structure an AI app so the **core logic is UI-agnostic** (`agent/`) and the UI is
-  a thin layer (`streamlit_app.py`).
-- ✅ Call an **LLM (Gemini)** and force **structured JSON** output.
-- ✅ Separate **"understand" (LLM)** from **"decide" (plain-Python filter)**.
-- ✅ Use a **managed database (Supabase)** over a simple REST API, with **upsert** to
-  avoid duplicates.
-- ✅ **Track and estimate cost** of external API calls.
-- ✅ Build a **multi-page Streamlit app** with a data-driven Settings page.
-- ✅ Bridge **environment variables ↔ Streamlit secrets** and hot-reload config.
-- ✅ **Deploy for free** on Streamlit Community Cloud and manage secrets safely.
+6. Run the two Supabase migrations once (if you haven't).
 
 ---
 
-## 11. What's next
+## 8. Common Errors and Fixes
 
-Ideas to extend the project:
+> [!WARNING]
+> **Build fails compiling Pillow / pandas — `RequiredDependencyException: zlib`.**
+> Streamlit Cloud picked Python **3.13/3.14**, which has no wheels for the pinned deps, so pip compiles from source and fails. **Fix:** set **Python version → 3.12** in Advanced settings and reboot.
 
-- 🔁 **Auto-scan on a schedule** — add a scheduler (e.g. APScheduler) to scan every few hours.
-- 🧭 **More filters** — filter the dashboard by company, role, or state.
-- 🌍 **Retarget anywhere** — you can already change keywords, roles, and locations on
-  the Settings page; try pointing it at a totally different talent pool.
-- 🧠 **Better ranking** — score leads by seniority or recency and sort the table.
-- 📧 **Outreach templates** — generate a personalized message per lead with Gemini.
-- 🔗 **Slack/email alerts** — notify a channel when new high-value leads appear.
-- 🧪 **Add tests** — unit-test the extractor and filter with saved example posts.
+> [!WARNING]
+> **`Supabase upsert failed ... invalid input syntax for type date`.**
+> The LLM returned a non-ISO date (`"September 2025"`). The current code sanitizes this automatically (`_clean_date`) — if you see it, pull the latest `store.py`.
+
+> [!WARNING]
+> **`column "company_key" does not exist`.**
+> You haven't run the company migration. Run **`supabase/companies.sql`** in the SQL Editor.
+
+> [!NOTE]
+> **The Gemini source returns 0 posts.** This is expected — Google Search grounding can't reach individual LinkedIn posts. Use `LINKEDIN_SOURCE=all` (or SerpAPI / Apify / Perplexity). Gemini is used for *extraction*, not discovery.
+
+> [!NOTE]
+> **"Missing required keys" banner.** Add `GEMINI_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY` (and one search key) on the Settings page or in Secrets.
+
+> [!NOTE]
+> **"The AI rejected every request."** Your `GEMINI_API_KEY` is invalid or `GEMINI_MODEL` is wrong. Use a fresh key and `gemini-2.5-flash`.
 
 ---
 
-### 📚 Related tutorial
+## 9. What You Learned
 
-Want another end-to-end AI project? Check out the companion RAG agent tutorial:
-👉 **https://github.com/adityasharmadotai-hash/docs-reader-rag-agent/blob/main/TUTORIAL.md**
+- 🔍 **Search quality beats AI quality** — an LLM can't extract a post it never receives.
+- 🏗️ **Architecture over prompts** — an expansion pass and a merge stage moved the needle more than any prompt tweak.
+- 🔌 **A provider interface** makes multi-source discovery easy to extend.
+- 🏷️ **Normalization & confidence** turn noisy posts into a clean, ranked company list.
+- 🛡️ **Validate at the boundary** — one bad value shouldn't sink a whole batch.
+- 💰 **Budget governors** keep combinatorial pipelines from draining your API keys.
+- ☁️ **Deployment is engineering too** — pinning the Python version is not optional.
 
 ---
 
-⭐ **Star the repo:** https://github.com/adityasharmadotai-hash/amazing-ai-agents
-💼 **Follow on LinkedIn:** https://www.linkedin.com/in/aditya-hicounselor/
-📺 **Subscribe on YouTube:** https://www.youtube.com/channel/UCPjQtVNUrf7EKrm8ZoqrCAQ
+## 10. What's Next
 
-Happy building! 🚀
+- 🚀 **Better startup discovery** — weight the long tail so small companies surface.
+- 🔁 **Continuous monitoring** — re-scan discovered companies on a schedule.
+- 📍 **Improved location detection** — cut the "unknown location" rate.
+- 🧠 **Semantic deduplication** — catch reposts, not just matching URLs.
+- 🔌 **More providers** — the interface is ready; a new one is a single module.
+
+---
+
+<div align="center">
+
+**You built a real Company Discovery Engine — not just an LLM wrapper.** 🎉
+⭐ [Star the repo](https://github.com/adityasharmadotai-hash/amazing-ai-agents) · 💼 [Follow on LinkedIn](https://www.linkedin.com/in/aditya-hicounselor/)
+
+</div>

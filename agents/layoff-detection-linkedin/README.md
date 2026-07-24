@@ -1,170 +1,166 @@
 # 🎯 LayoffScout AI
 
-> An AI agent that finds **US software-engineering candidates from LinkedIn & news layoff posts**, extracts them with Google Gemini, and turns them into recruiter-ready leads — all in a single Streamlit app.
+**An AI-powered Company Discovery Engine that finds companies laying people off — across LinkedIn and news — and turns the affected talent into clean, queryable leads, focused on San Francisco & California.**
 
----
-
-⭐ **Star the repo:** https://github.com/adityasharmadotai-hash/amazing-ai-agents
-💼 **Follow on LinkedIn:** https://www.linkedin.com/in/aditya-hicounselor/
-📺 **Subscribe on YouTube:** https://www.youtube.com/channel/UCPjQtVNUrf7EKrm8ZoqrCAQ
-🚀 **Looking for jobs at top AI companies in the U.S.? Apply here:** https://docs.google.com/forms/d/e/1FAIpQLSc3gJssBV3B25EZ3sYA7Qcen9NbtOB_wgQaturfB7lTXuAdLQ/viewform
+> ⭐ **Star the repo:** https://github.com/adityasharmadotai-hash/amazing-ai-agents
+> 💼 **Follow on LinkedIn:** https://www.linkedin.com/in/aditya-hicounselor/
+> 📺 **Subscribe on YouTube:** https://www.youtube.com/channel/UCPjQtVNUrf7EKrm8ZoqrCAQ
+> 🚀 **Looking for jobs at top AI companies in the U.S.?** [Apply here](https://docs.google.com/forms/d/e/1FAIpQLSc3gJssBV3B25EZ3sYA7Qcen9NbtOB_wgQaturfB7lTXuAdLQ/viewform)
 
 ---
 
 ## 📖 Overview
 
-When a company runs layoffs, hundreds of talented engineers post "I've been impacted…"
-or "#OpenToWork" on LinkedIn within days. For a recruiter, that is a goldmine of
-warm, available candidates — but reading, filtering, and organizing those posts by
-hand is slow and easy to miss.
+When a company has layoffs, the affected people are some of the strongest hires on the market — for a short window before everyone else finds them. Recruiters track this manually: scrolling LinkedIn, checking [layoffs.fyi](https://layoffs.fyi), reading tech news. **LayoffScout AI automates that.**
 
-**LayoffScout AI** automates the whole funnel:
+The hard part isn't reading a post — a good LLM does that easily. The hard part is **discovery**: reliably *finding* the posts in the first place, especially for **small startups and private companies** that never make the news. LayoffScout treats this as a search-and-coverage problem: it merges multiple search providers, extracts the company and person with AI, then runs a **second-pass expansion search** for each discovered company to surface posts the generic search missed.
 
-1. **Searches** LinkedIn (and optionally news articles) for recent layoff / open-to-work posts.
-2. **Reads each post with AI** (Google Gemini) to pull out the person, their role, their
-   company, whether they were laid off, and whether they're open to work.
-3. **Filters** down to the target audience — US-based candidates in software-engineering roles.
-4. **Stores** qualified leads in a Supabase database (deduped by post URL).
-5. **Enriches** any lead into a verified work email with one click (via Wiza).
-6. **Tracks cost** of every scan (scraping + AI tokens) so you always know your spend.
-
-Everything is presented in a clean Streamlit dashboard with a dedicated **Settings**
-page that walks you through generating every API key.
-
-**The problem it solves:** turning a noisy, fast-moving stream of social posts into a
-structured, filtered, contactable candidate list — without manual sifting.
+> [!NOTE]
+> The full engineering story — including what broke and why — is in **[DEVELOPMENT_JOURNEY.md](DEVELOPMENT_JOURNEY.md)**.
 
 ---
 
 ## ✨ Features
 
-- 🔎 **Pick your source** — a simple toggle on the Settings page: **SerpAPI only** (free tier, easiest — Apify not needed at all) *or* Apify (paid, full LinkedIn scrape). Plus optional NewsAPI.
-- 🤖 **AI extraction** — Gemini reads each post and returns structured fields (person, role, company, open-to-work, summary).
-- 🎯 **Smart filtering** — keeps only US-based software engineers (36 target job titles), with profile-scrape fallback to resolve unknown locations.
-- 🗄️ **Persistent storage** — Supabase (Postgres) with automatic dedupe on post URL.
-- ✉️ **One-click enrichment** — turn a profile into a verified work email via Wiza.
-- 💰 **Live cost tracking** — per-scan and cumulative spend across Apify, Gemini, and SerpAPI.
-- 📥 **CSV export** — download the leads table any time.
-- ⚙️ **Guided Settings page** — every API key with step-by-step "how to generate it" instructions.
-- 🛠️ **No-code retargeting** — change the **search keywords**, **target job titles/roles**, and **target locations/countries** right from the Settings page. Point it at data scientists in Canada, designers worldwide, anything — no code edits.
-- 🔗 **Analyze a single URL** — paste one LinkedIn post to test the pipeline instantly.
+- 🔌 **Multi-provider discovery** — merges **SerpAPI + Apify + Perplexity + NewsAPI** in one scan and de-duplicates across them.
+- 🗣️ **Employee-language search** — searches phrases people actually post (`"today was my last day"`, `"impacted by the layoffs"`), which is how small startups surface.
+- 🤖 **AI extraction** — Gemini pulls out the **company, person, role, location, layoff signal**, and classifies the poster (employee / recruiter / founder / company / news).
+- 🔎 **Company expansion** — once a company is found, it auto-searches `"<company> layoffs"`, `"<company> restructuring"`, etc. to find more posts.
+- 🏢 **Company Discovery database** — the company is the primary entity, with a **confidence score** that rises as independent signals stack up.
+- 📍 **San Francisco & California scoping** — a strict location filter on both leads and companies.
+- 💰 **Budget governor** — expansion hard-stops once a scan crosses a spend ceiling.
+- 📊 **Streamlit dashboard** — scan, browse leads & companies, cost tracking, single-post analyzer, and optional email enrichment (Wiza).
 
 ---
 
-## 🔄 How it works
+## ⚙️ How It Works
 
 ```mermaid
 flowchart TD
-    A[⚡ Scan New Data] --> B[Collect posts]
-    B --> B1[LinkedIn · SerpAPI / Apify]
-    B --> B2[News · NewsAPI optional]
-    B1 --> C[🤖 Gemini extraction<br/>person · role · company · open-to-work]
-    B2 --> C
-    C --> D{US + software role?}
-    D -- no --> X[Discard]
-    D -- unknown location --> E[Scrape profile to resolve country]
-    E --> D
-    D -- yes --> F[(🗄️ Supabase<br/>layoff_posts)]
-    F --> G[📊 Streamlit dashboard<br/>table · cost · CSV]
-    G --> H[✉️ Wiza enrichment<br/>verified work email]
+    P[🔌 Search Providers<br/>SerpAPI · Apify · Perplexity · News] --> C[📥 Candidate Collection]
+    C --> E[🤖 AI Extraction<br/>company · person · role · location]
+    E --> N[🏷️ Company Normalization]
+    N --> Q[📋 Discovery Queue]
+    Q --> X[🔎 Company Expansion Search]
+    X --> M[🔗 Merge + 🧹 Deduplicate]
+    M --> S[⚖️ Confidence Scoring]
+    S --> DB[(🏢 Supabase Database)]
+    DB --> UI[📊 Streamlit Dashboard]
+    style P fill:#6d5efc,color:#fff
+    style E fill:#8b5cf6,color:#fff
+    style X fill:#f59e0b,color:#fff
+    style S fill:#22c55e,color:#fff
+    style DB fill:#ec4899,color:#fff
 ```
 
-**In one sentence:** *scrape recent layoff posts → let AI read them → keep US software
-engineers → store & enrich them → show it all in a dashboard.*
+1. **Search** every configured provider with a dictionary of layoff phrases (searched independently).
+2. **Extract** each post with Gemini into a structured record.
+3. **Normalize** company names so `Retell AI` = `Retell.ai`.
+4. **Expand** — re-search each discovered company to find more posts.
+5. **Merge, dedupe, and score** confidence from independent signals.
+6. **Store** in Supabase and browse in the dashboard.
 
 ---
 
-## 🧰 Tech stack
+## 🧰 Tech Stack
 
-| Layer | Technology | Why |
-|-------|-----------|-----|
-| UI / hosting | **Streamlit** + Streamlit Community Cloud | Fast to build, free public hosting |
-| AI extraction | **Google Gemini** (`google-generativeai`) | Reads unstructured posts → structured JSON |
-| LinkedIn source | **SerpAPI** or **Apify** | Cheap Google-indexed snippets vs. full LinkedIn scrape |
-| News source | **NewsAPI** (optional) | Extra layoff signal from articles |
-| Database | **Supabase** (Postgres + PostgREST) | Free managed Postgres with a REST API |
-| Enrichment | **Wiza** (optional) | Profile → verified work email |
-| HTTP | **httpx** | Direct REST calls (no heavy SDKs) |
-| Data | **pandas** | Table rendering + CSV export |
-| Language | **Python 3.10+** | — |
+| Technology | Role | Why |
+| --- | --- | --- |
+| 🐍 **Python 3.12** | Core language | Best ecosystem for data pipelines + LLM SDKs |
+| 🎈 **Streamlit** | Dashboard & UI | Fastest path from script to shareable app |
+| ✨ **Google Gemini** | AI extraction | Cheap, fast, strong structured-JSON extraction |
+| 🟢 **SerpAPI** | Search provider | Cheap Google-indexed LinkedIn posts |
+| 🔵 **Apify** | Search provider | Full LinkedIn post text; reaches non-indexed posts |
+| 🟠 **Perplexity** | Search provider | Live web search returning real LinkedIn URLs |
+| 📰 **NewsAPI** | Search provider | High-confidence layoff events for known companies |
+| 🐘 **Supabase (Postgres)** | Database | Managed Postgres + instant REST (PostgREST) |
+| ✉️ **Wiza** *(optional)* | Contact enrichment | Turn a profile into a verified work email |
+| 🔗 **httpx / tenacity** | HTTP + retries | Lightweight, no heavy ORM |
 
 ---
 
-## 📁 File structure
+## 📁 File Structure
 
-```
+```text
 layoff-detection-linkedin/
-├── streamlit_app.py            # Entry point / router (st.navigation, theme, branding)
-├── st_common.py                # Secrets ↔ env bridge, config metadata, brand design system
-├── views/
-│   ├── dashboard.py            # Dashboard (scan, leads, cost, analyze, enrich)
-│   └── settings.py             # API keys page with generation instructions
-├── agent/                      # The reusable pipeline (UI-agnostic)
-│   ├── config.py               # Reads env vars → typed settings
-│   ├── pipeline.py             # Orchestrates collect → extract → store
-│   ├── extract.py              # Turns a post into a structured record
-│   ├── llm.py                  # Single Gemini helper (complete_json)
-│   ├── enrich.py               # Wiza work-email lookup
-│   ├── enrich_location.py      # Profile scrape → resolve country
-│   ├── store.py                # Supabase upsert / list (via httpx)
-│   ├── usage.py                # Cost + credit tracking per scan
-│   ├── logbus.py               # Log fan-out helper
+├── streamlit_app.py            # Entry point / router (st.navigation, callable pages)
+├── st_common.py                # Config keys, secrets bootstrap, brand CSS
+├── requirements.txt            # Pinned deps (deploy on Python 3.12)
+├── .env.example                # Copy to .env and fill in keys
+├── agent/
+│   ├── config.py               # All settings + query dictionary + expansion knobs
+│   ├── llm.py                  # Shared Gemini client (complete_json)
+│   ├── extract.py              # LLM: post text → structured record
+│   ├── pipeline.py             # Orchestrates a scan (2-pass: collect→extract→expand→store)
+│   ├── discovery.py            # Company-expansion engine + budget governor
+│   ├── companies.py            # Company rollup: normalization + confidence
+│   ├── store.py                # Supabase persistence (raw httpx / PostgREST)
+│   ├── usage.py                # Cost / credit tracking
+│   ├── enrich_location.py      # Resolve unknown location via profile scrape (Apify)
+│   ├── enrich.py               # Wiza email enrichment (optional)
+│   ├── logbus.py               # Log capture helper
 │   └── sources/
-│       ├── linkedin.py         # SerpAPI / Apify LinkedIn search
-│       ├── apify_linkedin.py   # Apify actor client
-│       └── news.py             # NewsAPI source
-├── supabase/
-│   └── layoff_posts.sql        # Table schema — run once in Supabase
-├── requirements.txt            # Python dependencies
-├── .streamlit/
-│   ├── config.toml             # Theme + server config
-│   └── secrets.toml.example    # Template for local/cloud secrets
-├── .env.example                # Template for local .env
-├── README.md
-└── TUTORIAL.md                 # Full beginner walkthrough
+│       ├── linkedin.py         # SerpAPI backend + provider orchestrator (merge/dedupe)
+│       ├── apify_linkedin.py   # Apify LinkedIn scrape backend
+│       ├── perplexity_search.py# Perplexity /search backend
+│       ├── gemini_search.py    # Gemini grounding backend (kept for completeness)
+│       └── news.py             # NewsAPI backend
+├── views/
+│   ├── dashboard.py            # Scan, Leads, Companies, Analyze, Enrich, History
+│   └── settings.py             # API keys + options UI
+└── supabase/
+    ├── layoff_posts.sql        # Leads table schema
+    └── companies.sql           # Companies rollup table + migration
 ```
 
 ---
 
-## 🚀 Getting started
+## 🚀 Getting Started
 
 ### 1. Clone
 
 ```bash
 git clone https://github.com/adityasharmadotai-hash/amazing-ai-agents.git
-cd amazing-ai-agents/layoff-detection-linkedin   # or wherever this project lives
+cd amazing-ai-agents/agents/layoff-detection-linkedin
 ```
 
-### 2. Install
+### 2. Install (Python 3.12 recommended)
 
 ```bash
 python -m venv .venv
-# Windows:  .venv\Scripts\activate
-# macOS/Linux:
-source .venv/bin/activate
-
+source .venv/bin/activate      # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 3. Configure keys
+### 3. Set up Supabase
 
-Copy the template and fill in your keys:
+Create a free project at [supabase.com](https://supabase.com), then run **both** files in the Supabase **SQL Editor**:
 
-```bash
-cp .streamlit/secrets.toml.example .streamlit/secrets.toml
+```text
+supabase/layoff_posts.sql     # leads table
+supabase/companies.sql        # companies rollup table
 ```
 
-Then edit `.streamlit/secrets.toml`. **Minimum to run (SerpAPI-only):**
-`GEMINI_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, and `SERPAPI_KEY` —
-**no Apify account required.** (Only add `APIFY_TOKEN` if you switch the source to
-Apify on the Settings page.) Don't have the keys yet? Just start the app — the
-**Settings** page has a source picker and step-by-step instructions for generating
-each one.
+### 4. Add your keys
 
-### 4. Create the database table
+```bash
+cp .env.example .env
+```
 
-In your Supabase project, open the **SQL Editor** and run the contents of
-[`supabase/layoff_posts.sql`](supabase/layoff_posts.sql).
+Fill in `.env` (only the **required** ones are mandatory):
+
+| Key | Required? | Where to get it |
+| --- | --- | --- |
+| `GEMINI_API_KEY` | ✅ | https://aistudio.google.com/app/apikey |
+| `SUPABASE_URL` | ✅ | Supabase → Project Settings → Data API |
+| `SUPABASE_SERVICE_KEY` | ✅ | Supabase → Project Settings → API keys (service_role) |
+| `SERPAPI_KEY` | ◻️ | https://serpapi.com |
+| `APIFY_TOKEN` | ◻️ | https://apify.com → Settings → API tokens |
+| `PERPLEXITY_API_KEY` | ◻️ | https://www.perplexity.ai/settings/api |
+| `NEWSAPI_KEY` | ◻️ | https://newsapi.org |
+| `WIZA_API_KEY` | ◻️ | https://wiza.co (only for email enrichment) |
+
+> `LINKEDIN_SOURCE=all` merges every provider you have a key for. Add at least one search key (SerpAPI / Apify / Perplexity).
 
 ### 5. Run
 
@@ -172,52 +168,51 @@ In your Supabase project, open the **SQL Editor** and run the contents of
 streamlit run streamlit_app.py
 ```
 
-Open http://localhost:8501, go to **⚙️ Settings** to confirm your keys, then click
-**⚡ Scan New Data** on the dashboard.
+Open the local URL, go to **⚙️ Settings** to confirm your keys, then click **⚡ Scan New Data** on the dashboard.
 
 ---
 
 ## ☁️ Deployment (Streamlit Community Cloud)
 
-1. Push this project to a **public GitHub repo**.
-2. Go to **https://share.streamlit.io** and sign in with GitHub.
-3. Click **Create app → Deploy a public app from GitHub**.
-4. Select your repo, branch (`main`), and set **Main file path** to `streamlit_app.py`.
-5. Click **Advanced settings → Secrets** and paste your keys in TOML form
-   (use `.streamlit/secrets.toml.example` as the template — the Settings page also
-   generates a ready-to-paste block for you).
-6. Click **Deploy**. In ~1 minute you get a public URL like
-   `https://your-app.streamlit.app` — perfect for a LinkedIn post. 🎉
-
-> 🔒 **Never commit real keys.** `.gitignore` already excludes `.env` and
-> `.streamlit/secrets.toml`. Keys live only in the Streamlit Cloud **Secrets** box.
+1. Push this repo to GitHub.
+2. On [share.streamlit.io](https://share.streamlit.io), create an app pointing to `agents/layoff-detection-linkedin/streamlit_app.py`.
+3. In **Advanced settings**, set **Python version → `3.12`**.
+   > [!WARNING]
+   > The pinned dependencies have no wheels for Python 3.13/3.14 — on newer Python, `pillow`/`pandas` compile from source and the build **fails on missing zlib**. Pin **3.12** and it installs from wheels cleanly.
+4. Paste your keys into **⋮ → Settings → Secrets** in TOML form (the Settings page shows a ready-to-copy template).
+5. Run the two Supabase migrations (above) once.
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome!
+Contributions are welcome — this is a real, imperfect, in-progress system.
 
-1. Fork the repo and create a branch: `git checkout -b feature/my-idea`
-2. Make your change and test it locally with `streamlit run streamlit_app.py`.
-3. Commit, push, and open a Pull Request describing what and why.
+- 🐛 **Open an Issue** for bugs, missed companies, or ideas.
+- 🔀 **Submit a PR** — small and focused is best.
+- 🔌 **Add or improve a search provider** (the provider interface makes this the highest-leverage contribution).
+- 🤖 **Improve AI extraction** — better company-name extraction, location inference, poster-role classification.
 
-Good first issues: add a new source, add filters to the dashboard, or add tests for
-the extractor.
+> Contributions that improve **coverage** and **data quality** are worth more here than any model upgrade.
+
+---
+
+## 📚 Tutorial
+
+New to the stack? Follow the full step-by-step build guide:
+
+👉 **[Complete Tutorial](https://github.com/adityasharmadotai-hash/docs-reader-rag-agent/blob/main/TUTORIAL.md)** &nbsp;·&nbsp; and the local **[TUTORIAL.md](TUTORIAL.md)** in this repo.
 
 ---
 
 ## 📄 License
 
-Released under the **MIT License** — free to use, modify, and share. See `LICENSE`
-(add one if you fork this for your own use).
+Released under the **MIT License**. Use it, fork it, learn from it.
 
 ---
 
-## 📚 Full tutorial
+<div align="center">
 
-New to this? The step-by-step, beginner-friendly build guide is in
-**[TUTORIAL.md](TUTORIAL.md)**.
+**Built by [Aditya](https://www.linkedin.com/in/aditya-hicounselor/)** · ⭐ Star the repo if it helped you
 
-A companion tutorial for a related project is here:
-👉 https://github.com/adityasharmadotai-hash/docs-reader-rag-agent/blob/main/TUTORIAL.md
+</div>
