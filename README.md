@@ -52,6 +52,7 @@ AI Agents are autonomous software systems that use large language models (LLMs) 
 |---------|------|
 | Multi-MCP Agent | [Click here](https://github.com/adityasharmadotai-hash/amazing-ai-agents/tree/main/agents/mcp-agents/multi-mcp-agent) |
 | AI Database Analyst (MCP) | [Click here](https://github.com/adityasharmadotai-hash/amazing-ai-agents/tree/main/agents/mcp-agents/ai-database-analyst-mcp) |
+| AI Sales Team | [Click here](https://github.com/adityasharmadotai-hash/networking-app) |
 
 ### RAG (Retrieval-Augmented Generation) AI Agents
 
