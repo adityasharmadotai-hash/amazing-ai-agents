@@ -13,13 +13,17 @@ from __future__ import annotations
 import json
 import os
 import re
+import time
+
+from . import config
 
 try:
     import streamlit as st
 except Exception:  # pragma: no cover
     st = None
 
-MODEL_NAME = "gemini-2.5-pro"
+log = config.get_logger("admanager.agent")
+MODEL_NAME = config.GEMINI_MODEL
 
 _PERSONA = (
     "You are the marketing analyst for a recruiting company that runs Instagram "
@@ -59,17 +63,21 @@ def _model(json_mode: bool = True):
     return genai.GenerativeModel(MODEL_NAME, generation_config=gen_config)
 
 
-def _call(prompt: str, json_mode: bool = True) -> str:
+def _call(prompt: str, json_mode: bool = True, retries: int = 2) -> str:
     if not is_configured():
         raise AgentError("GEMINI_API_KEY is not set.")
-    try:
-        model = _model(json_mode=json_mode)
-        resp = model.generate_content(f"{_PERSONA}\n\n{prompt}")
-        return (resp.text or "").strip()
-    except AgentError:
-        raise
-    except Exception as e:  # pragma: no cover - network/SDK errors
-        raise AgentError(f"Gemini call failed: {e}") from e
+    last_err: Exception | None = None
+    for attempt in range(retries + 1):
+        try:
+            model = _model(json_mode=json_mode)
+            resp = model.generate_content(f"{_PERSONA}\n\n{prompt}")
+            return (resp.text or "").strip()
+        except Exception as e:  # pragma: no cover - network/SDK errors
+            last_err = e
+            log.warning("Gemini call failed (attempt %d/%d): %s", attempt + 1, retries + 1, e)
+            if attempt < retries:
+                time.sleep(1.5 * (attempt + 1))
+    raise AgentError(f"Gemini call failed after {retries + 1} attempts: {last_err}")
 
 
 def _safe_json(text: str, default):
@@ -143,11 +151,93 @@ Return ONLY a JSON array (max 8 items), each:
   "type": "one of: Increase budget, Decrease budget, Pause ad, Scale ad, Test new audience, Improve ad copy, Improve headline, Improve CTA, New creative idea, A/B test",
   "target": "which campaign/ad/audience it applies to",
   "rationale": "1-2 sentences citing the numbers",
-  "priority": "high | medium | low"
+  "priority": "high | medium | low",
+  "confidence": <integer 0-100 — how sure you are this helps>,
+  "expected_impact": "short quantified outcome, e.g. 'CPL down ~15%' or '+8 qualified leads/wk'"
 }}
 """.strip()
     data = _safe_json(_call(prompt), [])
     return data if isinstance(data, list) else []
+
+
+# ── Creative suggestions (ad ideas) ───────────────────────────────────────────
+def creative_suggestions(stats: dict, count: int = 4) -> list[dict]:
+    prompt = f"""
+Based on this performance + audience data, propose {count} fresh Instagram ad
+creative concepts to attract QUALIFIED Bay Area job seekers. Favor formats and
+angles that our best-performing placements/audiences suggest.
+
+{_compact(stats)}
+
+Return ONLY a JSON array, each item:
+{{
+  "format": "Reel | Story | Carousel | Single image",
+  "angle": "the core idea / theme in a few words",
+  "hook": "the first line / on-screen text that stops the scroll",
+  "caption": "1-2 sentence caption",
+  "cta": "the call to action",
+  "why": "why this should work, citing our data"
+}}
+""".strip()
+    data = _safe_json(_call(prompt), [])
+    return data if isinstance(data, list) else []
+
+
+# ── Audience targeting recommendations ────────────────────────────────────────
+def audience_recommendations(audience_stats: dict) -> dict:
+    prompt = f"""
+Here is our audience/age/ad lead-quality breakdown (qualified_rate = % of leads
+the recruiting team marked Qualified/Interview/Hired):
+
+{json.dumps(audience_stats, default=str)}
+
+Recommend how to reallocate targeting to raise lead quality and lower wasted spend.
+Return ONLY JSON:
+{{
+  "scale_up": ["audiences/ages to invest more in, with the reason"],
+  "scale_down": ["audiences/ages to cut or refine, with the reason"],
+  "test_ideas": ["new audiences worth testing"],
+  "summary": "one-sentence takeaway"
+}}
+""".strip()
+    return _safe_json(_call(prompt),
+                      {"scale_up": [], "scale_down": [], "test_ideas": [], "summary": ""})
+
+
+# ── Executive summary (richer than daily_summary) ─────────────────────────────
+def executive_summary(stats: dict) -> dict:
+    prompt = f"""
+Write a concise executive summary for leadership from this snapshot, including the
+health score and the 7-day forecast that are embedded in the data.
+
+{_compact(stats)}
+
+Return ONLY JSON:
+{{
+  "headline": "one punchy sentence on where the account stands",
+  "health_read": "interpret the health score in plain English",
+  "wins": ["2-3 concrete wins with numbers"],
+  "risks": ["2-3 concrete risks with numbers"],
+  "forecast_note": "what the next 7 days look like and why",
+  "priorities": ["the top 3 actions for this week, in order"]
+}}
+""".strip()
+    return _safe_json(
+        _call(prompt),
+        {"headline": "", "health_read": "", "wins": [], "risks": [],
+         "forecast_note": "", "priorities": []},
+    )
+
+
+# ── Short forecast narrative ──────────────────────────────────────────────────
+def forecast_narrative(forecast_summary: dict) -> str:
+    if not forecast_summary:
+        return "Not enough history yet to forecast — sync a few more days of data."
+    prompt = (
+        "In 2-3 plain-English sentences, explain this 7-day ad forecast for a "
+        "non-technical marketer and what to watch:\n" + json.dumps(forecast_summary, default=str)
+    )
+    return _call(prompt, json_mode=False)
 
 
 # ── §6 Learn from lead feedback ───────────────────────────────────────────────

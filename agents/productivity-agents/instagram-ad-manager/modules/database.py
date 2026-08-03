@@ -17,14 +17,20 @@ import sqlite3
 from datetime import date, datetime
 from typing import Any, Iterable
 
+from . import config
+
 try:
     import streamlit as st
 except Exception:  # pragma: no cover - allows use outside Streamlit
     st = None
 
+log = config.get_logger("admanager.db")
+
 # ── Paths ─────────────────────────────────────────────────────────────────────
+# `ADMANAGER_DB_PATH` lets the app and the background sync job share a persistent
+# location (e.g. a mounted disk) instead of the ephemeral default.
 _DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
-DB_PATH = os.path.join(_DATA_DIR, "admanager.db")
+DB_PATH = os.environ.get("ADMANAGER_DB_PATH") or os.path.join(_DATA_DIR, "admanager.db")
 
 LEAD_STATUSES = [
     "New",
@@ -44,7 +50,7 @@ REJECTED_STATUSES = {"Rejected", "Invalid", "Duplicate", "No Response"}
 
 # ── Connection ────────────────────────────────────────────────────────────────
 def _connect() -> sqlite3.Connection:
-    os.makedirs(_DATA_DIR, exist_ok=True)
+    os.makedirs(os.path.dirname(DB_PATH) or ".", exist_ok=True)
     conn = sqlite3.connect(DB_PATH, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL;")
@@ -120,32 +126,114 @@ CREATE TABLE IF NOT EXISTS recommendations (
 CREATE TABLE IF NOT EXISTS analyses (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     date        TEXT,
-    kind        TEXT,                     -- performance | summary | lead_learning
+    kind        TEXT,                     -- performance | summary | lead_learning | health | ...
     payload     TEXT,
     created_at  TEXT
 );
 
+CREATE TABLE IF NOT EXISTS notifications (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at  TEXT,
+    severity    TEXT DEFAULT 'info',      -- info | success | warning | critical
+    title       TEXT,
+    body        TEXT,
+    category    TEXT,
+    read        INTEGER DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS sync_log (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    started_at   TEXT,
+    finished_at  TEXT,
+    status       TEXT,                    -- running | success | error | partial
+    source       TEXT,                    -- manual | scheduled | sample
+    campaigns    INTEGER DEFAULT 0,
+    metrics      INTEGER DEFAULT 0,
+    leads        INTEGER DEFAULT 0,
+    ran_ai       INTEGER DEFAULT 0,
+    message      TEXT
+);
+
+CREATE TABLE IF NOT EXISTS app_meta (
+    key    TEXT PRIMARY KEY,
+    value  TEXT
+);
+
 CREATE INDEX IF NOT EXISTS idx_metrics_date ON metrics_daily(date);
+CREATE INDEX IF NOT EXISTS idx_metrics_campaign ON metrics_daily(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_leads_received ON leads(received_at);
 CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
+CREATE INDEX IF NOT EXISTS idx_leads_campaign ON leads(campaign_id);
+CREATE INDEX IF NOT EXISTS idx_notif_read ON notifications(read);
 """
+
+# Columns added after the first release — applied idempotently in _migrate().
+_MIGRATIONS = {
+    "recommendations": [
+        ("confidence", "REAL DEFAULT 0"),
+        ("expected_impact", "TEXT DEFAULT ''"),
+        ("priority", "TEXT DEFAULT 'medium'"),
+    ],
+}
 
 _INITED = False
 
 
 def init_db(conn: sqlite3.Connection | None = None) -> None:
-    """Create tables once (idempotent)."""
+    """Create tables once and apply column migrations (idempotent)."""
     global _INITED
     if _INITED:
         return
     conn = conn or _get_conn()
     conn.executescript(_SCHEMA)
+    _migrate(conn)
     conn.commit()
     _INITED = True
 
 
+def _migrate(conn: sqlite3.Connection) -> None:
+    for table, cols in _MIGRATIONS.items():
+        existing = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+        for name, decl in cols:
+            if name not in existing:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {decl}")
+                log.info("migrated: added %s.%s", table, name)
+
+
 def _now() -> str:
     return datetime.now().isoformat(timespec="seconds")
+
+
+# ── Data version (drives Streamlit cache invalidation) ────────────────────────
+def _bump() -> None:
+    conn = get_conn()
+    conn.execute(
+        "INSERT INTO app_meta(key, value) VALUES('data_version', '1') "
+        "ON CONFLICT(key) DO UPDATE SET value = CAST(value AS INTEGER) + 1"
+    )
+    conn.commit()
+
+
+def get_version() -> int:
+    conn = get_conn()
+    row = conn.execute("SELECT value FROM app_meta WHERE key='data_version'").fetchone()
+    return int(row["value"]) if row else 0
+
+
+def set_meta(key: str, value: str) -> None:
+    conn = get_conn()
+    conn.execute(
+        "INSERT INTO app_meta(key, value) VALUES(?, ?) "
+        "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+        (key, value),
+    )
+    conn.commit()
+
+
+def get_meta(key: str, default: str | None = None) -> str | None:
+    conn = get_conn()
+    row = conn.execute("SELECT value FROM app_meta WHERE key=?", (key,)).fetchone()
+    return row["value"] if row else default
 
 
 # ── Upserts (from Meta sync or demo seed) ─────────────────────────────────────
@@ -171,6 +259,7 @@ def upsert_campaigns(rows: Iterable[dict]) -> int:
         )
         n += 1
     conn.commit()
+    _bump()
     return n
 
 
@@ -199,6 +288,7 @@ def upsert_metrics(rows: Iterable[dict]) -> int:
         )
         n += 1
     conn.commit()
+    _bump()
     return n
 
 
@@ -231,6 +321,7 @@ def upsert_leads(rows: Iterable[dict]) -> int:
         )
         n += 1
     conn.commit()
+    _bump()
     return n
 
 
@@ -299,6 +390,7 @@ def update_lead_status(lead_id: str, status: str) -> None:
     conn = get_conn()
     conn.execute("UPDATE leads SET status = ? WHERE id = ?", (status, lead_id))
     conn.commit()
+    _bump()
 
 
 def ad_names() -> list[str]:
@@ -310,14 +402,26 @@ def ad_names() -> list[str]:
 
 
 # ── Recommendations (continuous learning) ─────────────────────────────────────
-def add_recommendation(rec_type: str, target: str, rationale: str, rec_date: str | None = None) -> int:
+def add_recommendation(
+    rec_type: str,
+    target: str,
+    rationale: str,
+    rec_date: str | None = None,
+    confidence: float = 0.0,
+    expected_impact: str = "",
+    priority: str = "medium",
+) -> int:
     conn = get_conn()
     cur = conn.execute(
-        """INSERT INTO recommendations (date, type, target, rationale, status, outcome, created_at)
-           VALUES (?, ?, ?, ?, 'pending', 'unknown', ?)""",
-        (rec_date or date.today().isoformat(), rec_type, target, rationale, _now()),
+        """INSERT INTO recommendations
+               (date, type, target, rationale, status, outcome, created_at,
+                confidence, expected_impact, priority)
+           VALUES (?, ?, ?, ?, 'pending', 'unknown', ?, ?, ?, ?)""",
+        (rec_date or date.today().isoformat(), rec_type, target, rationale, _now(),
+         float(confidence or 0), expected_impact or "", priority or "medium"),
     )
     conn.commit()
+    _bump()
     return int(cur.lastrowid)
 
 
@@ -331,6 +435,7 @@ def update_recommendation(rec_id: int, status: str | None = None, outcome: str |
             (outcome, _now(), rec_id),
         )
     conn.commit()
+    _bump()
 
 
 def get_recommendations(limit: int | None = None) -> list[dict]:
@@ -356,6 +461,7 @@ def save_analysis(kind: str, payload: dict, analysis_date: str | None = None) ->
         (analysis_date or date.today().isoformat(), kind, json.dumps(payload), _now()),
     )
     conn.commit()
+    _bump()
     return int(cur.lastrowid)
 
 
@@ -410,7 +516,99 @@ def date_bounds() -> tuple[str | None, str | None]:
 
 
 def clear_all() -> None:
+    """Wipe content + notifications. Keeps sync_log (audit trail) intact so an
+    in-progress sync that reseeds sample data doesn't erase its own log row."""
     conn = get_conn()
-    for t in ("campaigns", "metrics_daily", "leads", "recommendations", "analyses"):
+    for t in ("campaigns", "metrics_daily", "leads", "recommendations", "analyses",
+              "notifications"):
         conn.execute(f"DELETE FROM {t}")
     conn.commit()
+    _bump()
+
+
+# ── Notifications (notification center) ───────────────────────────────────────
+def add_notification(title: str, body: str, severity: str = "info", category: str = "General") -> int:
+    conn = get_conn()
+    cur = conn.execute(
+        "INSERT INTO notifications (created_at, severity, title, body, category, read) "
+        "VALUES (?, ?, ?, ?, ?, 0)",
+        (_now(), severity, title, body, category),
+    )
+    conn.commit()
+    _bump()
+    return int(cur.lastrowid)
+
+
+def get_notifications(unread_only: bool = False, limit: int = 100) -> list[dict]:
+    conn = get_conn()
+    q = "SELECT * FROM notifications"
+    if unread_only:
+        q += " WHERE read = 0"
+    q += " ORDER BY id DESC LIMIT ?"
+    return [dict(r) for r in conn.execute(q, (limit,)).fetchall()]
+
+
+def unread_count() -> int:
+    conn = get_conn()
+    return conn.execute("SELECT COUNT(*) AS c FROM notifications WHERE read = 0").fetchone()["c"]
+
+
+def mark_notification_read(notif_id: int) -> None:
+    conn = get_conn()
+    conn.execute("UPDATE notifications SET read = 1 WHERE id = ?", (notif_id,))
+    conn.commit()
+    _bump()
+
+
+def mark_all_read() -> None:
+    conn = get_conn()
+    conn.execute("UPDATE notifications SET read = 1 WHERE read = 0")
+    conn.commit()
+    _bump()
+
+
+def clear_notifications() -> None:
+    conn = get_conn()
+    conn.execute("DELETE FROM notifications")
+    conn.commit()
+    _bump()
+
+
+# ── Sync log ──────────────────────────────────────────────────────────────────
+def start_sync(source: str) -> int:
+    conn = get_conn()
+    cur = conn.execute(
+        "INSERT INTO sync_log (started_at, status, source) VALUES (?, 'running', ?)",
+        (_now(), source),
+    )
+    conn.commit()
+    return int(cur.lastrowid)
+
+
+def finish_sync(sync_id: int, status: str, campaigns: int = 0, metrics: int = 0,
+                leads: int = 0, ran_ai: bool = False, message: str = "") -> None:
+    conn = get_conn()
+    conn.execute(
+        """UPDATE sync_log SET finished_at=?, status=?, campaigns=?, metrics=?, leads=?,
+               ran_ai=?, message=? WHERE id=?""",
+        (_now(), status, campaigns, metrics, leads, 1 if ran_ai else 0, message, sync_id),
+    )
+    conn.commit()
+    if status in ("success", "partial"):
+        set_meta("last_sync_at", _now())
+        set_meta("last_sync_status", status)
+    _bump()
+
+
+def last_sync() -> dict | None:
+    conn = get_conn()
+    row = conn.execute(
+        "SELECT * FROM sync_log WHERE status != 'running' ORDER BY id DESC LIMIT 1"
+    ).fetchone()
+    return dict(row) if row else None
+
+
+def recent_syncs(limit: int = 12) -> list[dict]:
+    conn = get_conn()
+    rows = conn.execute("SELECT * FROM sync_log ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
+    return [dict(r) for r in rows]

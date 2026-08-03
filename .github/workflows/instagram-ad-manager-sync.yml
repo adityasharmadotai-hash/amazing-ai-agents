@@ -1,0 +1,77 @@
+name: Instagram Ad Manager — scheduled sync
+
+# Background sync for agents/productivity-agents/instagram-ad-manager.
+# Streamlit can't run autonomous jobs, so this workflow periodically pulls Meta
+# Ads data + leads, runs Gemini analysis, refreshes recommendations/notifications,
+# and commits the updated SQLite database back so the deployed app shows fresh data.
+
+on:
+  schedule:
+    - cron: "0 13 * * *"   # daily at 13:00 UTC (~6am PT). Adjust as needed.
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "History window (days)"
+        default: "70"
+      run_ai:
+        description: "Run Gemini AI stage (true/false)"
+        default: "true"
+      sample:
+        description: "Seed sample data instead of Meta (true/false)"
+        default: "false"
+
+permissions:
+  contents: write   # needed to commit the refreshed database back
+
+concurrency:
+  group: iam-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      META_ACCESS_TOKEN: ${{ secrets.META_ACCESS_TOKEN }}
+      META_AD_ACCOUNT_ID: ${{ secrets.META_AD_ACCOUNT_ID }}
+      APP_DIR: agents/productivity-agents/instagram-ad-manager
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        working-directory: ${{ env.APP_DIR }}
+        run: pip install -r requirements.txt
+
+      - name: Run sync
+        working-directory: ${{ env.APP_DIR }}
+        run: |
+          ARGS="--days ${{ github.event.inputs.days || '70' }} --source scheduled"
+          if [ "${{ github.event.inputs.run_ai }}" = "false" ]; then ARGS="$ARGS --no-ai"; fi
+          if [ "${{ github.event.inputs.sample }}" = "true" ]; then ARGS="$ARGS --sample"; fi
+          echo "python sync.py $ARGS"
+          python sync.py $ARGS
+
+      - name: Commit refreshed database
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f "$APP_DIR/data/admanager.db"
+          if git diff --staged --quiet; then
+            echo "No database changes to commit."
+          else
+            git commit -m "chore(iam): scheduled data sync [skip ci]"
+            git push
+          fi
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sync-logs
+          path: ${{ env.APP_DIR }}/data/admanager.log
+          if-no-files-found: ignore

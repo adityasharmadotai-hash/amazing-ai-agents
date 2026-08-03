@@ -13,7 +13,9 @@ from __future__ import annotations
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 
-from . import database as db
+import numpy as np
+
+from . import config, database as db
 
 CANONICAL = "All"
 
@@ -332,4 +334,148 @@ def build_stats_payload(metrics: list[dict], campaigns: list[dict], leads: list[
         "placements": placement_breakdown(metrics),
         "lead_quality": lq,
         "recent_series": time_series(metrics)[-14:],
+        "health": marketing_health(metrics, campaigns, leads),
+        "forecast": forecast(metrics).get("summary", {}),
+        "audience_insights": audience_insights(leads),
+    }
+
+
+# ── Marketing health score (deterministic composite, 0–100) ───────────────────
+def _clamp(v: float, lo: float = 0.0, hi: float = 100.0) -> float:
+    return max(lo, min(hi, v))
+
+
+def marketing_health(metrics: list[dict], campaigns: list[dict], leads: list[dict]) -> dict:
+    b = config.BENCHMARKS
+    k = dashboard_kpis(metrics, leads, campaigns)
+    wow = week_over_week(metrics)["delta_pct"]
+    trends = campaign_trends(metrics, campaigns)
+    lq = lead_quality(leads)
+
+    total = sum(g["total"] for g in lq["by_audience"]) or 1
+    qualified = sum(g["qualified"] for g in lq["by_audience"])
+    quality_rate = qualified / total * 100
+
+    cpl = k["avg_cpl"] or 0.0
+    cost_score = _clamp(b["cpl"] / cpl * 100) if cpl else 0.0
+    click_score = _clamp(k["avg_ctr"] / b["ctr"] * 75) if b["ctr"] else 0.0
+    quality_score = _clamp(quality_rate / b["quality_rate"] * 70) if b["quality_rate"] else 0.0
+    conv_score = _clamp(k["conversion_rate"] / b["conversion"] * 75) if b["conversion"] else 0.0
+    # Momentum: CPL falling and leads rising is good.
+    momentum = _clamp(50 - wow.get("cpl", 0) * 1.4 + wow.get("leads", 0) * 0.8)
+    imp, dec = len(trends["improving"]), len(trends["declining"])
+    consistency = _clamp(50 + (imp - dec) * 18)
+
+    components = [
+        {"name": "Cost efficiency (CPL)", "score": round(cost_score), "weight": 0.25,
+         "detail": f"Avg CPL ${cpl:.2f} vs ${b['cpl']:.0f} target"},
+        {"name": "Lead quality", "score": round(quality_score), "weight": 0.25,
+         "detail": f"{quality_rate:.0f}% qualified vs {b['quality_rate']:.0f}% target"},
+        {"name": "Momentum (WoW)", "score": round(momentum), "weight": 0.20,
+         "detail": f"CPL {wow.get('cpl',0):+.0f}%, leads {wow.get('leads',0):+.0f}% week over week"},
+        {"name": "Click appeal (CTR)", "score": round(click_score), "weight": 0.12,
+         "detail": f"CTR {k['avg_ctr']:.2f}% vs {b['ctr']:.1f}% target"},
+        {"name": "Conversion", "score": round(conv_score), "weight": 0.10,
+         "detail": f"{k['conversion_rate']:.2f}% click→lead vs {b['conversion']:.0f}% target"},
+        {"name": "Consistency", "score": round(consistency), "weight": 0.08,
+         "detail": f"{imp} improving vs {dec} declining campaigns"},
+    ]
+    score = round(sum(c["score"] * c["weight"] for c in components))
+
+    if score >= 85:
+        grade, label = "A", "Excellent"
+    elif score >= 70:
+        grade, label = "B", "Healthy"
+    elif score >= 55:
+        grade, label = "C", "Fair"
+    elif score >= 40:
+        grade, label = "D", "Needs attention"
+    else:
+        grade, label = "F", "At risk"
+
+    ranked = sorted(components, key=lambda c: c["score"])
+    return {
+        "score": score, "grade": grade, "label": label, "components": components,
+        "weakest": ranked[0]["name"], "strongest": ranked[-1]["name"],
+    }
+
+
+# ── Forecasting (linear projection with an 80% band) ──────────────────────────
+def _project(y: list[float], horizon: int) -> tuple[list[float], list[float], list[float], float]:
+    n = len(y)
+    x = np.arange(n)
+    arr = np.array(y, dtype=float)
+    slope, intercept = np.polyfit(x, arr, 1)
+    fit = slope * x + intercept
+    resid = float(np.std(arr - fit)) if n > 2 else 0.0
+    fx = np.arange(n, n + horizon)
+    pred = slope * fx + intercept
+    band = 1.28 * resid  # ~80% interval
+    lower = np.clip(pred - band, 0, None)
+    upper = np.clip(pred + band, 0, None)
+    return (list(np.clip(pred, 0, None)), list(lower), list(upper), float(slope))
+
+
+def forecast(metrics: list[dict], horizon: int = 7, history_days: int = 21) -> dict:
+    series = time_series(metrics)
+    if len(series) < 4:
+        return {"history": series, "spend": [], "leads": [], "cpl": [], "summary": {}}
+
+    recent = series[-max(history_days, 8):]
+    last_date = date.fromisoformat(recent[-1]["date"])
+    fut_dates = [(last_date + timedelta(days=i + 1)).isoformat() for i in range(horizon)]
+
+    spend_p, spend_lo, spend_hi, spend_slope = _project([r["spend"] for r in recent], horizon)
+    leads_p, leads_lo, leads_hi, leads_slope = _project([r["leads"] for r in recent], horizon)
+
+    spend_fc = [{"date": d, "value": round(v, 2), "lower": round(lo, 2), "upper": round(hi, 2)}
+                for d, v, lo, hi in zip(fut_dates, spend_p, spend_lo, spend_hi)]
+    leads_fc = [{"date": d, "value": round(v, 1), "lower": round(lo, 1), "upper": round(hi, 1)}
+                for d, v, lo, hi in zip(fut_dates, leads_p, leads_lo, leads_hi)]
+    cpl_fc = [{"date": d, "value": round(safe_div(s["value"], l["value"]), 2)}
+              for d, s, l in zip(fut_dates, spend_fc, leads_fc)]
+
+    next7_spend = round(sum(s["value"] for s in spend_fc), 2)
+    next7_leads = round(sum(l["value"] for l in leads_fc), 1)
+    summary = {
+        "next7_spend": next7_spend,
+        "next7_leads": next7_leads,
+        "projected_cpl": round(safe_div(next7_spend, next7_leads), 2),
+        "spend_direction": "rising" if spend_slope > 0 else "falling" if spend_slope < 0 else "flat",
+        "leads_direction": "rising" if leads_slope > 0 else "falling" if leads_slope < 0 else "flat",
+        "horizon_days": horizon,
+    }
+    hist = [{"date": r["date"], "spend": r["spend"], "leads": r["leads"], "cpl": r["cpl"]} for r in recent]
+    return {"history": hist, "spend": spend_fc, "leads": leads_fc, "cpl": cpl_fc, "summary": summary}
+
+
+# ── Audience insights (targeting intelligence) ────────────────────────────────
+def audience_insights(leads: list[dict], min_volume: int = 3) -> dict:
+    lq = lead_quality(leads)
+
+    def rank(groups: list[dict]) -> dict:
+        eligible = [g for g in groups if g["total"] >= min_volume]
+        eligible.sort(key=lambda g: g["qualified_rate"], reverse=True)
+        return {"top": eligible[:3], "bottom": eligible[-3:][::-1] if len(eligible) > 3 else []}
+
+    aud = rank(lq["by_audience"])
+    age = rank(lq["by_age_range"])
+    ad = rank(lq["by_ad"])
+
+    actions = []
+    if aud["top"]:
+        actions.append(f"Scale spend on '{aud['top'][0]['group']}' "
+                       f"({aud['top'][0]['qualified_rate']:.0f}% qualified).")
+    if aud["bottom"]:
+        actions.append(f"Reduce or refine '{aud['bottom'][0]['group']}' "
+                       f"({aud['bottom'][0]['qualified_rate']:.0f}% qualified).")
+    if age["top"]:
+        actions.append(f"Best age band: {age['top'][0]['group']} "
+                       f"({age['top'][0]['qualified_rate']:.0f}% qualified).")
+
+    return {
+        "by_audience": aud, "by_age": age, "by_ad": ad,
+        "best_audience": aud["top"][0]["group"] if aud["top"] else None,
+        "worst_audience": aud["bottom"][0]["group"] if aud["bottom"] else None,
+        "actions": actions,
     }

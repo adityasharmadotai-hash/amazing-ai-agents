@@ -1,0 +1,17 @@
+18:53:54  INFO    admanager.db: migrated: added recommendations.confidence
+18:53:54  INFO    admanager.db: migrated: added recommendations.expected_impact
+18:53:54  INFO    admanager.db: migrated: added recommendations.priority
+19:06:29  INFO    admanager.cli: Starting sync (source=scheduled, days=70, ai=False, sample=True)
+19:06:29  INFO    admanager.sync: Seeding sample data (70 days)
+19:06:29  INFO    admanager.sync: Sync success: Data: 6 campaigns, 1520 metric rows, 304 leads. Health score: 55/100 (Fair). 6 new notification(s).
+19:06:29  INFO    admanager.cli: • Data: 6 campaigns, 1520 metric rows, 304 leads.
+19:06:29  INFO    admanager.cli: • Health score: 55/100 (Fair).
+19:06:29  INFO    admanager.cli: • 6 new notification(s).
+19:06:29  INFO    admanager.cli: Sync finished with status: success
+19:19:21  INFO    admanager.cli: Starting sync (source=scheduled, days=70, ai=False, sample=True)
+19:19:21  INFO    admanager.sync: Seeding sample data (70 days)
+19:19:21  INFO    admanager.sync: Sync success: Data: 6 campaigns, 1520 metric rows, 304 leads. Health score: 55/100 (Fair). 6 new notification(s).
+19:19:21  INFO    admanager.cli: • Data: 6 campaigns, 1520 metric rows, 304 leads.
+19:19:21  INFO    admanager.cli: • Health score: 55/100 (Fair).
+19:19:21  INFO    admanager.cli: • 6 new notification(s).
+19:19:21  INFO    admanager.cli: Sync finished with status: success
