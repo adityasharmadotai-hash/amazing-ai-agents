@@ -15,3 +15,5 @@
 19:19:21  INFO    admanager.cli: • Health score: 55/100 (Fair).
 19:19:21  INFO    admanager.cli: • 6 new notification(s).
 19:19:21  INFO    admanager.cli: Sync finished with status: success
+19:26:29  INFO    admanager.sync: Recomputing insights on existing data
+19:26:29  INFO    admanager.sync: Sync success: Data: 6 campaigns, 1520 metric rows, 304 leads. Health score: 55/100 (Fair). 6 new notification(s).
