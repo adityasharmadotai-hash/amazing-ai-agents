@@ -16,11 +16,13 @@
 
 ---
 
-> **What you'll build:** A Streamlit app that pulls live Instagram ad data from the
-> Meta Marketing API, computes campaign metrics (CTR/CPC/CPL), and uses **Google
-> Gemini 2.5 Pro** to analyze performance, recommend daily optimizations, learn
-> from lead-quality feedback, and answer questions in a chat assistant. Data is
-> stored in SQLite so recommendations and lead statuses persist.
+> **What you'll build:** A premium Streamlit app that pulls live Instagram ad data
+> from the Meta Marketing API, computes campaign metrics (CTR/CPC/CPL), a **marketing
+> health score**, and a **7-day forecast**, then uses **Google Gemini 2.5 Pro** to
+> analyze performance, recommend optimizations (with confidence + expected impact),
+> propose ad creative, and answer questions. A modern Instagram-inspired UI, a
+> **notification center**, and a **background sync job** (GitHub Actions) round it out.
+> Data lives in SQLite so recommendations, lead statuses, and history persist.
 
 ---
 
@@ -41,6 +43,8 @@
 13. [Deploying to Streamlit Cloud](#13-deploying-to-streamlit-cloud)
 14. [Common Errors & Fixes](#14-common-errors--fixes)
 15. [What You Learned](#15-what-you-learned)
+16. [Premium Upgrade: Health, Forecast, Notifications](#16-premium-upgrade-health-forecast-notifications)
+17. [Automating Sync with GitHub Actions](#17-automating-sync-with-github-actions)
 
 ---
 
@@ -359,6 +363,80 @@ META_AD_ACCOUNT_ID = "act_1234567890"
 - Building a **continuous-learning loop**: store recommendations → track outcomes →
   feed them back into tomorrow's prompt
 - Shipping it all as a filterable **Streamlit** dashboard with editable leads and chat
+
+---
+
+## 16. Premium Upgrade: Health, Forecast, Notifications
+
+The app grew from a solid dashboard into a **Premium AI Marketing Assistant**. The key
+additions, and where they live:
+
+- **Design system** — [`modules/theme.py`](./modules/theme.py) holds the Instagram-gradient
+  glassmorphism CSS plus HTML builders (`kpi_card`, `hero`, `section`, pills). [`modules/ui.py`](./modules/ui.py)
+  wraps Streamlit + Plotly with a consistent chart theme, a health gauge, and a forecast chart.
+- **Marketing health score** — `analytics.marketing_health()` blends cost efficiency, lead
+  quality, momentum (week-over-week), CTR, conversion, and consistency into a weighted 0–100
+  grade with a component breakdown. Fully deterministic, so the number is reproducible.
+- **Forecasting** — `analytics.forecast()` fits a linear trend (numpy) over recent daily data
+  to project the next 7 days of spend, leads, and CPL with an 80% band.
+- **Richer AI** — `agent.py` gained `creative_suggestions()`, `audience_recommendations()`,
+  `executive_summary()`, and `forecast_narrative()`, and `daily_recommendations()` now returns
+  a **confidence score** and **expected impact** for each action.
+- **Notifications** — `sync_service.generate_notifications()` turns thresholds (CPL spikes, lead
+  drops, top performers, health changes) into alerts stored in a `notifications` table and shown
+  in the Notification Center.
+- **Performance** — every DB write bumps a `data_version` counter; Streamlit's `@st.cache_data`
+  loaders key on it, so reads are cached and auto-invalidate on any change. `database.py` also
+  gained indexes and idempotent column migrations.
+
+> Nothing was removed — the original Dashboard, Campaigns, Leads, AI Analysis, Recommendations,
+> and Assistant all still work, just prettier and faster.
+
+---
+
+## 17. Automating Sync with GitHub Actions
+
+Streamlit **cannot** run background jobs, so the periodic work lives in a standalone script,
+[`sync.py`](./sync.py), which calls [`modules/sync_service.py`](./modules/sync_service.py) —
+the same pipeline the in-app **Sync Now** button uses.
+
+```bash
+python sync.py --days 70          # live Meta sync + Gemini AI
+python sync.py --no-ai            # data only
+python sync.py --sample           # seed demo data (no Meta needed)
+```
+
+A full sync: pulls campaigns/insights/leads → recomputes analytics + health → runs Gemini
+analysis, recommendations, lead-learning, and an executive summary → generates notifications →
+records a `sync_log` row and the last-sync time. If the AI stage fails, the sync degrades to
+**partial** rather than losing the freshly pulled data.
+
+### The workflow
+
+`.github/workflows/instagram-ad-manager-sync.yml` (at the **repo root** — Actions only run from
+there) is scheduled daily and can be run on demand:
+
+```yaml
+on:
+  schedule:
+    - cron: "0 13 * * *"   # daily 13:00 UTC
+  workflow_dispatch: { }
+```
+
+It checks out the repo, installs deps, runs `python sync.py`, then **commits the refreshed
+`data/admanager.db` back** so a Streamlit Cloud deployment auto-redeploys with fresh data.
+
+**Set up:**
+1. Repo **Settings → Secrets and variables → Actions** → add `GEMINI_API_KEY`,
+   `META_ACCESS_TOKEN`, `META_AD_ACCOUNT_ID`.
+2. Open the **Actions** tab and run *Instagram Ad Manager — scheduled sync* once (*Run workflow*).
+3. It then runs automatically on the cron schedule.
+
+> **Persistence tip:** committing a binary DB works for a demo, but for heavier use point
+> `ADMANAGER_DB_PATH` at a mounted disk or swap SQLite for hosted Postgres. Then the workflow
+> only needs to run the sync — no commit-back required.
+
+**cron / Task Scheduler** are drop-in alternatives — schedule the same `python sync.py` command.
 
 ---
 

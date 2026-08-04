@@ -15,6 +15,21 @@ from . import theme
 
 _FONT = "Inter, sans-serif"
 
+# Per-run, per-session counter so every chart gets a unique, stable key (avoids
+# StreamlitDuplicateElementId when a page renders several similar charts). Stored
+# in session_state so concurrent users on the same server don't collide.
+_KEY = "_chart_key_n"
+
+
+def reset_keys() -> None:
+    """Call once at the top of each script run before rendering charts."""
+    st.session_state[_KEY] = 0
+
+
+def _next_key(prefix: str = "chart") -> str:
+    st.session_state[_KEY] = st.session_state.get(_KEY, 0) + 1
+    return f"{prefix}_{st.session_state[_KEY]}"
+
 
 def inject_theme() -> None:
     st.markdown(theme.CSS, unsafe_allow_html=True)
@@ -66,7 +81,8 @@ def area(df: pd.DataFrame, x: str, y: str, color: str = theme.PURPLE, height: in
             fill="tozeroy", fillcolor=_hex_to_rgba(color, 0.16),
         )
     )
-    st.plotly_chart(style_fig(fig, height), width="stretch", config={"displayModeBar": False})
+    st.plotly_chart(style_fig(fig, height), width="stretch", key=_next_key("area"),
+                    config={"displayModeBar": False})
 
 
 def line(df: pd.DataFrame, x: str, y: str, color: str = theme.PINK, height: int = 280) -> None:
@@ -78,7 +94,8 @@ def line(df: pd.DataFrame, x: str, y: str, color: str = theme.PINK, height: int 
                    line=dict(color=color, width=2.5, shape="spline"),
                    marker=dict(size=6, color=color))
     )
-    st.plotly_chart(style_fig(fig, height), width="stretch", config={"displayModeBar": False})
+    st.plotly_chart(style_fig(fig, height), width="stretch", key=_next_key("line"),
+                    config={"displayModeBar": False})
 
 
 def bars(df: pd.DataFrame, x: str, y: str, color: str = theme.ORANGE, height: int = 280) -> None:
@@ -88,7 +105,8 @@ def bars(df: pd.DataFrame, x: str, y: str, color: str = theme.ORANGE, height: in
     fig = go.Figure(go.Bar(x=df[x], y=df[y], marker=dict(color=color, line=dict(width=0)),
                            marker_line_width=0))
     fig.update_traces(marker_cornerradius=6)
-    st.plotly_chart(style_fig(fig, height), width="stretch", config={"displayModeBar": False})
+    st.plotly_chart(style_fig(fig, height), width="stretch", key=_next_key("bars"),
+                    config={"displayModeBar": False})
 
 
 def hbar_gradient(df: pd.DataFrame, value: str, label: str, height: int = 300, reverse=False) -> None:
@@ -101,7 +119,8 @@ def hbar_gradient(df: pd.DataFrame, value: str, label: str, height: int = 300, r
         marker=dict(color=d[value], colorscale=theme.CONTINUOUS, showscale=False),
     ))
     fig.update_traces(marker_cornerradius=6)
-    st.plotly_chart(style_fig(fig, height), width="stretch", config={"displayModeBar": False})
+    st.plotly_chart(style_fig(fig, height), width="stretch", key=_next_key("hbar"),
+                    config={"displayModeBar": False})
 
 
 def donut(labels: list[str], values: list[float], height: int = 300) -> None:
@@ -111,7 +130,8 @@ def donut(labels: list[str], values: list[float], height: int = 300) -> None:
     fig = go.Figure(go.Pie(labels=labels, values=values, hole=0.55,
                            marker=dict(colors=theme.GRADIENT_SEQ),
                            textinfo="percent", sort=True))
-    st.plotly_chart(style_fig(fig, height, legend=True), width="stretch", config={"displayModeBar": False})
+    st.plotly_chart(style_fig(fig, height, legend=True), width="stretch", key=_next_key("donut"),
+                    config={"displayModeBar": False})
 
 
 def gauge(score: float, height: int = 260) -> None:
@@ -135,7 +155,7 @@ def gauge(score: float, height: int = 260) -> None:
     ))
     fig.update_layout(height=height, margin=dict(l=20, r=20, t=10, b=0),
                       paper_bgcolor="rgba(0,0,0,0)", font=dict(family=_FONT))
-    st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
+    st.plotly_chart(fig, width="stretch", key=_next_key("gauge"), config={"displayModeBar": False})
 
 
 def forecast_chart(history: list[dict], forecast: list[dict], y: str = "value", height: int = 300) -> None:
@@ -160,7 +180,8 @@ def forecast_chart(history: list[dict], forecast: list[dict], y: str = "value", 
         fig.add_trace(go.Scatter(x=fx, y=fy, mode="lines+markers", name="Forecast",
                                  line=dict(color=theme.ORANGE, width=2.5, dash="dash"),
                                  marker=dict(size=5)))
-    st.plotly_chart(style_fig(fig, height, legend=True), width="stretch", config={"displayModeBar": False})
+    st.plotly_chart(style_fig(fig, height, legend=True), width="stretch", key=_next_key("forecast"),
+                    config={"displayModeBar": False})
 
 
 # ── Health + notifications ────────────────────────────────────────────────────

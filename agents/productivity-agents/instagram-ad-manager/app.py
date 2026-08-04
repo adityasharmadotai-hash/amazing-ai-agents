@@ -24,6 +24,7 @@ from modules import (  # noqa: E402
 st.set_page_config(page_title=config.APP_NAME, page_icon="📈", layout="wide",
                    initial_sidebar_state="expanded")
 ui.inject_theme()
+ui.reset_keys()  # stable, unique chart keys per run (prevents DuplicateElementId)
 db.init_db()
 
 # ── Runtime API keys (entered on the Settings page) ───────────────────────────
@@ -87,9 +88,11 @@ def wow_delta(pct, invert=False):
 # ══════════════════════════════════════════════════════════════════════════════
 # SIDEBAR
 # ══════════════════════════════════════════════════════════════════════════════
-NAV = ["🏠 Dashboard", "📣 Campaigns", "👥 Leads", "🎯 Audience", "🎨 Creative Studio",
-       "🧠 AI Analysis", "💡 Recommendations", "🔮 Forecast", "❤️ Health Score",
-       "🗞️ Executive Brief", "🔔 Notifications", "💬 AI Assistant", "⚙️ Settings"]
+# Lean navigation (kept simple on purpose). The page code for Audience, Creative
+# Studio, Forecast, Health Score, Executive Brief, and Notifications still exists
+# below — to bring any back, just add its label to this list.
+NAV = ["🏠 Dashboard", "📣 Campaigns", "👥 Leads",
+       "🧠 AI Analysis", "💡 Recommendations", "💬 AI Assistant", "⚙️ Settings"]
 
 with st.sidebar:
     st.markdown(
@@ -102,10 +105,7 @@ with st.sidebar:
     )
     st.markdown("")
 
-    unread = db.unread_count()
-    nav_labels = [f"🔔 Notifications  ({unread})" if n == "🔔 Notifications" and unread else n for n in NAV]
-    picked = st.radio("Navigate", nav_labels, label_visibility="collapsed")
-    page = NAV[nav_labels.index(picked)]
+    page = st.radio("Navigate", NAV, label_visibility="collapsed")
 
     st.markdown("---")
     st.markdown("#### 🔎 Filters")
@@ -389,23 +389,38 @@ elif page == "🧠 AI Analysis":
     latest = st.session_state.get("last_perf") or (db.latest_analysis("performance") or {}).get("payload")
     if latest:
         if latest.get("headline"):
-            st.markdown(f'<div class="glass"><b>{latest["headline"]}</b></div>', unsafe_allow_html=True)
-        blocks = [("🏆 Best performing", latest.get("best_performing", [])),
-                  ("⚠️ Worst performing", latest.get("worst_performing", [])),
-                  ("📈 Improving", latest.get("improving", [])),
-                  ("📉 Declining", latest.get("declining", [])),
-                  ("🔔 Unusual changes", latest.get("anomalies", [])),
-                  ("💰 Cost-saving opportunities", latest.get("cost_opportunities", [])),
-                  ("🎯 More qualified leads", latest.get("lead_quality_opportunities", [])),
-                  ("🔍 Observations", latest.get("observations", []))]
-        cols = st.columns(2)
-        for i, (title, items) in enumerate(blocks):
-            with cols[i % 2]:
-                ui.section(title.split(" ", 1)[1], "", title.split(" ", 1)[0])
-                for it in items:
-                    st.markdown(f"- {it}")
-                if not items:
-                    st.caption("Nothing notable.")
+            st.markdown(f'<div class="glass"><div style="font-size:16px;font-weight:600;color:#2b0a3d;">'
+                        f'💡 {latest["headline"]}</div></div>', unsafe_allow_html=True)
+
+        working = (latest.get("best_performing", []) + latest.get("improving", []))[:5]
+        fixing = (latest.get("worst_performing", []) + latest.get("declining", [])
+                  + latest.get("anomalies", []))[:5]
+        todo = (latest.get("lead_quality_opportunities", []) + latest.get("cost_opportunities", []))[:5]
+
+        c1, c2 = st.columns(2)
+        with c1:
+            ui.section("What's working", "", "✅")
+            for x in working:
+                st.markdown(f"- {x}")
+            if not working:
+                st.caption("Nothing notable yet.")
+        with c2:
+            ui.section("What needs fixing", "", "⚠️")
+            for x in fixing:
+                st.markdown(f"- {x}")
+            if not fixing:
+                st.caption("Nothing urgent.")
+
+        ui.section("What to do next", "", "🎯")
+        for x in todo:
+            st.markdown(f"- {x}")
+        if not todo:
+            st.caption("No actions right now.")
+
+        if latest.get("observations"):
+            with st.expander("More detail"):
+                for x in latest["observations"]:
+                    st.markdown(f"- {x}")
     else:
         st.caption("Run an analysis to see insights.")
 

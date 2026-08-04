@@ -106,18 +106,23 @@ Analyze today's Instagram ad performance from this JSON snapshot:
 
 {_compact(stats)}
 
-Return ONLY JSON with these keys, each a list of short plain-English strings
-(reference concrete numbers; empty list if nothing applies):
+WRITING RULES (important — keep it simple):
+- Write for a busy non-marketer. Short, plain sentences.
+- MAX 3 items per list. Each item ONE short sentence.
+- Say "cost per lead" not "CPL". Write money as $6.04 (no backticks, no code formatting).
+- Only include what truly matters; use empty lists [] for the rest.
+
+Return ONLY JSON with these keys (lists of plain-English strings):
 {{
-  "headline": "one sentence overall read of the account",
-  "best_performing": ["..."],
-  "worst_performing": ["..."],
-  "improving": ["..."],
-  "declining": ["..."],
-  "anomalies": ["unusual changes worth attention"],
-  "cost_opportunities": ["ways to reduce cost per lead / spend"],
-  "lead_quality_opportunities": ["ways to get more QUALIFIED leads"],
-  "observations": ["e.g. 'Reels outperform Feed', 'CPL up 18% week over week'"]
+  "headline": "one plain sentence: the single most important takeaway",
+  "best_performing": ["what's working, with a number"],
+  "worst_performing": ["the biggest problem, with a number"],
+  "improving": ["only if clearly improving"],
+  "declining": ["only if clearly declining"],
+  "anomalies": ["anything unusual worth a glance"],
+  "cost_opportunities": ["simple ways to spend less per lead"],
+  "lead_quality_opportunities": ["simple ways to get more qualified leads"],
+  "observations": ["at most 2 quick facts"]
 }}
 """.strip()
     return _safe_json(
@@ -146,14 +151,18 @@ Previous recommendations and how they turned out (learn from what worked):
 
 Produce today's action recommendations. Prefer actions similar to ones that
 previously led to "improved" outcomes; avoid repeating ones that led to "worse".
-Return ONLY a JSON array (max 8 items), each:
+
+WRITING RULES: plain English, no jargon, no backticks. Write money as $12.34.
+Keep "rationale" to ONE short sentence a non-marketer understands.
+
+Return ONLY a JSON array (max 6 items, most important first), each:
 {{
   "type": "one of: Increase budget, Decrease budget, Pause ad, Scale ad, Test new audience, Improve ad copy, Improve headline, Improve CTA, New creative idea, A/B test",
   "target": "which campaign/ad/audience it applies to",
-  "rationale": "1-2 sentences citing the numbers",
+  "rationale": "ONE short plain sentence with the key number",
   "priority": "high | medium | low",
   "confidence": <integer 0-100 — how sure you are this helps>,
-  "expected_impact": "short quantified outcome, e.g. 'CPL down ~15%' or '+8 qualified leads/wk'"
+  "expected_impact": "short outcome, e.g. 'lower cost per lead ~15%' or '+8 qualified leads/wk'"
 }}
 """.strip()
     data = _safe_json(_call(prompt), [])

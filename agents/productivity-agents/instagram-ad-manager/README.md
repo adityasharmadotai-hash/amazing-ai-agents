@@ -1,6 +1,6 @@
-# 📈 Instagram AI Ad Manager
+# 📈 Instagram AI Ad Manager — Premium AI Marketing Assistant
 
-> An AI marketing assistant that monitors your Instagram lead-gen campaigns, explains the numbers in plain English, and recommends daily optimizations — built for recruiting **qualified job seekers in the San Francisco Bay Area** while cutting ad cost. Powered by **Google Gemini 2.5 Pro** + the **Meta Marketing API**.
+> An enterprise-grade AI marketing assistant that monitors your Instagram lead-gen campaigns, scores their health, forecasts the week ahead, explains everything in plain English, and recommends optimizations with confidence + expected impact — built for recruiting **qualified job seekers in the San Francisco Bay Area** while cutting ad cost. Powered by **Google Gemini 2.5 Pro** + the **Meta Marketing API**, with a modern Instagram-inspired UI.
 
 ---
 
@@ -37,26 +37,46 @@ team's lead-quality feedback, so its recommendations get sharper over time.
 
 | Feature | Description |
 |---------|-------------|
-| 📣 **Campaign Monitoring** | Every campaign with status, budget, spend, reach, impressions, clicks, CTR, CPC, **CPL**, leads, and conversion rate |
-| 🧠 **AI Performance Analysis** | Gemini explains best/worst campaigns, what's improving vs declining, anomalies, and cost-saving opportunities |
-| 💡 **Daily Recommendations** | Concrete actions (scale, pause, budget, new audience, better copy/CTA, A/B tests) — each with a reason |
-| 🔁 **Continuous Learning** | Tracks whether each recommendation was implemented and whether performance improved or got worse |
-| 👥 **Lead Monitoring** | Every Instagram lead with a one-click status editor (Qualified, Interview, Hired, Rejected, Duplicate, Invalid, No Response) |
-| 🎯 **Learn From Feedback** | Finds which audiences, ages, and ads produce your highest-quality candidates |
-| 📊 **Dashboard** | KPI cards + charts: spend, leads, CPL trend, CTR trend, qualified vs rejected, campaign comparison |
-| 🔎 **Filters** | Today · Yesterday · 7 / 30 days · 10 weeks · custom range · by campaign · ad · lead status |
-| 🗞️ **Daily Brief** | Overall health, biggest improvement, biggest concern, and recommended actions |
+| ❤️ **Marketing Health Score** | A single 0–100 grade from a weighted blend of cost efficiency, lead quality, momentum, CTR, conversion, and consistency |
+| 🔮 **7-Day Forecast** | Projected spend, leads, and CPL with an 80% confidence band, plus an AI plain-English outlook |
+| 🧠 **AI Performance Analysis** | Gemini explains best/worst campaigns, improving vs declining, anomalies, and cost-saving opportunities |
+| 💡 **Smart Recommendations** | Actions with **confidence score**, **expected impact**, and priority — and outcome tracking that feeds tomorrow's advice |
+| 🎯 **Audience Insights** | Which audiences, ages, and ads produce your highest-quality candidates + an AI targeting plan |
+| 🎨 **Creative Studio** | AI-generated ad concepts (format, hook, caption, CTA) tuned to your best-performing data |
+| 🔔 **Notification Center** | Automatic alerts on every sync (CPL spikes, lead drops, top performers, health changes) |
+| 🗞️ **Executive Brief** | Leadership-ready summary: health read, wins, risks, forecast note, and weekly priorities |
+| 📣 **Campaign Monitoring** | Every campaign with status, budget, spend, reach, impressions, clicks, CTR, CPC, **CPL**, leads, conversion |
+| 👥 **Lead Monitoring** | Every Instagram lead with a one-click status editor; the AI learns from your feedback |
+| 📊 **Premium Dashboard** | Glassmorphism KPI cards with week-over-week deltas + themed Plotly charts |
 | 💬 **AI Assistant** | Ask "which campaign is best?", "why did CPL go up?", "compare this week to last" |
+| 🔎 **Filters** | Today · Yesterday · 7 / 30 days · 10 weeks · custom range · by campaign · ad · lead status |
+| 🔄 **Background Sync** | A separate script (GitHub Actions / cron / Task Scheduler) keeps data fresh; the app shows the latest sync + a **Sync Now** button |
 
 ---
 
 ## Tech Stack
 
-- **Streamlit** — dashboard UI
-- **Google Gemini 2.5 Pro** (`google-generativeai`) — analysis, recommendations, chat
+- **Streamlit** — premium dashboard UI (Instagram-inspired glassmorphism theme)
+- **Google Gemini 2.5 Pro** (`google-generativeai`) — analysis, recommendations, creative, chat
 - **Meta Marketing API** (Graph API v21.0) — live campaigns, insights, and lead ads
-- **SQLite** — local storage for the campaign cache, lead statuses, and recommendation history
-- **Plotly + pandas** — charts and metrics
+- **SQLite** — campaign cache, lead statuses, recommendation history, notifications, sync log
+- **Plotly + pandas + numpy** — charts, metrics, and forecasting
+- **GitHub Actions** — scheduled background sync (see `sync.py`)
+
+---
+
+## Architecture
+
+```
+Meta Marketing API ─┐
+                    ├─► sync.py / sync_service.py ─► SQLite ◄─► app.py (Streamlit)
+Gemini 2.5 Pro ─────┘        (background job)                    (Sync Now + display)
+```
+
+The heavy lifting (pull data → run AI → generate recommendations & notifications →
+compute health) runs in **`sync.py`**, scheduled by GitHub Actions. Streamlit reads
+the latest synchronized data and offers a manual **Sync Now**. All reads are cached
+and auto-invalidate on any write via a data-version counter.
 
 ---
 
@@ -69,7 +89,14 @@ streamlit run app.py
 
 Then open the app → **Settings**:
 - **Load sample data** to explore immediately, **or**
-- add your keys (below) and **Sync live data from Meta**.
+- add your keys (below) and **Sync from Meta + AI**.
+
+Run the background sync manually any time:
+
+```bash
+python sync.py --sample --no-ai     # demo data, no API keys needed
+python sync.py --days 70            # live Meta sync + Gemini (uses env vars)
+```
 
 ### Keys (`.env` locally, or Streamlit **Secrets** when deployed)
 
@@ -91,16 +118,39 @@ META_AD_ACCOUNT_ID=act_1234567890
 
 ```
 instagram-ad-manager/
-├── app.py                 # Streamlit UI (dashboard, pages, filters)
+├── app.py                 # Premium Streamlit UI (13 pages, filters, Sync Now, caching)
+├── sync.py                # Background sync CLI (GitHub Actions / cron / Task Scheduler)
 ├── modules/
+│   ├── theme.py           # Design system: Instagram-gradient glassmorphism CSS + HTML builders
+│   ├── ui.py              # Streamlit + Plotly render helpers (charts, gauge, notifications)
+│   ├── config.py          # Constants, benchmarks, logging
 │   ├── meta_api.py        # Meta Marketing API client (campaigns, insights, leads)
-│   ├── database.py        # SQLite schema + CRUD
-│   ├── analytics.py       # CTR/CPC/CPL, trends, week-over-week, chart data
-│   ├── agent.py           # Gemini 2.5 Pro: analysis, recommendations, chat
+│   ├── database.py        # SQLite schema, migrations, versioned CRUD, notifications, sync log
+│   ├── analytics.py       # CTR/CPC/CPL, trends, health score, forecasting, audience insights
+│   ├── agent.py           # Gemini 2.5 Pro: analysis, recommendations, creative, exec summary, chat
+│   ├── sync_service.py    # Full sync orchestration (shared by sync.py and Sync Now)
 │   └── demo_seed.py       # Optional sample dataset
 ├── requirements.txt
 └── .env.example
+# repo root: .github/workflows/instagram-ad-manager-sync.yml  (scheduled sync)
 ```
+
+---
+
+## Automated Background Sync
+
+Streamlit **cannot** run autonomous jobs, so a standalone script does the periodic work.
+
+- **GitHub Actions (preferred):** `.github/workflows/instagram-ad-manager-sync.yml` (at the
+  repo root) runs daily, executes `python sync.py`, and commits the refreshed database back so
+  the deployed app shows fresh data. Add `GEMINI_API_KEY`, `META_ACCESS_TOKEN`, and
+  `META_AD_ACCOUNT_ID` as repository **Secrets**, then optionally run it once from the
+  **Actions** tab (*Run workflow*).
+- **cron (Linux/macOS):** `0 6 * * *  cd /path/app && python sync.py --days 70`
+- **Task Scheduler (Windows):** run `python sync.py --days 70` on a daily trigger.
+
+Set `ADMANAGER_DB_PATH` to a shared/persistent path so the job and the app use one database.
+The **Sync Now** button in the app runs the exact same pipeline on demand.
 
 ---
 
