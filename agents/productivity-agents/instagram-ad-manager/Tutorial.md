@@ -24,6 +24,10 @@
 > **notification center**, and a **background sync job** (GitHub Actions) round it out.
 > Data lives in SQLite so recommendations, lead statuses, and history persist.
 
+> 🛠️ **Want the honest, first-person build story** — the wrong assumptions, the
+> $990 cost-per-lead bug, the "Streamlit can't run itself" pivot, and the
+> Cloud-only crash? Read **[DEVELOPMENT_JOURNEY.md](./DEVELOPMENT_JOURNEY.md)**.
+
 ---
 
 ## 📋 Table of Contents

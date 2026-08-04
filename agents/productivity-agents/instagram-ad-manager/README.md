@@ -17,6 +17,19 @@
 ---
 
 **👉 STEP-BY-STEP TUTORIAL: [Tutorial.md](./Tutorial.md)**
+&nbsp;·&nbsp; **🛠️ THE ENGINEERING STORY: [DEVELOPMENT_JOURNEY.md](./DEVELOPMENT_JOURNEY.md)**
+
+---
+
+## The brief
+
+A recruiting team runs Instagram lead-gen ads to reach **job seekers in San
+Francisco and the Bay Area**. They wanted an AI agent that (1) has access to the
+whole campaign, (2) monitors performance, (3) suggests changes every day,
+(4) **runs by itself** and checks whether changes worked, (5) monitors every lead,
+(6) learns from their feedback on each lead, and (7) gives a dashboard filterable
+by date range and by week. This app delivers that — the autonomous part runs as a
+scheduled job (Streamlit itself can't), and the app is the view over its results.
 
 ---
 
@@ -51,6 +64,12 @@ team's lead-quality feedback, so its recommendations get sharper over time.
 | 💬 **AI Assistant** | Ask "which campaign is best?", "why did CPL go up?", "compare this week to last" |
 | 🔎 **Filters** | Today · Yesterday · 7 / 30 days · 10 weeks · custom range · by campaign · ad · lead status |
 | 🔄 **Background Sync** | A separate script (GitHub Actions / cron / Task Scheduler) keeps data fresh; the app shows the latest sync + a **Sync Now** button |
+
+> **Simple by default.** The app ships with a lean **7-item menu** — Dashboard,
+> Campaigns, Leads, AI Analysis, Recommendations, AI Assistant, Settings. The
+> advanced sections above (Audience, Creative Studio, Forecast, Health Score,
+> Executive Brief, Notifications) still live in the code and are **one line to
+> re-enable** in `app.py` (`NAV`). The health score still shows on the Dashboard.
 
 ---
 
