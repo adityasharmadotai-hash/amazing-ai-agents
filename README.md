@@ -25,60 +25,66 @@ I created this repository to help you go from knowing nothing about AI agents to
 
 AI Agents are autonomous software systems that use large language models (LLMs) to perceive their environment, make decisions, and take actions toward a goal. Unlike simple chatbots, agents can:
 
+- 👀 **Perceive & gather context** — read data, search the web, call APIs, and observe their environment
+- 🧠 **Reason & plan** — break a goal into steps and decide what to do next
+- 🛠️ **Act with tools** — send emails, query databases, write files, call external services
+- 💾 **Remember** — persist state and learn from feedback across runs
+- 🔁 **Run autonomously** — operate on a schedule or in a loop with minimal human input
 
 ---
 
 ## 💡 Learning Roadmap
 
-### Single-Agent Systems
+### 🤖 Single-Agent Systems
 
-| Project | Link |
-|---------|------|
-| Proposal Generator Agent | [Click here](https://github.com/adityasharmadotai-hash/amazing-ai-agents/tree/main/agents/business-agents/proposal-generator-agent) |
-| Founder Daily Brief Agent | [Click here](https://github.com/adityasharmadotai-hash/amazing-ai-agents/tree/main/agents/business-agents/founder-daily-brief-agent) |
-| Skill Gap Agent | [Click here](https://github.com/adityasharmadotai-hash/amazing-ai-agents/tree/main/agents/career-agents/skill-gap-agent) |
-| Content Repurposing Agent | [Click here](https://github.com/adityasharmadotai-hash/amazing-ai-agents/tree/main/agents/content-agents/content-repurposing-agent) |
-| Newsletter Content Agent | [Click here](https://github.com/adityasharmadotai-hash/amazing-ai-agents/tree/main/agents/content-agents/newsletter-content-agent) |
-| SEO Audit Agent | [Click here](https://github.com/adityasharmadotai-hash/amazing-ai-agents/tree/main/agents/marketing-agents/seo-audit-agent) |
-| LinkedIn Opportunity Agent | [Click here](https://github.com/adityasharmadotai-hash/amazing-ai-agents/tree/main/agents/networking-agents/linkedin-opportunity-agent) |
-| Email Assistant | [Click here](https://github.com/adityasharmadotai-hash/amazing-ai-agents/tree/main/agents/productivity-agents/email-assistant) |
-| Email Summary & Action Agent | [Click here](https://github.com/adityasharmadotai-hash/amazing-ai-agents/tree/main/agents/productivity-agents/email-summary-action-agent) |
-| AI Exec Email Assistant | [Click here](https://github.com/adityasharmadotai-hash/amazing-ai-agents/tree/main/agents/productivity-agents/ai-exec-email-assistant) |
-| Layoff Detection (LinkedIn) Agent | [Click here](https://github.com/adityasharmadotai-hash/amazing-ai-agents/tree/main/agents/layoff-detection-linkedin) |
+| Agent | What it does |
+|-------|--------------|
+| [Proposal Generator Agent](https://github.com/adityasharmadotai-hash/amazing-ai-agents/tree/main/agents/business-agents/proposal-generator-agent) | Draft tailored client proposals from a short brief. |
+| [Founder Daily Brief Agent](https://github.com/adityasharmadotai-hash/amazing-ai-agents/tree/main/agents/business-agents/founder-daily-brief-agent) | A daily briefing of what a founder needs to know. |
+| [Skill Gap Agent](https://github.com/adityasharmadotai-hash/amazing-ai-agents/tree/main/agents/career-agents/skill-gap-agent) | Spot the skills you're missing for a target role. |
+| [Content Repurposing Agent](https://github.com/adityasharmadotai-hash/amazing-ai-agents/tree/main/agents/content-agents/content-repurposing-agent) | Turn one piece of content into many formats. |
+| [Newsletter Content Agent](https://github.com/adityasharmadotai-hash/amazing-ai-agents/tree/main/agents/content-agents/newsletter-content-agent) | Generate newsletter content on any topic. |
+| [SEO Audit Agent](https://github.com/adityasharmadotai-hash/amazing-ai-agents/tree/main/agents/marketing-agents/seo-audit-agent) | Audit a page or site for SEO issues and fixes. |
+| [LinkedIn Opportunity Agent](https://github.com/adityasharmadotai-hash/amazing-ai-agents/tree/main/agents/networking-agents/linkedin-opportunity-agent) | Surface networking and job opportunities on LinkedIn. |
+| [Email Assistant](https://github.com/adityasharmadotai-hash/amazing-ai-agents/tree/main/agents/productivity-agents/email-assistant) | Draft and manage email replies. |
+| [Email Summary & Action Agent](https://github.com/adityasharmadotai-hash/amazing-ai-agents/tree/main/agents/productivity-agents/email-summary-action-agent) | Summarize your inbox and extract action items. |
+| [AI Exec Email Assistant](https://github.com/adityasharmadotai-hash/amazing-ai-agents/tree/main/agents/productivity-agents/ai-exec-email-assistant) | Executive-grade email triage and drafting. |
+| [Layoff Detection (LinkedIn) Agent](https://github.com/adityasharmadotai-hash/amazing-ai-agents/tree/main/agents/layoff-detection-linkedin) | Discover companies with layoffs and surface affected talent. |
+| 🆕 [Instagram AI Ad Manager](https://github.com/adityasharmadotai-hash/amazing-ai-agents/tree/main/agents/productivity-agents/instagram-ad-manager) | Self-running agent that monitors Instagram lead-gen ads and improves them daily (Meta API + Gemini). Ships with a full [engineering case study](https://github.com/adityasharmadotai-hash/amazing-ai-agents/tree/main/agents/productivity-agents/instagram-ad-manager/DEVELOPMENT_JOURNEY.md). |
 
-### Multi-Agent Systems
+### 🧩 Multi-Agent Systems
 
-| Project | Link |
-|---------|------|
-| Multi-MCP Agent | [Click here](https://github.com/adityasharmadotai-hash/amazing-ai-agents/tree/main/agents/mcp-agents/multi-mcp-agent) |
-| AI Database Analyst (MCP) | [Click here](https://github.com/adityasharmadotai-hash/amazing-ai-agents/tree/main/agents/mcp-agents/ai-database-analyst-mcp) |
-| AI Sales Team | [Click here](https://github.com/adityasharmadotai-hash/networking-app) |
+| Agent | What it does |
+|-------|--------------|
+| [Multi-MCP Agent](https://github.com/adityasharmadotai-hash/amazing-ai-agents/tree/main/agents/mcp-agents/multi-mcp-agent) | Orchestrate multiple MCP servers and tools together. |
+| [AI Database Analyst (MCP)](https://github.com/adityasharmadotai-hash/amazing-ai-agents/tree/main/agents/mcp-agents/ai-database-analyst-mcp) | Query and analyze databases through MCP. |
+| [AI Sales Team](https://github.com/adityasharmadotai-hash/networking-app) | A coordinated team of agents that runs sales outreach. |
 
-### RAG (Retrieval-Augmented Generation) AI Agents
+### 📚 RAG (Retrieval-Augmented Generation) AI Agents
 
-| Project | Link |
-|---------|------|
-| Docs Reader RAG Agent | [Click here](https://github.com/adityasharmadotai-hash/amazing-ai-agents/tree/main/agents/rag-agents/docs-reader-rag-agent) |
+| Agent | What it does |
+|-------|--------------|
+| [Docs Reader RAG Agent](https://github.com/adityasharmadotai-hash/amazing-ai-agents/tree/main/agents/rag-agents/docs-reader-rag-agent) | Answer questions over your own documents with RAG. |
 
-### Voice AI Agents
+### 🎙️ Voice AI Agents
 
-| Project | Link |
-|---------|------|
-| Voice Assistant Agent (ARIA) | [Click here](https://github.com/adityasharmadotai-hash/amazing-ai-agents/tree/main/agents/productivity-agents/voice-assistant-agent) |
-| Meeting Notes Agent | [Click here](https://github.com/adityasharmadotai-hash/amazing-ai-agents/tree/main/agents/productivity-agents/meeting-notes-agent) |
+| Agent | What it does |
+|-------|--------------|
+| [Voice Assistant Agent (ARIA)](https://github.com/adityasharmadotai-hash/amazing-ai-agents/tree/main/agents/productivity-agents/voice-assistant-agent) | A hands-free, voice-driven assistant. |
+| [Meeting Notes Agent](https://github.com/adityasharmadotai-hash/amazing-ai-agents/tree/main/agents/productivity-agents/meeting-notes-agent) | Transcribe meetings and extract decisions & action items. |
 
-### Document AI Agents
+### 📄 Document AI Agents
 
-| Project | Link |
-|---------|------|
-| Resume ↔ Job Agent | [Click here](https://github.com/adityasharmadotai-hash/amazing-ai-agents/tree/main/agents/recruiting-agents/resume-job-agent) |
+| Agent | What it does |
+|-------|--------------|
+| [Resume ↔ Job Agent](https://github.com/adityasharmadotai-hash/amazing-ai-agents/tree/main/agents/recruiting-agents/resume-job-agent) | Match a resume to a job and tailor it. |
 
-### Research AI Agents
+### 🔬 Research AI Agents
 
-| Project | Link |
-|---------|------|
-| Competitor Intelligence Agent | [Click here](https://github.com/adityasharmadotai-hash/amazing-ai-agents/tree/main/agents/research-agents/competitor-intelligence-agent) |
-| AI News Summary Agent | [Click here](https://github.com/adityasharmadotai-hash/amazing-ai-agents/tree/main/agents/productivity-agents/ai-news-summary-agent) |
+| Agent | What it does |
+|-------|--------------|
+| [Competitor Intelligence Agent](https://github.com/adityasharmadotai-hash/amazing-ai-agents/tree/main/agents/research-agents/competitor-intelligence-agent) | Automatically research competitors. |
+| [AI News Summary Agent](https://github.com/adityasharmadotai-hash/amazing-ai-agents/tree/main/agents/productivity-agents/ai-news-summary-agent) | Summarize and deliver news on topics you follow. |
 
 ---
 
