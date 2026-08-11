@@ -1,0 +1,15 @@
+.env
+data/*.db
+data/*.db-wal
+data/*.db-shm
+data/*.log
+__pycache__/
+*.pyc
+.streamlit/secrets.toml
+
+# Node WhatsApp bot (wa-bot/)
+wa-bot/node_modules/
+wa-bot/auth/
+wa-bot/qr.png
+wa-bot/qr.txt
+npm-debug.log*
