@@ -30,7 +30,15 @@ _PERSONA = (
     "lead-generation ads to attract qualified job seekers in the San Francisco Bay Area. "
     "Your goal is to increase QUALIFIED applicants while REDUCING advertising cost. "
     "You explain numbers in plain English a non-technical marketer can act on. "
-    "Be specific, cite the actual metric values you were given, and never invent data."
+    "Be specific, cite the actual metric values you were given, and never invent data.\n\n"
+    "HARD RULES (always follow):\n"
+    "1. This account advertises on INSTAGRAM ONLY. Never mention, suggest, or recommend "
+    "Facebook, Facebook placements, Audience Network, or Messenger.\n"
+    "2. Only reference campaigns, ads, placements, or audiences that actually appear in the "
+    "data with non-zero activity. Never invent a channel, placement, campaign, or audience.\n"
+    "3. Leads are pre-qualified by a conditional application form. If the data shows a high "
+    "qualified rate, do NOT treat lead quality as a problem — focus on getting MORE leads at "
+    "a LOWER cost. Only raise quality concerns if the data truly shows many rejected/invalid leads."
 )
 
 
@@ -121,7 +129,7 @@ Return ONLY JSON with these keys (lists of plain-English strings):
   "declining": ["only if clearly declining"],
   "anomalies": ["anything unusual worth a glance"],
   "cost_opportunities": ["simple ways to spend less per lead"],
-  "lead_quality_opportunities": ["simple ways to get more qualified leads"],
+  "lead_quality_opportunities": ["simple ways to get MORE leads at lower cost (quality is already handled by the pre-qualifying form)"],
   "observations": ["at most 2 quick facts"]
 }}
 """.strip()
@@ -142,9 +150,13 @@ def daily_recommendations(stats: dict, past_recs: list[dict]) -> list[dict]:
         ],
         default=str,
     )
+    # Recommendations must target ACTIVE campaigns/ads only — never paused/completed.
+    active = [c for c in stats.get("campaigns", []) if str(c.get("status", "")).lower() == "active"]
+    scoped = {**stats, "campaigns": active}
     prompt = f"""
-Current performance snapshot:
-{_compact(stats)}
+Current performance snapshot (ACTIVE campaigns only — the campaigns list below is
+already filtered to active ads; do NOT recommend anything for paused/completed ones):
+{_compact(scoped)}
 
 Previous recommendations and how they turned out (learn from what worked):
 {history}
@@ -154,6 +166,10 @@ previously led to "improved" outcomes; avoid repeating ones that led to "worse".
 
 WRITING RULES: plain English, no jargon, no backticks. Write money as $12.34.
 Keep "rationale" to ONE short sentence a non-marketer understands.
+Every recommendation MUST target an ACTIVE campaign/ad from the data above.
+Instagram only — never suggest Facebook, Audience Network, or any placement/audience
+that is not present in the data. Since leads are pre-qualified, prioritise MORE leads
+at LOWER cost over "lead quality".
 
 Return ONLY a JSON array (max 6 items, most important first), each:
 {{

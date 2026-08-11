@@ -68,9 +68,20 @@ h1, h2, h3, h4 {{ font-family: 'Sora', 'Inter', sans-serif; color: var(--ink); l
 [data-testid="stSidebar"] * {{ color: #f6ecff !important; }}
 [data-testid="stSidebar"] .stRadio label p {{ font-size: 14.5px !important; font-weight: 500; }}
 [data-testid="stSidebar"] [data-testid="stWidgetLabel"] p {{ color:#e7d6ff !important; font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.06em; }}
-[data-testid="stSidebar"] input, [data-testid="stSidebar"] [data-baseweb="select"] > div {{
-  background: rgba(255,255,255,0.10) !important; border-color: rgba(255,255,255,0.18) !important;
+
+/* Form controls in the sidebar: solid white fields with dark, readable text
+   (the global near-white sidebar text color would otherwise hide the value). */
+[data-testid="stSidebar"] [data-baseweb="select"] > div {{
+  background: #ffffff !important; border-color: rgba(255,255,255,0.35) !important;
 }}
+[data-testid="stSidebar"] [data-baseweb="select"] > div,
+[data-testid="stSidebar"] [data-baseweb="select"] * {{ color: #2b0a3d !important; }}
+[data-testid="stSidebar"] [data-baseweb="select"] svg {{ fill: #7c3aed !important; }}
+[data-testid="stSidebar"] input {{
+  background: #ffffff !important; color: #2b0a3d !important;
+  border-color: rgba(255,255,255,0.35) !important; -webkit-text-fill-color: #2b0a3d !important;
+}}
+[data-testid="stSidebar"] input::placeholder {{ color: #9b7cc0 !important; -webkit-text-fill-color: #9b7cc0 !important; }}
 
 /* Radio nav → pill list */
 [data-testid="stSidebar"] div[role="radiogroup"] > label {{

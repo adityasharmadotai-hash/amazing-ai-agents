@@ -271,6 +271,11 @@ elif page == "👥 Leads":
             theme.kpi_card("Rejected", f"{rn:,}", "not a fit", "🚫"),
             theme.kpi_card("Qualified rate", f"{analytics.safe_div(qn, len(leads))*100:.0f}%", "of shown", "📈"),
         ])
+        st.caption("Leads arrive pre-qualified from the conditional application form. "
+                   "Use the button to mark existing leads, or edit any status inline below.")
+        if st.button("✅ Mark all shown leads as Qualified"):
+            n = db.bulk_update_lead_status([ld["id"] for ld in leads], "Qualified")
+            st.success(f"Marked {n} lead(s) as Qualified."); st.rerun()
         name_map = db.campaign_name_map()
         rows = [{"id": ld["id"], "Name": ld["name"], "Email": ld["email"], "Phone": ld["phone"],
                  "Campaign": name_map.get(ld["campaign_id"], ld["campaign_id"]), "Ad": ld["ad_name"],

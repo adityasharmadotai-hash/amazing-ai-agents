@@ -194,7 +194,11 @@ def get_daily_insights(days: int = 70, breakdown_placement: bool = False) -> lis
     for r in rows:
         placement = "All"
         if breakdown_placement:
-            pos = (r.get("platform_position") or r.get("publisher_platform") or "").lower()
+            plat = (r.get("publisher_platform") or "").lower()
+            # Instagram-only account: drop Facebook / Audience Network / Messenger rows.
+            if plat and plat != "instagram":
+                continue
+            pos = (r.get("platform_position") or plat or "").lower()
             placement = _PLACEMENT_LABELS.get(pos, pos.title() or "Other")
         out.append(
             {
@@ -275,7 +279,8 @@ def get_leads(days: int = 70) -> list[dict]:
                     "campaign_id": r.get("campaign_id") or ad.get("campaign_id", ""),
                     "ad_name": r.get("ad_name") or ad.get("name", ""),
                     "received_at": created or datetime.now().isoformat(timespec="seconds"),
-                    "status": "New",
+                    # Leads arrive pre-qualified (conditional application form gates the form).
+                    "status": "Qualified",
                     "audience": "",
                     "age_range": "",
                 }

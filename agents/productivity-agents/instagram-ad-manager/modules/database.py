@@ -393,6 +393,16 @@ def update_lead_status(lead_id: str, status: str) -> None:
     _bump()
 
 
+def bulk_update_lead_status(lead_ids: list[str], status: str) -> int:
+    if not lead_ids:
+        return 0
+    conn = get_conn()
+    conn.executemany("UPDATE leads SET status = ? WHERE id = ?", [(status, i) for i in lead_ids])
+    conn.commit()
+    _bump()
+    return len(lead_ids)
+
+
 def ad_names() -> list[str]:
     conn = get_conn()
     rows = conn.execute(
