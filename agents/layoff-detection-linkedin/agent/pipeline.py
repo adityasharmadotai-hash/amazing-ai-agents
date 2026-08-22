@@ -125,6 +125,22 @@ def _run_scan_locked() -> dict[str, Any]:
                  " [budget hit]" if disc_metrics["budget_hit"] else "")
     disc_metrics["expansion_records"] = len(records) - first_pass_records
 
+    # ── Hard location rejection ────────────────────────────────────────────
+    # In strict mode (LOCATION_INCLUDE_UNKNOWN=false) we do NOT store posts whose
+    # location can't be verified as a target location — an unknown/unstated or
+    # clearly-elsewhere post is dropped here rather than saved and merely flagged.
+    # (Location enrichment already ran inside process_candidate, so every
+    # individual got its best shot at a resolved location before this gate.)
+    if not config.LOCATION_INCLUDE_UNKNOWN and config.TARGET_LOCATIONS:
+        kept = [r for r in records if config.location_ok(r)]
+        dropped = len(records) - len(kept)
+        if dropped:
+            log.info("Location gate: dropped %d/%d post(s) not verified in %s "
+                     "(LOCATION_INCLUDE_UNKNOWN=false).", dropped, len(records),
+                     ", ".join(config.TARGET_LOCATIONS))
+        disc_metrics["location_dropped"] = dropped
+        records = kept
+
     # Posts found by provider (across both passes), for the metrics panel.
     prov_counts: dict[str, int] = {}
     for c in candidates:

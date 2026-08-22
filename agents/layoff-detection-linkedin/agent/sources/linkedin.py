@@ -162,6 +162,8 @@ def search_linkedin_posts(queries: list[str] | None = None) -> list[dict]:
     if len(sources) == 1:
         results = _run(sources[0])
     else:
+        # Run every provider concurrently and MERGE all their batches — a slow or
+        # failing provider never blocks or discards the others' candidates.
         with ThreadPoolExecutor(max_workers=max(2, len(sources))) as pool:
             futs = {pool.submit(_run, s): s for s in sources}
             for fut in as_completed(futs):
@@ -173,15 +175,23 @@ def search_linkedin_posts(queries: list[str] | None = None) -> list[dict]:
                 except Exception as exc:  # noqa: BLE001 — one bad provider is OK
                     log.warning("Provider %s failed: %s", s, exc)
 
+    # Dedupe across providers by normalized URL, keeping the richest-text copy.
+    # Candidates with no URL can't be deduped or extracted downstream, so they'd
+    # be lost silently — count them and warn rather than dropping quietly.
     best: dict[str, dict] = {}
+    no_url = 0
     for r in results:
         key = _norm_url(r.get("url"))
         if not key:
+            no_url += 1
             continue
         cur = best.get(key)
         if cur is None or len(r.get("text") or "") > len(cur.get("text") or ""):
             best[key] = r
     out = list(best.values())
+    if no_url:
+        log.warning("LinkedIn merge: skipped %d candidate(s) with no URL "
+                    "(cannot dedupe/extract without one).", no_url)
     log.info("LinkedIn (%s): %d unique candidate post(s) from %d raw",
              "+".join(sources), len(out), len(results))
     return out

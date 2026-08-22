@@ -86,6 +86,12 @@ context. Use null only if there is truly no signal.
 - is_us (boolean): true only if the person/company is based in the United States.
 - location (string|null): the most specific place stated or implied — city \
 and/or state/region (e.g. "San Francisco, California", "Austin, TX", "Bay Area").
+- is_target_location (boolean): true ONLY if the person/company is located in \
+one of these TARGET LOCATIONS (or an obvious synonym/neighborhood of them): \
+{targets}. Set false if the location is clearly somewhere else. Set false if \
+the location is genuinely unknown or unstated — do NOT guess true. Treat Bay \
+Area / Silicon Valley cities (Palo Alto, Mountain View, Sunnyvale, San Jose, \
+etc.) as part of the San Francisco / California target.
 - headcount (integer|null): number of people laid off, if stated.
 - event_date (string|null): ISO date (YYYY-MM-DD) the layoff happened or was \
 announced. Infer from phrases like "yesterday", "last week", "today", or an \
@@ -108,16 +114,42 @@ POST TEXT:
 \"\"\"
 """
 
+def _target_desc() -> str:
+    """Human-readable list of the configured target locations + their aliases,
+    injected into the extraction prompt so the model can judge is_target_location.
+    Empty target config (worldwide) => everywhere qualifies."""
+    if not config.TARGET_LOCATIONS:
+        return "anywhere in the world (no location filter — always true)"
+    aliases = config.target_location_aliases()
+    return ", ".join(aliases) if aliases else ", ".join(config.TARGET_LOCATIONS)
+
+
+def _coerce_target_flag(v: Any) -> bool | None:
+    """Normalize the model's is_target_location into a tri-state True/False/None.
+    None means 'no verdict' (key missing), which lets location_ok fall back to
+    text matching + the unknown-location rule."""
+    if isinstance(v, bool):
+        return v
+    if isinstance(v, str):
+        s = v.strip().lower()
+        if s in {"true", "yes", "y", "1"}:
+            return True
+        if s in {"false", "no", "n", "0"}:
+            return False
+    return None
+
+
 def extract_record(text: str, url: str) -> dict[str, Any] | None:
     """Return a structured record, or None if the text isn't a layoff signal."""
     slug = slug_text(url)
     if not (text and text.strip()) and not slug:
         return None
+    targets = _target_desc()
     try:
         data = llm.complete_json(
             _SYSTEM,
             _USER_TEMPLATE.format(url=url, slug=slug or "(none)",
-                                  text=(text or "")[:6000]),
+                                  targets=targets, text=(text or "")[:6000]),
         )
     except Exception as exc:  # noqa: BLE001 — one bad post shouldn't kill a scan
         global _last_error
@@ -129,6 +161,7 @@ def extract_record(text: str, url: str) -> dict[str, Any] | None:
     if not isinstance(data, dict) or not data.get("is_layoff"):
         return None
 
+    data["is_target_location"] = _coerce_target_flag(data.get("is_target_location"))
     data["source_url"] = url
     return data
 

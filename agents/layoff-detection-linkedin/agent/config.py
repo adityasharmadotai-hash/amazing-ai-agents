@@ -8,6 +8,7 @@ under Streamlit's rerun model and was corrupting the `agent` package import.
 from __future__ import annotations
 
 import os
+import re
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -54,6 +55,19 @@ def _parse_locations(raw: str) -> list[str]:
 _US_ALIASES = {"united states", "usa", "us", "u.s.", "u.s.a.", "america"}
 _UNKNOWN_LOC = {"", "unknown", "none", "n/a", "null", "remote", "worldwide", "global"}
 
+# Alias expansion for target locations. When a configured target location's full
+# string OR its primary component (before the first comma) matches a key here,
+# every listed alias ALSO counts as an in-location match — and the aliases are
+# shown to the extractor so it can set `is_target_location` correctly. This keeps
+# a "San Francisco" target from dropping nearby Bay Area / Silicon Valley posts
+# (Palo Alto, San Jose, …) that never literally spell out "San Francisco".
+LOCATION_ALIASES: dict[str, list[str]] = {
+    "san francisco": [
+        "san francisco", "sf", "bay area", "san francisco bay area",
+        "silicon valley", "palo alto", "mountain view", "sunnyvale", "san jose",
+    ],
+}
+
 # All LinkedIn discovery providers. Gemini is excluded from "all"/merge mode
 # because Google Search grounding cannot reach individual LinkedIn posts (it
 # returns 0) — but it stays selectable explicitly for anyone who wants it.
@@ -72,6 +86,14 @@ QUERY_DICTIONARY: dict[str, list[str]] = {
         '"affected by the layoffs"', '"impacted by the layoffs"',
         '"impacted by layoffs"', '"part of the layoffs"',
         '"looking for new opportunities"', '"open to work"',
+        # Conversational phrasings that thin snippets often use — the `*` is a
+        # Google in-phrase wildcard (SerpAPI backend), so "my time at * has come
+        # to an end" matches "my time at ACME has come to an end". Other backends
+        # treat it literally, which is harmless.
+        '"my time at * has come to an end"',
+        '"affected by the workforce reduction"',
+        '"leaving * earlier than expected"',
+        '"impacted along with many talented colleagues"',
     ],
     "company": [
         '"layoffs"', '"laying off"', '"layoffs at"', '"downsizing"',
@@ -269,25 +291,62 @@ def _loc_match_terms(loc_lower: str) -> list[str]:
     """
     primary = loc_lower.split(",")[0].strip()
     terms = {loc_lower, primary}
-    return [t for t in terms if len(t) >= 3]
+    # Pull in the alias group for this place (e.g. SF -> Bay Area, Palo Alto…).
+    for key in (loc_lower, primary):
+        if key in LOCATION_ALIASES:
+            terms.update(LOCATION_ALIASES[key])
+    # Keep 2-char aliases like "sf" (matched on a word boundary, see
+    # `_term_matches`); drop 1-char noise only.
+    return [t for t in terms if len(t) >= 2]
+
+
+def _term_matches(hay: str, term: str) -> bool:
+    """True if `term` is present in `hay`. Very short terms (<=2 chars, e.g.
+    'sf') must match on a word boundary so they never fire inside an unrelated
+    word ('misfit', 'sfax'); longer terms match as a plain substring."""
+    if len(term) <= 2:
+        return re.search(rf"\b{re.escape(term)}\b", hay) is not None
+    return term in hay
+
+
+def target_location_aliases() -> list[str]:
+    """Every alias/place term (lowercased, deduped) that counts as an in-location
+    match across all configured target locations. Used to tell the extractor
+    exactly which places qualify as `is_target_location`."""
+    out: list[str] = []
+    for loc in _LOCATIONS_LOWER:
+        out.extend(_loc_match_terms(loc))
+    return list(dict.fromkeys(out))
 
 
 def location_ok(rec: dict) -> bool:
     """True if a record's location matches the target locations (or if no
     location filter is configured, i.e. worldwide). Matches at country, state,
-    or city granularity (see `_loc_match_terms`)."""
+    or city granularity (see `_loc_match_terms`), honoring alias groups
+    (SF -> Bay Area / Silicon Valley / Palo Alto / …).
+
+    The extractor's explicit `is_target_location` verdict is authoritative:
+      - True  -> qualifies even if the raw location text is phrased unusually.
+      - False -> the post is NOT in a target location, so it can never be given
+                 the unknown-location benefit of the doubt (hard rejection).
+    """
     if not _LOCATIONS_LOWER:
         return True
+    verdict = rec.get("is_target_location")
     # US-alias targets ("United States", "USA", …) are satisfied by the is_us
     # flag. City/state targets are NOT — they must actually appear in the text.
     if rec.get("is_us") and any(c in _US_ALIASES for c in _LOCATIONS_LOWER):
         return True
     hay = " ".join(str(rec.get(k) or "") for k in ("country", "location")).lower()
     for c in _LOCATIONS_LOWER:
-        if any(term in hay for term in _loc_match_terms(c)):
+        if any(_term_matches(hay, term) for term in _loc_match_terms(c)):
             return True
-    # Benefit of the doubt: unknown/unstated country passes when enabled.
-    if LOCATION_INCLUDE_UNKNOWN:
+    # The extractor explicitly confirmed this is a target-location post.
+    if verdict is True:
+        return True
+    # Benefit of the doubt: unknown/unstated country passes when enabled — but
+    # NEVER when the extractor explicitly said it is NOT the target location.
+    if LOCATION_INCLUDE_UNKNOWN and verdict is not False:
         country = (rec.get("country") or "").strip().lower()
         if country in _UNKNOWN_LOC:
             return True
