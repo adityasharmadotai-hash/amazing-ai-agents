@@ -4,3 +4,8 @@ __pycache__/
 venv/
 .streamlit/secrets.toml
 .DS_Store
+data/
+.claude/
+
+# design prototypes (scratch)
+design_mockup*.html
