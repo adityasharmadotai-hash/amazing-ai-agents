@@ -9,6 +9,7 @@ from __future__ import annotations
 import io
 import logging
 
+import httpx
 import pandas as pd
 import streamlit as st
 
@@ -20,6 +21,41 @@ from agent.pipeline import analyze_url, run_scan
 def _money(v) -> str:
     v = v or 0
     return f"${v:.4f}" if v < 0.01 else f"${v:.2f}"
+
+
+def _is_connection_error(exc: BaseException) -> bool:
+    """True for any httpx connect/timeout/transport failure.
+
+    `httpx.RequestError` is the base of ConnectError, ConnectTimeout,
+    ReadTimeout, PoolTimeout, RemoteProtocolError, etc. — every "couldn't reach
+    the service" case. We also treat socket.gaierror (DNS) the same way.
+    """
+    import socket
+    return isinstance(exc, (httpx.RequestError, socket.gaierror, ConnectionError))
+
+
+def _show_action_error(title: str, exc: BaseException, logs: str = "") -> None:
+    """Render a friendly error for a failed network action instead of letting
+    the exception crash the whole Streamlit script (which shows a redacted
+    traceback to the user)."""
+    if _is_connection_error(exc):
+        st.error(
+            f"🌐 **{title} — couldn't reach an external service.**\n\n"
+            "The app failed to connect to one of its providers (Supabase, "
+            "SerpAPI, Apify, Perplexity, Gemini or Wiza). This is almost always "
+            "a temporary network problem, or a wrong/typo'd URL or endpoint. "
+            "Check your internet connection and the **`SUPABASE_URL`** (and other "
+            "keys) on the **⚙️ Settings** page, then try again.\n\n"
+            f"_Details: `{type(exc).__name__}: {exc}`_"
+        )
+    else:
+        st.error(
+            f"🛑 **{title}.**\n\n"
+            f"_Details: `{type(exc).__name__}: {exc}`_"
+        )
+    if logs:
+        with st.expander("📜 Scan log"):
+            st.code(logs, language="text")
 
 
 def _capture_scan():
@@ -108,10 +144,17 @@ def render():
         otw_only = st.toggle("Open-to-work only", value=False)
 
     if scan_clicked:
-        with st.spinner("Scraping LinkedIn, extracting with AI, resolving "
-                        "locations… this can take a minute."):
-            summary, logs = _capture_scan()
-        if summary.get("status") == "busy":
+        summary, logs, scan_exc = None, "", None
+        try:
+            with st.spinner("Scraping LinkedIn, extracting with AI, resolving "
+                            "locations… this can take a minute."):
+                summary, logs = _capture_scan()
+        except Exception as exc:  # noqa: BLE001 — never let a scan crash the page
+            scan_exc = exc
+            logging.getLogger(__name__).exception("Scan failed")
+        if scan_exc is not None:
+            _show_action_error("The scan couldn't finish", scan_exc, logs)
+        elif summary.get("status") == "busy":
             st.info("⏳ " + summary.get("message", "A scan is already running."))
         elif summary.get("ai_error"):
             st.error(
@@ -346,9 +389,16 @@ def render():
             submitted = st.form_submit_button("Analyze URL", disabled=bool(missing),
                                               type="primary")
         if submitted and url.strip():
-            with st.spinner("Analyzing that post…"):
-                rec = analyze_url(url.strip())
-            if rec:
+            rec, analyze_exc = None, None
+            try:
+                with st.spinner("Analyzing that post…"):
+                    rec = analyze_url(url.strip())
+            except Exception as exc:  # noqa: BLE001
+                analyze_exc = exc
+                logging.getLogger(__name__).exception("Analyze URL failed")
+            if analyze_exc is not None:
+                _show_action_error("That post couldn't be analyzed", analyze_exc)
+            elif rec:
                 st.success(f"✅ {rec.get('person_name') or rec.get('company') or 'Lead'} — "
                            f"{rec.get('role_hint') or '—'} at "
                            f"{rec.get('company') or '—'} "
@@ -366,11 +416,19 @@ def render():
                                     placeholder="https://www.linkedin.com/in/…")
             enrich_go = st.form_submit_button("✉ Enrich via Wiza", type="primary")
         if enrich_go and profile.strip():
-            with st.spinner("Looking up contact via Wiza… this can take up to a "
-                            "minute (Wiza processes the reveal asynchronously)."):
-                res = enrich.enrich_profile(profile.strip())
-            status = res.get("status")
-            if status == "ok" and res.get("email"):
+            res, enrich_exc = None, None
+            try:
+                with st.spinner("Looking up contact via Wiza… this can take up to "
+                                "a minute (Wiza processes the reveal "
+                                "asynchronously)."):
+                    res = enrich.enrich_profile(profile.strip())
+            except Exception as exc:  # noqa: BLE001
+                enrich_exc = exc
+                logging.getLogger(__name__).exception("Enrich profile failed")
+            status = res.get("status") if res else None
+            if enrich_exc is not None:
+                _show_action_error("The enrichment lookup failed", enrich_exc)
+            elif status == "ok" and res.get("email"):
                 st.success(f"✅ {res.get('full_name') or 'Contact'} — {res.get('email')}")
                 st.json(res)
             elif status == "ok":

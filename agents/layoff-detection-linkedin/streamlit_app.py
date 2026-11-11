@@ -11,6 +11,9 @@ found"); callables sidestep path resolution entirely.
 """
 from __future__ import annotations
 
+import logging
+
+import httpx
 import streamlit as st
 
 import st_common
@@ -31,7 +34,31 @@ pages = [
             url_path="dashboard", default=True),
     st.Page(settings.render, title="Settings", icon="⚙️", url_path="settings"),
 ]
-st.navigation(pages).run()
+
+# Final safety net. Streamlit re-runs this whole script on every interaction, so
+# an unhandled exception from any page (e.g. httpx.ConnectError when a provider
+# is unreachable) would otherwise bubble up here and Streamlit Cloud would show a
+# redacted "This app has encountered an error" crash. Catch it and render a
+# readable message instead — the page's own handlers deal with expected failures;
+# this only catches the unexpected.
+try:
+    st.navigation(pages).run()
+except Exception as exc:  # noqa: BLE001
+    logging.getLogger(__name__).exception("Unhandled error while rendering page")
+    _is_conn = isinstance(exc, (httpx.RequestError, ConnectionError))
+    st.error(
+        ("🌐 **Couldn't reach an external service.** The app failed to connect to "
+         "one of its providers (Supabase, SerpAPI, Apify, Perplexity, Gemini or "
+         "Wiza). This is usually a temporary network issue or a wrong URL/key — "
+         "check the **⚙️ Settings** page and try again."
+         if _is_conn else
+         "🛑 **Something went wrong rendering this page.** The error is shown "
+         "below. If it mentions a missing key or URL, fix it on the **⚙️ Settings** "
+         "page and reload.")
+        + f"\n\n_Details: `{type(exc).__name__}: {exc}`_"
+    )
+    st.button("↻ Reload", on_click=st.rerun)
+    st.stop()
 
 # Sidebar footer — brand links (rendered under the nav).
 with st.sidebar:
