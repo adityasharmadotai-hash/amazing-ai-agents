@@ -404,9 +404,49 @@ html, body, .stApp, [data-testid="stAppViewContainer"],
 [data-testid="stSidebar"] * , .stMarkdown, button, input, textarea, select {
   font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
 }
-.stApp { background:var(--bg); }
+.stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"] {
+  background:var(--bg); color:var(--ink);
+}
 [data-testid="stHeader"] { background:transparent; }
 .block-container { padding-top:1.4rem; padding-bottom:3rem; max-width:1180px; }
+
+/* ---------- Readable text in ANY base theme ----------
+   Streamlit Cloud ignores this app's .streamlit/config.toml because the app
+   lives in a repo subdirectory (Cloud reads config from the repo root), so the
+   base theme can fall back to the viewer's dark mode and paint our light
+   surfaces with white, invisible text. Force content colors here so the UI is
+   always legible regardless of the active base theme. The hero keeps its white
+   text via the explicit override further down. */
+[data-testid="stMarkdownContainer"], .stMarkdown,
+[data-testid="stMarkdownContainer"] p, .stMarkdown p, .stMarkdown li,
+h1, h2, h3, h4, h5, h6,
+[data-testid="stHeading"], [data-testid="stHeadingWithActionElements"],
+label, [data-testid="stWidgetLabel"], [data-testid="stWidgetLabel"] p,
+[data-testid="stRadio"] label, [data-testid="stRadio"] div,
+[data-testid="stCheckbox"] label,
+[data-testid="stExpander"] summary, [data-testid="stExpander"] summary p,
+[data-baseweb="tab"] { color:var(--ink) !important; }
+
+[data-testid="stCaptionContainer"], [data-testid="stCaptionContainer"] * {
+  color:var(--muted) !important;
+}
+
+/* Alerts (st.info/success/warning/error) — dark text on their light tints. */
+[data-testid="stAlert"] p, [data-testid="stAlertContentInfo"],
+[data-testid="stAlertContentSuccess"], [data-testid="stAlertContentWarning"],
+[data-testid="stAlertContentError"] { color:var(--ink) !important; }
+
+/* Inputs: keep a light field with dark text even under a dark base theme. */
+.stTextInput input, .stTextArea textarea,
+.stSelectbox div[data-baseweb="select"] > div,
+[data-baseweb="input"], [data-baseweb="base-input"] input {
+  background:#fff !important; color:var(--ink) !important;
+}
+
+/* Sidebar nav labels stay dark on the white sidebar. */
+[data-testid="stSidebarNav"] a span, [data-testid="stSidebarNav"] a p {
+  color:var(--ink) !important;
+}
 
 /* ---------- Hero ---------- */
 .ls-hero {
@@ -428,6 +468,10 @@ html, body, .stApp, [data-testid="stAppViewContainer"],
   background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.30);
   color:#fff; padding:7px 14px; border-radius:999px; font-size:12.5px;
   font-weight:600; white-space:nowrap;
+}
+/* Hero text stays white — wins over the global readable-text rules above. */
+.ls-hero, .ls-hero *, .ls-title, .ls-sub, .ls-pill, .ls-logo {
+  color:#fff !important;
 }
 
 /* ---------- Sidebar ---------- */
