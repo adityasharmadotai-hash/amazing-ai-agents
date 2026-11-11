@@ -75,6 +75,35 @@ def _headers(extra: dict | None = None) -> dict:
     return h
 
 
+# Cloudflare gateway codes that mean the Supabase ORIGIN was unreachable. On a
+# free project this is almost always a PAUSED project (they pause after ~1 week
+# idle). PostgREST never returns these — Cloudflare does, with an HTML error
+# page, so dumping the body at the user is useless.
+_UNREACHABLE_STATUS = {520, 521, 522, 523, 524, 525, 526, 527, 530}
+
+
+def _fail(action: str, resp: httpx.Response) -> RuntimeError:
+    """Build a clean, actionable error from a non-2xx PostgREST response.
+
+    Supabase sits behind Cloudflare, so a paused/down project returns a 52x
+    status with a full HTML error page. We detect that and explain what to do
+    instead of surfacing raw HTML.
+    """
+    status = resp.status_code
+    body = (resp.text or "").strip()
+    looks_html = body[:15].lower().startswith(("<!doctype", "<html"))
+    if status in _UNREACHABLE_STATUS or (status >= 500 and looks_html):
+        return RuntimeError(
+            f"Supabase is unreachable (HTTP {status}). The project is most likely "
+            "PAUSED — free Supabase projects pause after ~1 week of inactivity. "
+            "Open https://supabase.com/dashboard, select your project and click "
+            "Restore/Resume, wait ~1 minute, then try again. (Also double-check "
+            "SUPABASE_URL on the Settings page.)"
+        )
+    detail = "(HTML error page)" if looks_html else body[:200]
+    return RuntimeError(f"Supabase {action} failed {status}: {detail}")
+
+
 _COMPANIES_TABLE = "companies"
 
 _FIELDS = ("source_url", "source", "company", "company_key", "poster_role",
@@ -134,7 +163,7 @@ def upsert_records(records: list[dict[str, Any]]) -> int:
             if resp.status_code < 300:
                 log.info("Stored %d records (without company fields)", len(slim))
                 return len(slim)
-        raise RuntimeError(f"Supabase upsert failed {resp.status_code}: {resp.text[:200]}")
+        raise _fail("upsert", resp)
     log.info("Stored %d layoff records", len(rows))
     return len(rows)
 
@@ -147,7 +176,7 @@ def posts_for_rollup() -> list[dict]:
               "limit": "10000"}
     resp = httpx.get(f"{_base()}/{_TABLE}", params=params, headers=_headers(), timeout=30)
     if resp.status_code >= 300:
-        raise RuntimeError(f"Supabase rollup select failed {resp.status_code}: {resp.text[:200]}")
+        raise _fail("rollup select", resp)
     return resp.json()
 
 
@@ -168,7 +197,7 @@ def upsert_companies(rows: list[dict[str, Any]]) -> int:
     headers = _headers({"Prefer": "resolution=merge-duplicates,return=minimal"})
     resp = httpx.post(url, json=payload, headers=headers, timeout=30)
     if resp.status_code >= 300:
-        raise RuntimeError(f"Supabase companies upsert failed {resp.status_code}: {resp.text[:200]}")
+        raise _fail("companies upsert", resp)
     log.info("Rolled up %d companies", len(payload))
     return len(payload)
 
@@ -191,7 +220,7 @@ def list_companies(limit: int = 300, min_confidence: float | None = None,
     resp = httpx.get(f"{_base()}/{_COMPANIES_TABLE}", params=params,
                      headers=_headers(), timeout=30)
     if resp.status_code >= 300:
-        raise RuntimeError(f"Supabase companies select failed {resp.status_code}: {resp.text[:200]}")
+        raise _fail("companies select", resp)
     return resp.json()
 
 
@@ -212,7 +241,7 @@ def list_records(limit: int = 200, company: str | None = None,
 
     resp = httpx.get(f"{_base()}/{_TABLE}", params=params, headers=_headers(), timeout=30)
     if resp.status_code >= 300:
-        raise RuntimeError(f"Supabase select failed {resp.status_code}: {resp.text[:200]}")
+        raise _fail("select", resp)
     rows = resp.json()
     # collapse the same person appearing in multiple posts (different URLs) —
     # keep the newest (rows are ordered created_at desc). Company/announcement
@@ -239,7 +268,7 @@ def delete_all() -> int:
     headers = _headers({"Prefer": "return=representation"})
     resp = httpx.delete(url, headers=headers, timeout=60)
     if resp.status_code >= 300:
-        raise RuntimeError(f"Supabase delete failed {resp.status_code}: {resp.text[:200]}")
+        raise _fail("delete", resp)
     try:
         return len(resp.json())
     except Exception:  # noqa: BLE001
