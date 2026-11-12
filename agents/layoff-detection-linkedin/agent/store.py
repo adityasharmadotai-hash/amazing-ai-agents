@@ -82,12 +82,27 @@ def _headers(extra: dict | None = None) -> dict:
 _UNREACHABLE_STATUS = {520, 521, 522, 523, 524, 525, 526, 527, 530}
 
 
+def _is_missing_column(resp: httpx.Response, column: str | None = None) -> bool:
+    """True if a PostgREST response is the 'column does not exist' error (42703).
+
+    Pass `column` to require that specific column be the one missing.
+    """
+    try:
+        body = resp.json()
+    except Exception:  # noqa: BLE001 — non-JSON (e.g. HTML) body
+        return False
+    if not isinstance(body, dict) or body.get("code") != "42703":
+        return False
+    return column is None or column in (body.get("message") or "")
+
+
 def _fail(action: str, resp: httpx.Response) -> RuntimeError:
     """Build a clean, actionable error from a non-2xx PostgREST response.
 
     Supabase sits behind Cloudflare, so a paused/down project returns a 52x
     status with a full HTML error page. We detect that and explain what to do
-    instead of surfacing raw HTML.
+    instead of surfacing raw HTML. We also detect schema drift (a column the
+    code expects that the table doesn't have yet).
     """
     status = resp.status_code
     body = (resp.text or "").strip()
@@ -99,6 +114,17 @@ def _fail(action: str, resp: httpx.Response) -> RuntimeError:
             "Open https://supabase.com/dashboard, select your project and click "
             "Restore/Resume, wait ~1 minute, then try again. (Also double-check "
             "SUPABASE_URL on the Settings page.)"
+        )
+    if _is_missing_column(resp):
+        msg = ""
+        try:
+            msg = resp.json().get("message") or ""
+        except Exception:  # noqa: BLE001
+            pass
+        return RuntimeError(
+            f"Your Supabase schema is out of date ({msg}). Re-run the latest "
+            "supabase/companies.sql (and supabase/layoff_posts.sql) in the Supabase "
+            "SQL editor — they're idempotent and safe to re-run — then try again."
         )
     detail = "(HTML error page)" if looks_html else body[:200]
     return RuntimeError(f"Supabase {action} failed {status}: {detail}")
@@ -208,17 +234,28 @@ def list_companies(limit: int = 300, min_confidence: float | None = None,
 
     in_location=True returns only companies with at least one post in the target
     location (e.g. SF/California)."""
-    params = {
-        "select": "*",
-        "order": "confidence.desc,total_posts.desc",
-        "limit": str(limit),
-    }
-    if min_confidence is not None:
-        params["confidence"] = f"gte.{min_confidence}"
-    if in_location is not None:
-        params["in_location"] = f"eq.{str(in_location).lower()}"
-    resp = httpx.get(f"{_base()}/{_COMPANIES_TABLE}", params=params,
-                     headers=_headers(), timeout=30)
+    def _params(with_in_location: bool) -> dict:
+        p = {
+            "select": "*",
+            "order": "confidence.desc,total_posts.desc",
+            "limit": str(limit),
+        }
+        if min_confidence is not None:
+            p["confidence"] = f"gte.{min_confidence}"
+        if with_in_location and in_location is not None:
+            p["in_location"] = f"eq.{str(in_location).lower()}"
+        return p
+
+    url = f"{_base()}/{_COMPANIES_TABLE}"
+    resp = httpx.get(url, params=_params(True), headers=_headers(), timeout=30)
+    # Stale schema: the companies table predates the in_location column (run
+    # supabase/companies.sql to add it). Rather than failing the whole Companies
+    # tab, retry WITHOUT the location filter so discovered companies still show.
+    if (resp.status_code >= 300 and in_location is not None
+            and _is_missing_column(resp, "in_location")):
+        log.warning("companies.in_location is missing — run supabase/companies.sql "
+                    "to enable the location filter. Returning companies unfiltered.")
+        resp = httpx.get(url, params=_params(False), headers=_headers(), timeout=30)
     if resp.status_code >= 300:
         raise _fail("companies select", resp)
     return resp.json()
