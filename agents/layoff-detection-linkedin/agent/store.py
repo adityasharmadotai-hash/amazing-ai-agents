@@ -317,3 +317,63 @@ def table_exists() -> bool:
     resp = httpx.get(f"{_base()}/{_TABLE}", params={"select": "id", "limit": "1"},
                      headers=_headers(), timeout=20)
     return resp.status_code < 300
+
+
+def _table_absent(resp: httpx.Response) -> bool:
+    """True if PostgREST reports the table itself is missing (not just a column).
+
+    A missing table returns 404 (often with a PGRST2xx code like PGRST205,
+    'Could not find the table … in the schema cache').
+    """
+    if resp.status_code == 404:
+        return True
+    try:
+        return str(resp.json().get("code", "")).startswith("PGRST2")
+    except Exception:  # noqa: BLE001 — non-JSON body
+        return False
+
+
+# What each table must have for the app to work, and which SQL file provides it.
+# We probe only the migration-added columns (the ones most likely missing on an
+# older schema); the base table check is the 404 case.
+#   (table, columns-to-probe, SQL-if-table-missing, SQL-if-column-missing)
+_SCHEMA_CHECKS = (
+    (_TABLE, "company_key,poster_role",
+     "supabase/layoff_posts.sql", "supabase/companies.sql"),
+    (_COMPANIES_TABLE, "in_location,in_location_posts",
+     "supabase/companies.sql", "supabase/companies.sql"),
+)
+
+
+def schema_status() -> dict:
+    """Best-effort check that the Supabase tables have the columns the app needs.
+
+    Returns ``{"checked": bool, "ok": bool, "problems": [str, ...]}`` and never
+    raises. When Supabase isn't configured, is paused/unreachable, or fails in an
+    unexpected way, returns ``checked=False`` so callers stay quiet — those states
+    have their own, more specific UX and shouldn't also trigger a schema nag.
+    """
+    if not (config.SUPABASE_URL and config.SUPABASE_SERVICE_KEY):
+        return {"checked": False, "ok": True, "problems": []}
+    problems: list[str] = []
+    for table, sel, base_sql, migration_sql in _SCHEMA_CHECKS:
+        try:
+            resp = httpx.get(f"{_base()}/{table}",
+                             params={"select": sel, "limit": "1"},
+                             headers=_headers(), timeout=15)
+        except httpx.RequestError:
+            return {"checked": False, "ok": True, "problems": []}  # offline
+        if resp.status_code < 300:
+            continue
+        if resp.status_code in _UNREACHABLE_STATUS:
+            return {"checked": False, "ok": True, "problems": []}  # paused/down
+        if _is_missing_column(resp):
+            problems.append(
+                f"`{table}` is missing a required column — run **`{migration_sql}`** "
+                "in the Supabase SQL editor.")
+        elif _table_absent(resp):
+            problems.append(
+                f"`{table}` table not found — run **`{base_sql}`** in the Supabase "
+                "SQL editor.")
+        # Any other error (auth, transient): stay quiet rather than cry wolf.
+    return {"checked": True, "ok": not problems, "problems": problems}

@@ -23,6 +23,18 @@ def _money(v) -> str:
     return f"${v:.4f}" if v < 0.01 else f"${v:.2f}"
 
 
+def _schema_problems() -> list[str]:
+    """Database schema problems, checked once per session (cached in
+    session_state so we hit Supabase at startup, not on every rerun)."""
+    if "schema_problems" not in st.session_state:
+        try:
+            st.session_state["schema_problems"] = (
+                store.schema_status().get("problems", []))
+        except Exception:  # noqa: BLE001 — a schema check must never break the page
+            st.session_state["schema_problems"] = []
+    return st.session_state["schema_problems"]
+
+
 def _is_connection_error(exc: BaseException) -> bool:
     """True for any httpx connect/timeout/transport failure.
 
@@ -128,6 +140,25 @@ def render():
             "step-by-step instructions for generating each one.",
             icon="⚙️",
         )
+
+    # ── Schema version check (startup) ─────────────────────────────────────
+    # Verify the Supabase tables have the columns this build needs, so users on
+    # an older migration get a clear, actionable banner at startup instead of a
+    # confusing error mid-use. Only runs when the DB keys are set (no point
+    # otherwise); skipped silently when Supabase is paused/unreachable.
+    if not missing:
+        problems = _schema_problems()
+        if problems:
+            st.warning(
+                "🗄️ **Your database schema is out of date.** The app still runs, "
+                "but some features need a quick one-time migration:\n\n"
+                + "\n".join(f"- {p}" for p in problems)
+                + "\n\nThese scripts are **idempotent** (safe to re-run). Run them "
+                "in the Supabase **SQL editor**, then click **Re-check**.",
+            )
+            if st.button("↻ Re-check schema"):
+                st.session_state.pop("schema_problems", None)
+                st.rerun()
 
     # ── Action bar ─────────────────────────────────────────────────────────
     c1, c2, c3, c4 = st.columns([1.6, 1, 1.15, 1.15])
