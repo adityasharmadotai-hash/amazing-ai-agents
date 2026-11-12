@@ -90,6 +90,21 @@ def _resolve(url: str) -> str:
     return final
 
 
+def _max_searches() -> int:
+    """GEMINI_NEWS_MAX_SEARCHES, read defensively.
+
+    Streamlit reruns the main script but keeps already-imported submodules
+    cached, so a *newly added* config global can be absent on a stale `config`
+    module after a redeploy. getattr with a default keeps this source working
+    regardless (a fresh process always has the real value)."""
+    return max(1, int(getattr(config, "GEMINI_NEWS_MAX_SEARCHES", 4) or 4))
+
+
+def _trusted_domains() -> list[str]:
+    """NEWS_TRUSTED_DOMAINS, read defensively (see _max_searches)."""
+    return getattr(config, "NEWS_TRUSTED_DOMAINS", []) or []
+
+
 def _recency_days() -> int:
     """The N-day window to ask the model to respect (mirrors the other sources)."""
     days = config.LINKEDIN_RECENCY_DAYS
@@ -112,7 +127,7 @@ def _build_prompt(focus: str | None) -> str:
     if loc:
         lines.append(f"Prefer layoffs that affect {loc} (companies headquartered "
                      "there, local offices, or workers based there).")
-    trusted = config.NEWS_TRUSTED_DOMAINS
+    trusted = _trusted_domains()
     if trusted:
         lines.append("Only use these news domains: " + ", ".join(trusted) + ".")
     else:
@@ -189,7 +204,7 @@ def _acceptable(url: str) -> bool:
     host = urlsplit(url).netloc.lower()
     if any(skip in host for skip in _SKIP_HOSTS):
         return False
-    trusted = config.NEWS_TRUSTED_DOMAINS
+    trusted = _trusted_domains()
     if trusted:
         return any(host == d.lower() or host.endswith("." + d.lower())
                    for d in trusted)
@@ -237,7 +252,7 @@ def search_linkedin_posts(queries: list[str] | None = None) -> list[dict]:
         log.info("Gemini news source skipped (GEMINI_API_KEY unset).")
         return []
 
-    cap = max(1, config.GEMINI_NEWS_MAX_SEARCHES)
+    cap = _max_searches()
     if queries is not None:
         foci = list(dict.fromkeys(q for q in queries if q))[:cap]
     else:

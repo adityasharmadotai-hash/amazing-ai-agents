@@ -83,15 +83,20 @@ _UNREACHABLE_STATUS = {520, 521, 522, 523, 524, 525, 526, 527, 530}
 
 
 def _is_missing_column(resp: httpx.Response, column: str | None = None) -> bool:
-    """True if a PostgREST response is the 'column does not exist' error (42703).
+    """True if a PostgREST response means a column the code expects is missing.
 
-    Pass `column` to require that specific column be the one missing.
+    Covers two cases:
+      - 42703   — the column genuinely does not exist (DB-level).
+      - PGRST204 — "Could not find the 'X' column ... in the schema cache": the
+        column was just added by a migration but PostgREST's cached schema is
+        stale (fixed by reloading the schema cache).
+    Pass `column` to require that specific column be the one named.
     """
     try:
         body = resp.json()
     except Exception:  # noqa: BLE001 — non-JSON (e.g. HTML) body
         return False
-    if not isinstance(body, dict) or body.get("code") != "42703":
+    if not isinstance(body, dict) or body.get("code") not in ("42703", "PGRST204"):
         return False
     return column is None or column in (body.get("message") or "")
 
@@ -122,9 +127,12 @@ def _fail(action: str, resp: httpx.Response) -> RuntimeError:
         except Exception:  # noqa: BLE001
             pass
         return RuntimeError(
-            f"Your Supabase schema is out of date ({msg}). Re-run the latest "
-            "supabase/companies.sql (and supabase/layoff_posts.sql) in the Supabase "
-            "SQL editor — they're idempotent and safe to re-run — then try again."
+            f"Your Supabase schema is out of date, or its API cache is stale "
+            f"({msg}). Re-run the latest supabase/companies.sql (and "
+            "supabase/layoff_posts.sql) in the Supabase SQL editor — they're "
+            "idempotent — then reload the API schema cache (Supabase dashboard: "
+            "the table's API docs refresh automatically within a minute, or run "
+            "`NOTIFY pgrst, 'reload schema';` in the SQL editor). Then try again."
         )
     detail = "(HTML error page)" if looks_html else body[:200]
     return RuntimeError(f"Supabase {action} failed {status}: {detail}")
