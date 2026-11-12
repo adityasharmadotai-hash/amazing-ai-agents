@@ -32,13 +32,13 @@ html,body,[class*="css"]{ font-family:'Inter',sans-serif; }
 [data-testid="stSidebar"] .stButton>button{
     background:rgba(255,255,255,0.06) !important;
     border:1px solid rgba(255,255,255,0.1) !important;
-    border-radius:10px !important;color:#cbd5e1 !important;
-    font-size:14px !important;font-weight:500 !important;
-    padding:10px 14px !important;width:100% !important;
+    border-radius:10px !important;color:#eef0ff !important;
+    font-size:15px !important;font-weight:600 !important;
+    padding:11px 15px !important;width:100% !important;
     margin:2px 0 !important;text-align:left !important;
-    transition:all 0.18s !important;
+    transition:all 0.18s !important;letter-spacing:.01em;
 }
-[data-testid="stSidebar"] .stButton>button p{color:#cbd5e1 !important;}
+[data-testid="stSidebar"] .stButton>button p{color:#eef0ff !important;font-size:15px !important;font-weight:600 !important;}
 [data-testid="stSidebar"] .stButton>button:hover{
     background:rgba(79,70,229,0.28) !important;
     border-color:rgba(79,70,229,0.5) !important;color:white !important;
@@ -58,9 +58,9 @@ html,body,[class*="css"]{ font-family:'Inter',sans-serif; }
 
 /* ── Score gauge ── */
 .score-gauge{
-    text-align:center;padding:30px 20px;background:white;
+    text-align:center;padding:30px 20px;background:#0e1120;
     border-radius:20px;box-shadow:0 6px 24px rgba(0,0,0,0.08);
-    border:1px solid #e2e8f0;
+    border:1px solid rgba(140,120,255,.18);
 }
 .score-number{font-size:80px;font-weight:900;line-height:1;letter-spacing:-4px;}
 .score-label{font-size:18px;font-weight:700;margin-top:8px;}
@@ -73,45 +73,45 @@ html,body,[class*="css"]{ font-family:'Inter',sans-serif; }
 
 /* ── Category cards ── */
 .cat-card{
-    background:white;border-radius:14px;padding:16px 20px;
-    border:1px solid #e2e8f0;box-shadow:0 2px 6px rgba(0,0,0,0.04);
+    background:#0e1120;border-radius:14px;padding:16px 20px;
+    border:1px solid rgba(140,120,255,.18);box-shadow:0 2px 6px rgba(0,0,0,0.04);
     margin-bottom:10px;cursor:default;transition:all 0.15s;
 }
 .cat-card:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(0,0,0,0.09);}
-.cat-bar{height:7px;border-radius:4px;margin-top:10px;background:#f1f5f9;}
+.cat-bar{height:7px;border-radius:4px;margin-top:10px;background:#1c2036;}
 .cat-bar-fill{height:7px;border-radius:4px;transition:width 0.6s ease;}
 
 /* ── Issue cards ── */
-.iss-critical{background:#fef2f2;border:1px solid #fecaca;border-left:4px solid #ef4444;border-radius:10px;padding:12px 16px;margin:5px 0;}
-.iss-warning {background:#fffbeb;border:1px solid #fde68a;border-left:4px solid #f59e0b;border-radius:10px;padding:12px 16px;margin:5px 0;}
-.iss-info    {background:#eff6ff;border:1px solid #bfdbfe;border-left:4px solid #3b82f6;border-radius:10px;padding:12px 16px;margin:5px 0;}
-.iss-pass    {background:#f0fdf4;border:1px solid #bbf7d0;border-left:4px solid #22c55e;border-radius:10px;padding:12px 16px;margin:5px 0;}
-.iss-title   {font-size:13px;font-weight:600;color:#0f172a;margin-bottom:4px;}
+.iss-critical{background:rgba(251,113,133,.12);border:1px solid #fecaca;border-left:4px solid #ef4444;border-radius:10px;padding:12px 16px;margin:5px 0;}
+.iss-warning {background:rgba(251,191,36,.12);border:1px solid #fde68a;border-left:4px solid #f59e0b;border-radius:10px;padding:12px 16px;margin:5px 0;}
+.iss-info    {background:rgba(96,165,250,.12);border:1px solid #bfdbfe;border-left:4px solid #3b82f6;border-radius:10px;padding:12px 16px;margin:5px 0;}
+.iss-pass    {background:rgba(52,211,153,.12);border:1px solid #bbf7d0;border-left:4px solid #22c55e;border-radius:10px;padding:12px 16px;margin:5px 0;}
+.iss-title   {font-size:13px;font-weight:600;color:#eef0ff;margin-bottom:4px;}
 .iss-fix     {font-size:12px;color:#64748b;}
 
 /* ── AI suggestion cards ── */
 .ai-card{
-    background:white;border:1px solid #e2e8f0;border-radius:12px;
+    background:#0e1120;border:1px solid rgba(140,120,255,.18);border-radius:12px;
     padding:16px 18px;margin:7px 0;
     box-shadow:0 1px 4px rgba(0,0,0,0.05);
 }
-.ai-title{font-size:14px;font-weight:700;color:#0f172a;margin-bottom:6px;}
-.ai-body {font-size:13px;color:#374151;line-height:1.65;}
-.badge-high{background:#fef2f2;color:#dc2626;border:1px solid #fecaca;
+.ai-title{font-size:14px;font-weight:700;color:#eef0ff;margin-bottom:6px;}
+.ai-body {font-size:13px;color:#c9cdf2;line-height:1.65;}
+.badge-high{background:rgba(251,113,133,.12);color:#dc2626;border:1px solid #fecaca;
     padding:2px 9px;border-radius:10px;font-size:11px;font-weight:700;}
-.badge-med {background:#fffbeb;color:#d97706;border:1px solid #fde68a;
+.badge-med {background:rgba(251,191,36,.12);color:#d97706;border:1px solid #fde68a;
     padding:2px 9px;border-radius:10px;font-size:11px;font-weight:700;}
-.badge-low {background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;
+.badge-low {background:rgba(52,211,153,.12);color:#16a34a;border:1px solid #bbf7d0;
     padding:2px 9px;border-radius:10px;font-size:11px;font-weight:700;}
 
 /* ── SERP preview ── */
 .serp-box{
-    background:white;border:1px solid #e2e8f0;border-radius:12px;
+    background:#0e1120;border:1px solid rgba(140,120,255,.18);border-radius:12px;
     padding:20px 24px;margin:10px 0;
     box-shadow:0 2px 8px rgba(0,0,0,0.06);
     font-family:'Arial',sans-serif;
 }
-.serp-title{color:#1a0dab;font-size:20px;font-weight:400;cursor:pointer;
+.serp-title{color:#8ab4f8;font-size:20px;font-weight:400;cursor:pointer;
     text-decoration:none;line-height:1.3;}
 .serp-title:hover{text-decoration:underline;}
 .serp-url  {color:#006621;font-size:14px;margin:2px 0;}
@@ -120,31 +120,31 @@ html,body,[class*="css"]{ font-family:'Inter',sans-serif; }
 
 /* ── OG preview ── */
 .og-card{
-    border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;
+    border:1px solid rgba(140,120,255,.18);border-radius:12px;overflow:hidden;
     max-width:500px;box-shadow:0 2px 8px rgba(0,0,0,0.07);
 }
 .og-domain{font-size:12px;color:#65676B;text-transform:uppercase;
-    padding:10px 12px 4px;background:white;}
-.og-title {font-size:16px;font-weight:700;color:#1c1e21;
-    padding:0 12px 4px;background:white;}
-.og-desc  {font-size:14px;color:#65676B;padding:0 12px 12px;background:white;}
+    padding:10px 12px 4px;background:#0e1120;}
+.og-title {font-size:16px;font-weight:700;color:#eef0ff;
+    padding:0 12px 4px;background:#0e1120;}
+.og-desc  {font-size:14px;color:#65676B;padding:0 12px 12px;background:#0e1120;}
 
 /* ── Sample URL pills ── */
 .sample-pill{
     display:inline-block;padding:5px 14px;border-radius:20px;
-    background:#f1f5f9;border:1px solid #e2e8f0;
-    font-size:12px;font-weight:500;color:#374151;
+    background:#1c2036;border:1px solid rgba(140,120,255,.18);
+    font-size:12px;font-weight:500;color:#c9cdf2;
     cursor:pointer;margin:4px;transition:all 0.15s;
 }
-.sample-pill:hover{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8;}
+.sample-pill:hover{background:rgba(96,165,250,.12);border-color:#bfdbfe;color:#1d4ed8;}
 
 /* ── Metric cards ── */
 .metric-box{
-    background:white;border:1px solid #e2e8f0;border-radius:12px;
+    background:#0e1120;border:1px solid rgba(140,120,255,.18);border-radius:12px;
     padding:16px;text-align:center;
     box-shadow:0 1px 4px rgba(0,0,0,0.06);
 }
-.metric-val{font-size:24px;font-weight:800;color:#0f172a;}
+.metric-val{font-size:24px;font-weight:800;color:#eef0ff;}
 .metric-lbl{font-size:11px;color:#64748b;font-weight:600;
     text-transform:uppercase;letter-spacing:0.05em;margin-top:3px;}
 
@@ -156,14 +156,14 @@ html,body,[class*="css"]{ font-family:'Inter',sans-serif; }
 }
 
 /* ── KW badge ── */
-.kw-badge{display:inline-block;background:#eff6ff;color:#2563eb;
+.kw-badge{display:inline-block;background:rgba(96,165,250,.12);color:#2563eb;
     border:1px solid #bfdbfe;padding:3px 10px;border-radius:12px;
     font-size:12px;font-weight:600;margin:3px;}
 
 /* ── Comparison bar ── */
 .comp-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f1f5f9;}
-.comp-lbl{min-width:120px;font-size:13px;font-weight:500;color:#374151;}
-.comp-bar-wrap{flex:1;background:#f1f5f9;border-radius:4px;height:8px;}
+.comp-lbl{min-width:120px;font-size:13px;font-weight:500;color:#c9cdf2;}
+.comp-bar-wrap{flex:1;background:#1c2036;border-radius:4px;height:8px;}
 .comp-bar-fill{height:8px;border-radius:4px;transition:width 0.5s;}
 .comp-val{min-width:40px;text-align:right;font-size:12px;font-weight:700;}
 
@@ -172,21 +172,21 @@ html,body,[class*="css"]{ font-family:'Inter',sans-serif; }
 
 /* ── Copy button ── */
 .copy-btn{
-    background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;
-    padding:4px 12px;font-size:12px;font-weight:500;color:#374151;
+    background:#0e1120;border:1px solid rgba(140,120,255,.18);border-radius:8px;
+    padding:4px 12px;font-size:12px;font-weight:500;color:#c9cdf2;
     cursor:pointer;transition:all 0.15s;float:right;
 }
-.copy-btn:hover{background:#eff6ff;color:#4f46e5;border-color:#bfdbfe;}
+.copy-btn:hover{background:rgba(96,165,250,.12);color:#4f46e5;border-color:#bfdbfe;}
 
 /* ── Page header ── */
 .page-hdr{padding:4px 0 20px;}
-.page-hdr h1{font-size:26px;font-weight:800;color:#0f172a;margin:0;}
+.page-hdr h1{font-size:26px;font-weight:800;color:#eef0ff;margin:0;}
 .page-hdr p{color:#64748b;font-size:14px;margin-top:5px;}
 
 /* ── URL bar ── */
 .url-bar{
-    background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;
-    padding:10px 16px;font-size:14px;font-weight:500;color:#374151;
+    background:#0e1120;border:1px solid rgba(140,120,255,.18);border-radius:10px;
+    padding:10px 16px;font-size:14px;font-weight:500;color:#c9cdf2;
     word-break:break-all;margin-bottom:16px;
     display:flex;align-items:center;gap:8px;
 }
@@ -199,15 +199,15 @@ html,body,[class*="css"]{ font-family:'Inter',sans-serif; }
 /* ── Tag ── */
 .tag{display:inline-block;padding:2px 8px;border-radius:6px;
     font-size:11px;font-weight:600;margin-right:4px;}
-.tag-green{background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;}
-.tag-red  {background:#fef2f2;color:#dc2626;border:1px solid #fecaca;}
-.tag-blue {background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;}
-.tag-gray {background:#f8fafc;color:#64748b;border:1px solid #e2e8f0;}
+.tag-green{background:rgba(52,211,153,.12);color:#16a34a;border:1px solid #bbf7d0;}
+.tag-red  {background:rgba(251,113,133,.12);color:#dc2626;border:1px solid #fecaca;}
+.tag-blue {background:rgba(96,165,250,.12);color:#2563eb;border:1px solid #bfdbfe;}
+.tag-gray {background:#0e1120;color:#64748b;border:1px solid rgba(140,120,255,.18);}
 
 /* ── Tabs ── */
-.stTabs [data-baseweb="tab-list"]{background:#f1f5f9;border-radius:10px;padding:3px;gap:2px;}
+.stTabs [data-baseweb="tab-list"]{background:#1c2036;border-radius:10px;padding:3px;gap:2px;}
 .stTabs [data-baseweb="tab"]{border-radius:8px;font-weight:500;font-size:13px;}
-.stTabs [aria-selected="true"]{background:white !important;box-shadow:0 1px 4px rgba(0,0,0,0.1);}
+.stTabs [aria-selected="true"]{background:#0e1120 !important;box-shadow:0 1px 4px rgba(0,0,0,0.1);}
 
 /* ── Text area (export) ── */
 [data-testid="stTextArea"] textarea{
@@ -219,7 +219,7 @@ html,body,[class*="css"]{ font-family:'Inter',sans-serif; }
 /* ── Input ── */
 [data-testid="stTextInput"] input{
     border-radius:10px !important;font-size:15px !important;
-    padding:12px 16px !important;border:2px solid #e2e8f0 !important;
+    padding:12px 16px !important;border:2px solid rgba(140,120,255,.18) !important;
 }
 [data-testid="stTextInput"] input:focus{border-color:#4f46e5 !important;}
 
@@ -242,14 +242,14 @@ html,body,[class*="css"]{ font-family:'Inter',sans-serif; }
     font-size:12px;font-weight:700;flex-shrink:0;
     display:flex;align-items:center;justify-content:center;
 }
-.fix-step-text{font-size:13px;color:#374151;line-height:1.5;padding-top:3px;}
+.fix-step-text{font-size:13px;color:#c9cdf2;line-height:1.5;padding-top:3px;}
 .fix-badge{
     display:inline-block;padding:3px 10px;border-radius:12px;
     font-size:11px;font-weight:700;margin-right:6px;
 }
-.fix-easy  {background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;}
-.fix-medium{background:#fffbeb;color:#d97706;border:1px solid #fde68a;}
-.fix-hard  {background:#fef2f2;color:#dc2626;border:1px solid #fecaca;}
+.fix-easy  {background:rgba(52,211,153,.12);color:#16a34a;border:1px solid #bbf7d0;}
+.fix-medium{background:rgba(251,191,36,.12);color:#d97706;border:1px solid #fde68a;}
+.fix-hard  {background:rgba(251,113,133,.12);color:#dc2626;border:1px solid #fecaca;}
 .fix-code{
     background:#0f172a;border-radius:10px;padding:14px 16px;
     font-family:monospace;font-size:12px;color:#a5f3fc;
@@ -257,7 +257,7 @@ html,body,[class*="css"]{ font-family:'Inter',sans-serif; }
     white-space:pre;
 }
 .fix-list-item{
-    font-size:12px;color:#374151;padding:3px 0;
+    font-size:12px;color:#c9cdf2;padding:3px 0;
     display:flex;align-items:flex-start;gap:6px;
 }
 
@@ -277,11 +277,38 @@ from modules.ai_advisor import (
 )
 from modules.exporter import export_markdown, export_pdf
 from modules.fixes import get_fix_guide, FIX_GUIDES
+from modules import ui
+import streamlit.components.v1 as components
+from modules import dark_ui, projections, history, rankings, suggestions
+from datetime import datetime
+
+# Inject the agentic animation layer (keyframes, Scout, gauges, pulse line…)
+st.markdown(ui.animations_css(), unsafe_allow_html=True)
+
+# Dark-theme override for the legacy GPT-4o pages. Only class-based rules here —
+# attribute-substring matching on inline styles does NOT work (the browser serialises
+# inline styles with spaces and rgb(), so [style*="background:#0e1120"] never matches).
+# The inline-styled markup in those pages is converted at the source below instead.
+st.markdown("""
+<style>
+.cat-card:hover{ box-shadow:0 6px 16px rgba(99,102,241,.25) !important; }
+.cat-bar,.comp-bar-wrap{ background:#1c2036 !important; }
+.serp-title{ color:#8ab4f8 !important; } .serp-url{ color:#6ee7a8 !important; }
+.metric-lbl{ color:#8a90bf !important; }
+.stTabs [data-baseweb="tab-list"]{ background:#0e1120 !important; }
+.stTabs [aria-selected="true"]{ background:#1c2036 !important; }
+.iss-info{ background:rgba(59,130,246,.12) !important; }
+.iss-pass{ background:rgba(34,197,94,.12) !important; }
+.iss-warning{ background:rgba(245,158,11,.12) !important; }
+.iss-critical{ background:rgba(239,68,68,.12) !important; }
+.fix-step-text,.fix-list-item{ color:#c9cdf2 !important; }
+</style>
+""", unsafe_allow_html=True)
 
 # ── Session state ─────────────────────────────────────────────────────────────
 for k, v in {
-    "page":"🔍 Audit","raw_data":None,"audit":None,"ai":None,
-    "user_api_key":"","audit_history":[],
+    "page":"💓 Live Pulse","raw_data":None,"audit":None,"ai":None,
+    "user_api_key":"","serp_api_key":"","audit_history":[],
 }.items():
     if k not in st.session_state:
         st.session_state[k] = v
@@ -297,12 +324,114 @@ def _sync():
     if k: os.environ["OPENAI_API_KEY"] = k
 _sync()
 
+def _sync_serp():
+    """Make the SerpAPI key available to modules.rankings (in-app field, secret, or env)."""
+    k = st.session_state.get("serp_api_key", "").strip()
+    if not k:
+        try: k = st.secrets.get("SERPAPI_KEY") or ""
+        except Exception: k = ""
+    k = k or os.environ.get("SERPAPI_KEY", "")
+    if k: os.environ["SERPAPI_KEY"] = k
+_sync_serp()
+
+# ── Live site monitor ─────────────────────────────────────────────────────────
+LIVE_SITE = "https://futrbridge.com"
+
+@st.cache_data(ttl=1800, show_spinner=False)
+def run_live_audit(url: str) -> dict:
+    """Rule-based audit of a site, cached for 30 min. No API key needed."""
+    page = fetch_page(url)
+    if "error" in page:
+        return {"error": page["error"]}
+    raw = extract_raw_data(page)
+    if "error" in raw:
+        return {"error": raw["error"]}
+    audit = {
+        "meta":      analyse_meta(raw),    "headings":  analyse_headings(raw),
+        "keywords":  analyse_keywords(raw), "technical": analyse_technical(raw),
+        "images":    analyse_images(raw),   "links":     analyse_links(raw),
+    }
+    audit["overall_score"] = calculate_overall(audit)
+    return {"raw": raw, "audit": audit}
+
+
+def live_audit_or_stop():
+    """Run (cached) live audit of the tracked site; render an error + stop on failure."""
+    with st.spinner("📡 Scout is scanning the live site…"):
+        res = run_live_audit(LIVE_SITE)
+    if res.get("error"):
+        st.markdown(ui.scout_svg("worried", size=140), unsafe_allow_html=True)
+        st.error(f"😟 Scout couldn't reach {LIVE_SITE}: {res['error']}")
+        st.stop()
+    history.record(LIVE_SITE, res["audit"])
+    return res["raw"], res["audit"]
+
+
+def dark_page_header(title, subtitle, with_rescan=False):
+    """A dark-theme-friendly page header; returns True if the rescan button was clicked."""
+    clicked = False
+    if with_rescan:
+        c1, c2 = st.columns([5, 1])
+    else:
+        c1 = st.container(); c2 = None
+    with c1:
+        st.markdown(
+            f"<div style='font-family:Space Grotesk,sans-serif;font-weight:700;font-size:25px;color:#eef0ff;'>{title}</div>"
+            f"<div style='color:#8a90bf;font-size:13.5px;margin-top:3px;'>{subtitle}</div>",
+            unsafe_allow_html=True)
+    if c2 is not None:
+        with c2:
+            st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+            clicked = st.button("🔄 Re-scan", use_container_width=True)
+    return clicked
+
+# Friendly page titles for the live site's ranking pages. FutrBridge is a
+# single-page site today, so the landing page is the one that ranks.
+PAGE_NAMES = {"/": "Landing page — Hire the Top 1% AI Talent"}
+CAT_PAGE_DESC = {
+    "meta": "Title, description, canonical and social tags — how search engines and social platforms read your page.",
+    "headings": "Your heading hierarchy (H1–H6) — how content is structured for readers and crawlers.",
+    "keywords": "The terms your page targets, their placement and density.",
+    "technical": "Performance, security, crawlability and structured data — the engine room of SEO.",
+    "images": "Alt text, lazy-loading and dimensions — accessibility, image search traffic and layout stability.",
+    "links": "Internal and external links, anchor-text quality and crawl paths.",
+}
+
 # ── Navigation ────────────────────────────────────────────────────────────────
-NAV = [
-    ("🔍","Audit"), ("📊","Dashboard"), ("🤖","AI Suggestions"),
-    ("📈","Keywords"), ("⚙️","Technical"), ("👁️","SERP Preview"),
-    ("🔧","Fix Guides"), ("📤","Export"), ("🔑","Settings"),
+# Each item: (icon, label, page_id). Dark pages use clean ids; category health
+# pages use "cat:<key>"; legacy GPT-4o pages keep their original "icon label" ids.
+NAV_GROUPS = [
+    ("Monitor", [
+        ("💓", "Live Pulse",       "💓 Live Pulse"),
+        ("🚀", "Improvements",     "🚀 Improvements"),
+    ]),
+    ("Search Rankings", [
+        ("🔑", "Keyword Rankings", "🔑 Keyword Rankings"),
+        ("📄", "Pages",            "📄 Pages"),
+        ("💡", "Keyword Ideas",    "💡 Keyword Ideas"),
+        ("🏆", "Competitors",      "🏆 Competitors"),
+    ]),
+    ("Page Health", [
+        ("🏷️", "Meta Tags",  "cat:meta"),
+        ("📝", "Headings",   "cat:headings"),
+        ("🗝️", "Keywords",   "cat:keywords"),
+        ("⚙️", "Technical",  "cat:technical"),
+        ("🖼️", "Images",     "cat:images"),
+        ("🔗", "Links",      "cat:links"),
+    ]),
+    ("Full Audit · GPT-4o", [
+        ("🔍", "Run Audit",     "🔍 Audit"),
+        ("📊", "Dashboard",     "📊 Dashboard"),
+        ("🤖", "AI Suggestions","🤖 AI Suggestions"),
+        ("👁️", "SERP Preview",  "👁️ SERP Preview"),
+        ("🔧", "Fix Guides",    "🔧 Fix Guides"),
+        ("📤", "Export",        "📤 Export"),
+        ("🔑", "Settings",      "🔑 Settings"),
+    ]),
 ]
+# Pages that never require a manual audit (they run on the live site).
+ALWAYS_OPEN = {"💓 Live Pulse", "🚀 Improvements", "🔑 Keyword Rankings", "📄 Pages",
+               "💡 Keyword Ideas", "🏆 Competitors", "🔍 Audit", "🔑 Settings"}
 
 # ── Fix guide renderer ────────────────────────────────────────────────────────
 def _render_fix_guide(guide: dict):
@@ -317,15 +446,15 @@ def _render_fix_guide(guide: dict):
     <div class="fix-panel">
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
             <span class="fix-badge {diff_cls}">🎯 {diff} difficulty</span>
-            <span class="fix-badge" style="background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;">
+            <span class="fix-badge" style="background:rgba(96,165,250,.12);color:#2563eb;border:1px solid #bfdbfe;">
                 ⏱ {time_}
             </span>
-            <span class="fix-badge" style="background:#fef2f2;color:{impact_color};border:1px solid #fecaca;">
+            <span class="fix-badge" style="background:rgba(251,113,133,.12);color:{impact_color};border:1px solid #fecaca;">
                 ⚡ {impact} impact
             </span>
         </div>
-        <div style="font-size:13px;color:#374151;line-height:1.7;margin-bottom:16px;
-                    background:white;border-radius:8px;padding:12px 14px;border:1px solid #e2e8f0;">
+        <div style="font-size:13px;color:#c9cdf2;line-height:1.7;margin-bottom:16px;
+                    background:#0e1120;border-radius:8px;padding:12px 14px;border:1px solid rgba(140,120,255,.18);">
             {guide.get('summary','')}
         </div>
     </div>
@@ -385,30 +514,31 @@ with st.sidebar:
     lbl, scol = score_label(score) if has_audit else ("","#6b7280")
 
     st.markdown(f"""
-    <div style="padding:18px 4px 14px;text-align:center;">
-        <div style="width:54px;height:54px;background:linear-gradient(135deg,#4f46e5,#7c3aed);
-                    border-radius:14px;margin:0 auto;display:flex;align-items:center;
-                    justify-content:center;font-size:24px;box-shadow:0 4px 14px rgba(79,70,229,0.4);">🔍</div>
-        <div style="font-size:15px;font-weight:800;color:white;margin-top:9px;">SEO Audit Agent</div>
-        <div style="font-size:11px;color:#475569;margin-top:2px;">Powered by OpenAI GPT-4o</div>
+    <div style="padding:14px 4px 10px;text-align:center;">
+        {ui.scout_mini(ui.mascot_mood(score) if has_audit else "content", size=58)}
+        <div style="font-size:17px;font-weight:800;color:white;margin-top:7px;">Scout · SEO Agent</div>
+        <div style="font-size:12px;color:#9aa0c8;margin-top:3px;">Live audits · Powered by GPT-4o</div>
         {"<div style='margin-top:10px;background:rgba(79,70,229,0.2);border-radius:8px;padding:8px 4px;'><div style='font-size:26px;font-weight:900;color:"+scol+";line-height:1;'>"+str(score)+"<span style=\"font-size:12px;color:#94a3b8;font-weight:500;\">/100</span></div><div style='font-size:11px;color:"+scol+";font-weight:700;'>"+lbl+"</div></div>" if has_audit else ""}
     </div>
     <div class="nav-div"></div>
     <div style="font-size:10px;color:#475569;text-transform:uppercase;letter-spacing:0.1em;font-weight:600;padding:0 4px;margin-bottom:6px;">Navigation</div>
     """, unsafe_allow_html=True)
 
-    current = st.session_state.get("page","🔍 Audit")
-    for icon, label in NAV:
-        full = f"{icon} {label}"
-        active = (current == full)
-        locked = (not has_audit and label not in ("Audit","Settings"))
-        if active: st.markdown('<div class="nav-active">', unsafe_allow_html=True)
-        btn_lbl = f"✦  {icon}  {label}" if active else f"{icon}  {label}"
-        if st.button(btn_lbl, key=f"nav_{label}", use_container_width=True, disabled=locked):
-            st.session_state.page = full; st.rerun()
-        if active: st.markdown('</div>', unsafe_allow_html=True)
+    current = st.session_state.get("page","💓 Live Pulse")
+    for group_title, items in NAV_GROUPS:
+        st.markdown(f'<div style="font-size:12px;color:#a0a6cf;text-transform:uppercase;'
+                    f'letter-spacing:0.12em;font-weight:800;padding:12px 4px 5px;">{group_title}</div>',
+                    unsafe_allow_html=True)
+        for icon, label, pid in items:
+            active = (current == pid)
+            locked = (pid not in ALWAYS_OPEN) and (not pid.startswith("cat:")) and (not has_audit)
+            if active: st.markdown('<div class="nav-active">', unsafe_allow_html=True)
+            btn_lbl = f"✦  {icon}  {label}" if active else f"{icon}  {label}"
+            if st.button(btn_lbl, key=f"nav_{pid}", use_container_width=True, disabled=locked):
+                st.session_state.page = pid; st.rerun()
+            if active: st.markdown('</div>', unsafe_allow_html=True)
 
-    page = st.session_state.get("page","🔍 Audit")
+    page = st.session_state.get("page","💓 Live Pulse")
 
     # Active audit card
     if has_audit:
@@ -441,9 +571,177 @@ with st.sidebar:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# PAGE: LIVE PULSE  — always-on agentic monitor for futrbridge.com
+# ══════════════════════════════════════════════════════════════════════════════
+if page == "💓 Live Pulse":
+    site = LIVE_SITE.replace("https://", "")
+    if dark_page_header(f"💓 Live Pulse <span style='color:#a78bfa;font-size:15px'>· {site}</span>",
+                        "Scout watches your site 24/7 — auto-refreshed every 30 minutes.",
+                        with_rescan=True):
+        run_live_audit.clear(); st.rerun()
+
+    raw, audit = live_audit_or_stop()
+    score = audit["overall_score"]
+    counts = issue_counts(audit)
+    trend = history.overall_points(LIVE_SITE)
+    html = dark_ui.render_overview(
+        audit, counts, raw.get("load_time_seconds", 0),
+        ui.scout_line(score, audit), trend, datetime.now().strftime("%H:%M"))
+    components.html(html, height=980, scrolling=True)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE: IMPROVEMENTS (roadmap)
+# ══════════════════════════════════════════════════════════════════════════════
+elif page == "🚀 Improvements":
+    if dark_page_header("🚀 Improvement Roadmap",
+                        "If you apply every fix Scout found, here's where your score goes — and the order to do it in.",
+                        with_rescan=True):
+        run_live_audit.clear(); st.rerun()
+    raw, audit = live_audit_or_stop()
+    proj = projections.project(audit)
+    html = dark_ui.render_roadmap(proj, projections.roadmap(audit))
+    components.html(html, height=1000, scrolling=True)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE: KEYWORD RANKINGS
+# ══════════════════════════════════════════════════════════════════════════════
+elif page == "🔑 Keyword Rankings":
+    has_serp = rankings.has_key()
+    c1, c2 = st.columns([5, 1])
+    with c1:
+        st.markdown(
+            "<div style='font-family:Space Grotesk,sans-serif;font-weight:700;font-size:25px;color:#eef0ff;'>🔑 Keyword Rankings</div>"
+            "<div style='color:#8a90bf;font-size:13.5px;margin-top:3px;'>Where futrbridge.com ranks in Google "
+            "🇺🇸 US &amp; 🌉 SF Bay Area for your target keywords.</div>", unsafe_allow_html=True)
+    with c2:
+        st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+        refresh = st.button("🔄 Refresh", use_container_width=True, disabled=not has_serp)
+
+    cache = rankings.load_cache()
+    if has_serp and refresh:
+        bar = st.progress(0.0, text="Querying Google…")
+        def _prog(done, total, label):
+            bar.progress(done / total, text=f"SerpAPI · {label}  ({done}/{total})")
+        cache = rankings.refresh(progress=_prog)
+        bar.empty(); st.rerun()
+    if has_serp and not cache:
+        st.info("No rankings cached yet — hit **🔄 Refresh** to fetch live positions "
+                f"({len(rankings.DEFAULT_KEYWORDS)} keywords × 2 locations = "
+                f"{len(rankings.DEFAULT_KEYWORDS)*2} SerpAPI searches).")
+
+    updated = cache.get("updated", "never").replace("T", " ") if cache else "never"
+    html = dark_ui.render_rankings(rankings.rows(cache), rankings.summary(cache),
+                                   updated, has_serp, rankings.locations(), LIVE_SITE)
+    components.html(html, height=640, scrolling=True)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE: PAGES (keywords each page ranks for)
+# ══════════════════════════════════════════════════════════════════════════════
+elif page == "📄 Pages":
+    dark_page_header("📄 Pages",
+                     "Every ranking page and the keywords driving traffic to it — with position and location.")
+    cache = rankings.load_cache()
+    if not rankings.has_key():
+        st.info("Connect **SERPAPI_KEY** in Settings and refresh **Keyword Rankings** to populate this view.")
+    by_page = {}
+    for r in rankings.rows(cache):
+        by_page.setdefault(r["page"], []).append(r)
+    html = dark_ui.render_pages(by_page, PAGE_NAMES, rankings.locations(), LIVE_SITE)
+    components.html(html, height=620, scrolling=True)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE: COMPETITORS (who else ranks for your keywords)
+# ══════════════════════════════════════════════════════════════════════════════
+elif page == "🏆 Competitors":
+    has_serp = rankings.has_key()
+    c1, c2 = st.columns([5, 1])
+    with c1:
+        st.markdown(
+            "<div style='font-family:Space Grotesk,sans-serif;font-weight:700;font-size:25px;color:#eef0ff;'>🏆 Competitors</div>"
+            "<div style='color:#8a90bf;font-size:13.5px;margin-top:3px;'>Companies ranking in Google's top 10 for your "
+            "AI-staffing keywords (US &amp; SF Bay Area) — and which keywords each one wins.</div>", unsafe_allow_html=True)
+    with c2:
+        st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+        refresh = st.button("🔄 Refresh", use_container_width=True, disabled=not has_serp)
+
+    cache = rankings.load_cache()
+    if has_serp and refresh:
+        bar = st.progress(0.0, text="Scanning Google SERPs…")
+        def _prog(done, total, label):
+            bar.progress(done / total, text=f"SerpAPI · {label}  ({done}/{total})")
+        cache = rankings.refresh(progress=_prog)
+        bar.empty(); st.rerun()
+    if has_serp and not cache:
+        st.info("No SERP data yet — hit **🔄 Refresh** (also populates Keyword Rankings).")
+
+    comps = rankings.competitors(cache)
+    updated = cache.get("updated", "never").replace("T", " ") if cache else "never"
+    html = dark_ui.render_competitors(comps, has_serp, updated,
+                                      rankings.competitor_summary(cache))
+    n = len(comps)
+    components.html(html, height=(240 + 132 * n) if n else 420, scrolling=True)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE: KEYWORD IDEAS (long-tail suggestions + how to rank)
+# ══════════════════════════════════════════════════════════════════════════════
+elif page == "💡 Keyword Ideas":
+    has_serp = rankings.has_key()
+    c1, c2 = st.columns([5, 1])
+    with c1:
+        st.markdown(
+            "<div style='font-family:Space Grotesk,sans-serif;font-weight:700;font-size:25px;color:#eef0ff;'>💡 Keyword Ideas</div>"
+            "<div style='color:#8a90bf;font-size:13.5px;margin-top:3px;'>Winnable long-tail keywords Scout mined from "
+            "Google — each with a plan for how to rank.</div>", unsafe_allow_html=True)
+    with c2:
+        st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+        gen = st.button("✨ Generate", use_container_width=True, disabled=not has_serp)
+
+    cache = suggestions.load_cache()
+    if has_serp and gen:
+        bar = st.progress(0.0, text="Mining Google…")
+        def _p(done, total, label):
+            bar.progress(done / total, text=f"SerpAPI · expanding “{label}”  ({done}/{total})")
+        cache = suggestions.generate(progress=_p)
+        bar.empty(); st.rerun()
+    if has_serp and not cache:
+        st.info(f"No ideas yet — hit **✨ Generate** to mine winnable keywords "
+                f"({len(suggestions.DISCOVERY_SEEDS)} SerpAPI searches).")
+
+    updated = cache.get("updated", "never").replace("T", " ") if cache else "never"
+    html = dark_ui.render_suggestions(cache.get("items", []), suggestions.counts(cache),
+                                      updated, has_serp)
+    n = len(cache.get("items", []))
+    components.html(html, height=(180 + 188 * n) if n else 420, scrolling=True)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE: CATEGORY HEALTH (cat:<key>) — page-by-page improvement view
+# ══════════════════════════════════════════════════════════════════════════════
+elif page.startswith("cat:"):
+    cat = page.split(":", 1)[1]
+    name, icon = projections.CAT_META.get(cat, (cat.title(), "📋"))
+    if dark_page_header(f"{icon} {name}",
+                        f"Page health & exact fixes for {name.lower()} on {LIVE_SITE.replace('https://','')}.",
+                        with_rescan=True):
+        run_live_audit.clear(); st.rerun()
+    raw, audit = live_audit_or_stop()
+    cd = audit.get(cat, {})
+    proj_cat = projections.project_category(cat, cd)
+    fixes = projections.category_fixes(audit, cat)
+    html = dark_ui.render_category(cat, name, icon, CAT_PAGE_DESC.get(cat, ""),
+                                   cd.get("score", 0), proj_cat, fixes)
+    components.html(html, height=(360 + 220 * ((len(fixes) + 1) // 2)) if fixes else 420, scrolling=True)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # PAGE: AUDIT
 # ══════════════════════════════════════════════════════════════════════════════
-if page == "🔍 Audit":
+elif page == "🔍 Audit":
 
     st.markdown("""
     <div class="page-hdr">
@@ -522,8 +820,8 @@ if page == "🔍 Audit":
             icon, msg = STEPS[i]
             progress_bar.progress((i+1)/step_count)
             status_text.markdown(f"""
-            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;
-                        padding:12px 16px;font-size:13px;color:#374151;">
+            <div style="background:#0e1120;border:1px solid rgba(140,120,255,.18);border-radius:10px;
+                        padding:12px 16px;font-size:13px;color:#c9cdf2;">
                 {icon} <strong>Step {i+1}/{step_count}:</strong> {msg}
             </div>""", unsafe_allow_html=True)
 
@@ -571,8 +869,8 @@ if page == "🔍 Audit":
 
             progress_bar.progress(1.0)
             status_text.markdown(f"""
-            <div style="background:#f0fdf4;border:2px solid #86efac;border-radius:10px;
-                        padding:12px 16px;font-size:14px;font-weight:600;color:#15803d;">
+            <div style="background:rgba(52,211,153,.12);border:2px solid #86efac;border-radius:10px;
+                        padding:12px 16px;font-size:14px;font-weight:600;color:#6ee7b7;">
                 ✅ Audit complete! Score: {audit['overall_score']}/100 — navigating to dashboard...
             </div>""", unsafe_allow_html=True)
             import time; time.sleep(0.8)
@@ -597,13 +895,13 @@ if page == "🔍 Audit":
         ]:
             with col:
                 st.markdown(f"""
-                <div style="background:white;border:1px solid #e2e8f0;border-radius:16px;
+                <div style="background:#0e1120;border:1px solid rgba(140,120,255,.18);border-radius:16px;
                             padding:24px 18px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
                     <div style="width:40px;height:40px;background:linear-gradient(135deg,#4f46e5,#7c3aed);
                                 color:white;border-radius:50%;font-weight:900;font-size:18px;
                                 margin:0 auto 14px;display:flex;align-items:center;justify-content:center;">{num}</div>
                     <div style="font-size:28px;margin-bottom:10px;">{icon}</div>
-                    <div style="font-weight:700;color:#0f172a;font-size:14px;margin-bottom:6px;">{title}</div>
+                    <div style="font-weight:700;color:#eef0ff;font-size:14px;margin-bottom:6px;">{title}</div>
                     <div style="font-size:12px;color:#64748b;line-height:1.6;">{desc}</div>
                 </div>
                 """, unsafe_allow_html=True)
@@ -630,7 +928,7 @@ if page == "🔍 Audit":
                 <div style="display:flex;gap:12px;padding:12px 0;border-bottom:1px solid #f1f5f9;">
                     <div style="font-size:22px;width:32px;flex-shrink:0;">{icon}</div>
                     <div>
-                        <div style="font-weight:600;font-size:13px;color:#0f172a;">{title}</div>
+                        <div style="font-weight:600;font-size:13px;color:#eef0ff;">{title}</div>
                         <div style="font-size:12px;color:#64748b;margin-top:2px;">{desc}</div>
                     </div>
                 </div>
@@ -641,7 +939,7 @@ if page == "🔍 Audit":
                 <div style="display:flex;gap:12px;padding:12px 0;border-bottom:1px solid #f1f5f9;">
                     <div style="font-size:22px;width:32px;flex-shrink:0;">{icon}</div>
                     <div>
-                        <div style="font-weight:600;font-size:13px;color:#0f172a;">{title}</div>
+                        <div style="font-weight:600;font-size:13px;color:#eef0ff;">{title}</div>
                         <div style="font-size:12px;color:#64748b;margin-top:2px;">{desc}</div>
                     </div>
                 </div>
@@ -656,10 +954,10 @@ if page == "🔍 Audit":
                 _, hcol = score_label(h["score"])
                 st.markdown(f"""
                 <div style="display:flex;justify-content:space-between;align-items:center;
-                            padding:10px 16px;background:white;border:1px solid #e2e8f0;
+                            padding:10px 16px;background:#0e1120;border:1px solid rgba(140,120,255,.18);
                             border-radius:10px;margin:5px 0;">
                     <div>
-                        <div style="font-size:13px;font-weight:600;color:#0f172a;">{h['domain']}</div>
+                        <div style="font-size:13px;font-weight:600;color:#eef0ff;">{h['domain']}</div>
                         <div style="font-size:11px;color:#64748b;">{h['url'][:50]}...</div>
                     </div>
                     <div style="font-size:20px;font-weight:800;color:{hcol};">{h['score']}</div>
@@ -733,8 +1031,8 @@ elif page == "📊 Dashboard":
     ]:
         with cw:
             st.markdown(f"""
-            <div style="background:white;border-radius:14px;padding:20px;text-align:center;
-                        border:1px solid #e2e8f0;box-shadow:0 2px 6px rgba(0,0,0,0.05);
+            <div style="background:#0e1120;border-radius:14px;padding:20px;text-align:center;
+                        border:1px solid rgba(140,120,255,.18);box-shadow:0 2px 6px rgba(0,0,0,0.05);
                         border-top:3px solid {color};">
                 <div style="font-size:26px;">{icon}</div>
                 <div style="font-size:30px;font-weight:900;color:{color};line-height:1;">{counts[sev]}</div>
@@ -765,13 +1063,13 @@ elif page == "📊 Dashboard":
         fig.update_layout(
             polar=dict(
                 radialaxis=dict(visible=True,range=[0,100],
-                                gridcolor="#e2e8f0",tickfont=dict(size=10)),
-                angularaxis=dict(gridcolor="#e8edf5",
-                                 tickfont=dict(size=12,color="#374151"))
+                                gridcolor="rgba(140,120,255,.14)",tickfont=dict(size=10,color="#8a90bf")),
+                angularaxis=dict(gridcolor="rgba(140,120,255,.14)",
+                                 tickfont=dict(size=12,color="#c9cdf2"))
             ),
             showlegend=False,
             margin=dict(l=40,r=40,t=30,b=30),
-            height=320, paper_bgcolor="white",
+            height=320, paper_bgcolor="rgba(0,0,0,0)",
         )
         st.markdown('<div class="sec-hdr">📡 SEO Performance Radar</div>', unsafe_allow_html=True)
         st.plotly_chart(fig, use_container_width=True)
@@ -790,7 +1088,7 @@ elif page == "📊 Dashboard":
             <div class="cat-card">
                 <div style="display:flex;justify-content:space-between;align-items:center;">
                     <div>
-                        <div style="font-size:13px;font-weight:600;color:#374151;">{icon} {cat}</div>
+                        <div style="font-size:13px;font-weight:600;color:#c9cdf2;">{icon} {cat}</div>
                         <div style="margin-top:2px;">{badges}</div>
                     </div>
                     <div style="font-size:26px;font-weight:800;color:{bar_c};">{s}</div>
@@ -833,10 +1131,10 @@ elif page == "📊 Dashboard":
             vals = [sum(1 for i in audit[k].get("issues",[]) if i["severity"]==sev) for k in cat_keys]
             fig2.add_trace(go.Bar(name=sev.title(), x=cats_order, y=vals,
                                   marker_color=color, marker_line_width=0))
-        fig2.update_layout(barmode="stack",plot_bgcolor="white",paper_bgcolor="white",
+        fig2.update_layout(barmode="stack",plot_bgcolor="rgba(0,0,0,0)",paper_bgcolor="rgba(0,0,0,0)",
                            margin=dict(l=20,r=20,t=10,b=20),height=240,
                            xaxis=dict(showgrid=False),
-                           yaxis=dict(showgrid=True,gridcolor="#f1f5f9"),
+                           yaxis=dict(showgrid=True,gridcolor="rgba(140,120,255,.10)"),
                            legend=dict(orientation="h",yanchor="bottom",y=1.02,
                                        font=dict(size=12)))
         st.plotly_chart(fig2, use_container_width=True)
@@ -914,7 +1212,7 @@ elif page == "🤖 AI Suggestions":
 
         # Grade + summary
         st.markdown(f"""
-        <div style="background:white;border:2px solid {grade_color};border-radius:16px;
+        <div style="background:#0e1120;border:2px solid {grade_color};border-radius:16px;
                     padding:20px 24px;margin-bottom:20px;
                     box-shadow:0 4px 16px rgba(0,0,0,0.07);">
             <div style="display:flex;align-items:flex-start;gap:20px;">
@@ -923,8 +1221,8 @@ elif page == "🤖 AI Suggestions":
                     <div style="font-size:11px;color:#94a3b8;font-weight:600;">SEO GRADE</div>
                 </div>
                 <div>
-                    <div style="font-size:16px;font-weight:700;color:#0f172a;margin-bottom:6px;">Executive Summary</div>
-                    <div style="font-size:14px;color:#374151;line-height:1.7;">{summary}</div>
+                    <div style="font-size:16px;font-weight:700;color:#eef0ff;margin-bottom:6px;">Executive Summary</div>
+                    <div style="font-size:14px;color:#c9cdf2;line-height:1.7;">{summary}</div>
                 </div>
             </div>
         </div>
@@ -938,11 +1236,11 @@ elif page == "🤖 AI Suggestions":
                 with col:
                     colors_p = ["#ef4444","#f59e0b","#3b82f6"]
                     st.markdown(f"""
-                    <div style="background:white;border:2px solid {colors_p[i-1]};border-radius:14px;
+                    <div style="background:#0e1120;border:2px solid {colors_p[i-1]};border-radius:14px;
                                 padding:18px;text-align:center;height:100%;
                                 box-shadow:0 2px 8px rgba(0,0,0,0.06);">
                         <div style="font-size:28px;font-weight:900;color:{colors_p[i-1]};margin-bottom:8px;">#{i}</div>
-                        <div style="font-size:13px;font-weight:600;color:#0f172a;line-height:1.5;">{p}</div>
+                        <div style="font-size:13px;font-weight:600;color:#eef0ff;line-height:1.5;">{p}</div>
                     </div>
                     """, unsafe_allow_html=True)
 
@@ -996,12 +1294,12 @@ elif page == "🤖 AI Suggestions":
                     color = "#22c55e" if ok else "#f59e0b"
                     tag   = "✅ Optimal" if ok else f"⚠️ {chars} chars"
                     st.markdown(f"""
-                    <div style="background:white;border:1px solid {'#bbf7d0' if ok else '#fde68a'};
+                    <div style="background:#0e1120;border:1px solid {'#bbf7d0' if ok else '#fde68a'};
                                 border-radius:10px;padding:14px 16px;margin:6px 0;">
-                        <div style="font-size:13px;font-weight:600;color:#0f172a;margin-bottom:4px;">
+                        <div style="font-size:13px;font-weight:600;color:#eef0ff;margin-bottom:4px;">
                             Option {i}
                         </div>
-                        <div style="font-size:14px;color:#1a0dab;">{t_}</div>
+                        <div style="font-size:14px;color:#8ab4f8;">{t_}</div>
                         <div style="font-size:11px;color:{color};margin-top:5px;font-weight:600;">{tag}</div>
                     </div>
                     """, unsafe_allow_html=True)
@@ -1014,9 +1312,9 @@ elif page == "🤖 AI Suggestions":
                     color = "#22c55e" if ok else "#f59e0b"
                     tag   = "✅ Optimal" if ok else f"⚠️ {chars} chars"
                     st.markdown(f"""
-                    <div style="background:white;border:1px solid {'#bbf7d0' if ok else '#fde68a'};
+                    <div style="background:#0e1120;border:1px solid {'#bbf7d0' if ok else '#fde68a'};
                                 border-radius:10px;padding:14px 16px;margin:6px 0;">
-                        <div style="font-size:13px;font-weight:600;color:#0f172a;margin-bottom:4px;">
+                        <div style="font-size:13px;font-weight:600;color:#eef0ff;margin-bottom:4px;">
                             Option {i}
                         </div>
                         <div style="font-size:13px;color:#4d5156;line-height:1.5;">{d_}</div>
@@ -1044,7 +1342,7 @@ elif page == "🤖 AI Suggestions":
                                 border:2px solid #bfdbfe;border-radius:12px;padding:16px 20px;margin-top:12px;">
                         <div style="font-weight:700;color:#1d4ed8;margin-bottom:4px;">🎯 Primary Keyword Target</div>
                         <div style="font-size:20px;font-weight:800;color:#1e40af;">"{content['primary_keyword']}"</div>
-                        <div style="font-size:13px;color:#374151;margin-top:6px;">{content.get('keyword_reasoning','')}</div>
+                        <div style="font-size:13px;color:#c9cdf2;margin-top:6px;">{content.get('keyword_reasoning','')}</div>
                     </div>
                     """, unsafe_allow_html=True)
 
@@ -1076,10 +1374,10 @@ elif page == "🤖 AI Suggestions":
 
             if ux.get("page_structure_advice"):
                 st.markdown(f"""
-                <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:12px;
+                <div style="background:rgba(52,211,153,.12);border:1px solid #86efac;border-radius:12px;
                             padding:16px 20px;margin-top:14px;">
-                    <div style="font-weight:700;color:#15803d;margin-bottom:6px;">🏗️ Page Structure Advice</div>
-                    <div style="font-size:13px;color:#374151;line-height:1.65;">{ux['page_structure_advice']}</div>
+                    <div style="font-weight:700;color:#6ee7b7;margin-bottom:6px;">🏗️ Page Structure Advice</div>
+                    <div style="font-size:13px;color:#c9cdf2;line-height:1.65;">{ux['page_structure_advice']}</div>
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -1113,9 +1411,9 @@ elif page == "📈 Keywords":
                 hovertemplate="%{y}: %{x} occurrences<extra></extra>",
             ))
             fig.update_layout(
-                plot_bgcolor="white", paper_bgcolor="white",
+                plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
                 margin=dict(l=10,r=20,t=10,b=20), height=420,
-                xaxis=dict(showgrid=True,gridcolor="#f1f5f9",title="Frequency"),
+                xaxis=dict(showgrid=True,gridcolor="rgba(140,120,255,.10)",title="Frequency"),
                 yaxis=dict(autorange="reversed"),
             )
             st.plotly_chart(fig, use_container_width=True)
@@ -1145,8 +1443,8 @@ elif page == "📈 Keywords":
             color = "#22c55e" if ok else "#ef4444"
             st.markdown(f"""
             <div style="display:flex;justify-content:space-between;padding:9px 14px;
-                        background:white;border:1px solid #e2e8f0;border-radius:8px;margin:4px 0;">
-                <span style="font-size:13px;font-weight:500;color:#374151;">{lbl_}</span>
+                        background:#0e1120;border:1px solid rgba(140,120,255,.18);border-radius:8px;margin:4px 0;">
+                <span style="font-size:13px;font-weight:500;color:#c9cdf2;">{lbl_}</span>
                 <span style="font-size:14px;color:{color};font-weight:700;">{icon}</span>
             </div>
             """, unsafe_allow_html=True)
@@ -1170,7 +1468,7 @@ elif page == "📈 Keywords":
                 <div class="ai-card">
                     <div style="display:flex;justify-content:space-between;align-items:flex-start;">
                         <div>
-                            <div style="font-size:15px;font-weight:700;color:#0f172a;">"{kw.get('keyword','')}"</div>
+                            <div style="font-size:15px;font-weight:700;color:#eef0ff;">"{kw.get('keyword','')}"</div>
                             <div style="font-size:11px;color:#94a3b8;margin-top:2px;">{kw_type}</div>
                         </div>
                         <span style="font-size:11px;font-weight:600;color:{diff_c};white-space:nowrap;">
@@ -1199,7 +1497,7 @@ elif page == "📈 Keywords":
                     <div class="ai-card">
                         <div class="ai-title">📝 {idea.get('title','')}</div>
                         <div style="font-size:12px;color:#94a3b8;margin-bottom:4px;">{idea.get('type','')}</div>
-                        <div style="font-size:12px;color:#374151;">
+                        <div style="font-size:12px;color:#c9cdf2;">
                             Target: <span class="kw-badge" style="font-size:11px;">{idea.get('target_keyword','')}</span>
                         </div>
                     </div>
@@ -1207,10 +1505,10 @@ elif page == "📈 Keywords":
 
         if ai_kw.get("local_seo_tip"):
             st.markdown(f"""
-            <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;
+            <div style="background:rgba(251,191,36,.12);border:1px solid #fde68a;border-radius:12px;
                         padding:14px 18px;margin-top:12px;">
-                <div style="font-weight:700;color:#92400e;margin-bottom:4px;">📍 Local SEO Tip</div>
-                <div style="font-size:13px;color:#374151;">{ai_kw['local_seo_tip']}</div>
+                <div style="font-weight:700;color:#fcd34d;margin-bottom:4px;">📍 Local SEO Tip</div>
+                <div style="font-size:13px;color:#c9cdf2;">{ai_kw['local_seo_tip']}</div>
             </div>
             """, unsafe_allow_html=True)
 
@@ -1242,7 +1540,7 @@ elif page == "⚙️ Technical":
         with cw:
             color = "#22c55e" if good else "#ef4444"
             st.markdown(f"""
-            <div style="background:white;border:1px solid #e2e8f0;border-radius:12px;
+            <div style="background:#0e1120;border:1px solid rgba(140,120,255,.18);border-radius:12px;
                         padding:16px;text-align:center;border-top:3px solid {color};">
                 <div style="font-size:20px;font-weight:800;color:{color};">{val}</div>
                 <div style="font-size:11px;color:#64748b;font-weight:600;text-transform:uppercase;margin-top:4px;">{lbl_}</div>
@@ -1255,12 +1553,12 @@ elif page == "⚙️ Technical":
     speed_color = "#22c55e" if lt<1.5 else ("#f59e0b" if lt<3 else "#ef4444")
     speed_label = "🚀 Excellent" if lt<1.5 else ("✅ Good" if lt<3 else ("⚠️ Slow" if lt<5 else "❌ Very Slow"))
     st.markdown(f"""
-    <div style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:20px 24px;margin-bottom:16px;">
+    <div style="background:#0e1120;border:1px solid rgba(140,120,255,.18);border-radius:14px;padding:20px 24px;margin-bottom:16px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-            <div style="font-weight:700;color:#0f172a;">⏱ Page Load Speed</div>
+            <div style="font-weight:700;color:#eef0ff;">⏱ Page Load Speed</div>
             <div style="font-size:18px;font-weight:800;color:{speed_color};">{lt}s — {speed_label}</div>
         </div>
-        <div style="background:#f1f5f9;border-radius:6px;height:10px;">
+        <div style="background:#1c2036;border-radius:6px;height:10px;">
             <div style="width:{speed_pct}%;background:{speed_color};border-radius:6px;height:10px;transition:width 0.5s;"></div>
         </div>
         <div style="display:flex;justify-content:space-between;font-size:11px;color:#94a3b8;margin-top:5px;">
@@ -1301,8 +1599,8 @@ elif page == "⚙️ Technical":
             color = "#ef4444" if (is_bad and val > 0) else "#0f172a"
             st.markdown(f"""
             <div style="display:flex;justify-content:space-between;padding:8px 14px;
-                        background:white;border:1px solid #e2e8f0;border-radius:8px;margin:3px 0;">
-                <span style="font-size:13px;color:#374151;">{lbl_}</span>
+                        background:#0e1120;border:1px solid rgba(140,120,255,.18);border-radius:8px;margin:3px 0;">
+                <span style="font-size:13px;color:#c9cdf2;">{lbl_}</span>
                 <strong style="font-size:13px;color:{color};">{val}</strong>
             </div>
             """, unsafe_allow_html=True)
@@ -1414,12 +1712,12 @@ elif page == "👁️ SERP Preview":
     with mc1:
         tc = "#22c55e" if title_ok else "#f59e0b"
         st.markdown(f"""
-        <div style="background:white;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-top:8px;">
+        <div style="background:#0e1120;border:1px solid rgba(140,120,255,.18);border-radius:10px;padding:14px;margin-top:8px;">
             <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-                <span style="font-size:13px;font-weight:600;color:#374151;">Title Length</span>
+                <span style="font-size:13px;font-weight:600;color:#c9cdf2;">Title Length</span>
                 <span style="font-size:13px;font-weight:700;color:{tc};">{title_len}/60 chars — {'✅ Optimal' if title_ok else '⚠️ Adjust'}</span>
             </div>
-            <div style="background:#f1f5f9;border-radius:4px;height:6px;">
+            <div style="background:#1c2036;border-radius:4px;height:6px;">
                 <div style="width:{min(100,title_len/60*100):.0f}%;background:{tc};border-radius:4px;height:6px;"></div>
             </div>
             <div style="font-size:11px;color:#94a3b8;margin-top:4px;">Target: 50-60 characters</div>
@@ -1428,12 +1726,12 @@ elif page == "👁️ SERP Preview":
     with mc2:
         dc = "#22c55e" if desc_ok else "#f59e0b"
         st.markdown(f"""
-        <div style="background:white;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-top:8px;">
+        <div style="background:#0e1120;border:1px solid rgba(140,120,255,.18);border-radius:10px;padding:14px;margin-top:8px;">
             <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-                <span style="font-size:13px;font-weight:600;color:#374151;">Description Length</span>
+                <span style="font-size:13px;font-weight:600;color:#c9cdf2;">Description Length</span>
                 <span style="font-size:13px;font-weight:700;color:{dc};">{desc_len}/160 chars — {'✅ Optimal' if desc_ok else '⚠️ Adjust'}</span>
             </div>
-            <div style="background:#f1f5f9;border-radius:4px;height:6px;">
+            <div style="background:#1c2036;border-radius:4px;height:6px;">
                 <div style="width:{min(100,desc_len/160*100):.0f}%;background:{dc};border-radius:4px;height:6px;"></div>
             </div>
             <div style="font-size:11px;color:#94a3b8;margin-top:4px;">Target: 150-160 characters</div>
@@ -1475,8 +1773,8 @@ elif page == "👁️ SERP Preview":
         st.markdown(f"""
         <div style="border:1px solid #cfd9de;border-radius:16px;overflow:hidden;max-width:500px;">
             {img_html_tw}
-            <div style="padding:12px 14px;background:white;">
-                <div style="font-size:15px;font-weight:700;color:#0f1419;">{(tw_title[:60]+'...') if len(tw_title)>60 else tw_title}</div>
+            <div style="padding:12px 14px;background:#0e1120;">
+                <div style="font-size:15px;font-weight:700;color:#eef0ff;">{(tw_title[:60]+'...') if len(tw_title)>60 else tw_title}</div>
                 <div style="font-size:14px;color:#536471;margin-top:4px;">{(tw_desc[:80]+'...') if len(tw_desc)>80 else tw_desc}</div>
                 <div style="font-size:13px;color:#536471;margin-top:6px;">🔗 {domain}</div>
             </div>
@@ -1509,7 +1807,7 @@ elif page == "👁️ SERP Preview":
             preview = f' = "{val[:30]}..."' if ok and len(val)>30 else (f' = "{val}"' if ok else " — not set")
             color = "#22c55e" if ok else "#ef4444"
             st.markdown(f"""
-            <div style="padding:7px 12px;background:white;border:1px solid #e2e8f0;
+            <div style="padding:7px 12px;background:#0e1120;border:1px solid rgba(140,120,255,.18);
                         border-radius:8px;margin:3px 0;font-size:12px;font-family:monospace;">
                 <span style="color:{color};font-weight:700;">{icon}</span>
                 <span style="color:#4f46e5;">{tag}</span>
@@ -1524,7 +1822,7 @@ elif page == "👁️ SERP Preview":
             preview = f' = "{val[:30]}..."' if ok and len(val)>30 else (f' = "{val}"' if ok else " — not set")
             color = "#22c55e" if ok else "#ef4444"
             st.markdown(f"""
-            <div style="padding:7px 12px;background:white;border:1px solid #e2e8f0;
+            <div style="padding:7px 12px;background:#0e1120;border:1px solid rgba(140,120,255,.18);
                         border-radius:8px;margin:3px 0;font-size:12px;font-family:monospace;">
                 <span style="color:{color};font-weight:700;">{icon}</span>
                 <span style="color:#1da1f2;">{tag}</span>
@@ -1589,15 +1887,15 @@ elif page == "🔧 Fix Guides":
                         {sev.upper()}
                     </span>
                     <span class="fix-badge {diff_cls}">🎯 {diff}</span>
-                    <span class="fix-badge" style="background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;">⏱ {time_}</span>
+                    <span class="fix-badge" style="background:rgba(96,165,250,.12);color:#2563eb;border:1px solid #bfdbfe;">⏱ {time_}</span>
                     <span class="tag tag-gray">📂 {item['category']}</span>
                 </div>
                 """, unsafe_allow_html=True)
 
                 if item.get("fix"):
                     st.markdown(f"""
-                    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;
-                                padding:10px 14px;margin-bottom:12px;font-size:13px;color:#374151;">
+                    <div style="background:#0e1120;border:1px solid rgba(140,120,255,.18);border-radius:8px;
+                                padding:10px 14px;margin-bottom:12px;font-size:13px;color:#c9cdf2;">
                         🔧 <strong>Quick fix:</strong> {item['fix']}
                     </div>
                     """, unsafe_allow_html=True)
@@ -1648,8 +1946,8 @@ elif page == "🔧 Fix Guides":
                 st.markdown(f"""
                 <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
                     <span class="fix-badge {diff_cls}">🎯 {diff}</span>
-                    <span class="fix-badge" style="background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;">⏱ {time_}</span>
-                    <span class="fix-badge" style="background:#fef2f2;color:{impact_color};border:1px solid #fecaca;">⚡ {impact} impact</span>
+                    <span class="fix-badge" style="background:rgba(96,165,250,.12);color:#2563eb;border:1px solid #bfdbfe;">⏱ {time_}</span>
+                    <span class="fix-badge" style="background:rgba(251,113,133,.12);color:{impact_color};border:1px solid #fecaca;">⚡ {impact} impact</span>
                 </div>
                 """, unsafe_allow_html=True)
                 _render_fix_guide(guide)
@@ -1672,12 +1970,12 @@ elif page == "📤 Export":
 
     # Summary banner
     st.markdown(f"""
-    <div style="background:white;border:2px solid {scol};border-radius:16px;
+    <div style="background:#0e1120;border:2px solid {scol};border-radius:16px;
                 padding:20px 24px;margin-bottom:24px;
                 box-shadow:0 4px 16px rgba(0,0,0,0.06);">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
             <div>
-                <div style="font-size:16px;font-weight:700;color:#0f172a;">Audit Report Ready</div>
+                <div style="font-size:16px;font-weight:700;color:#eef0ff;">Audit Report Ready</div>
                 <div style="font-size:13px;color:#64748b;margin-top:3px;">🌐 {raw.get('url','')}</div>
             </div>
             <div style="display:flex;gap:16px;align-items:center;">
@@ -1699,18 +1997,18 @@ elif page == "📤 Export":
 
     with ex1:
         st.markdown("""
-        <div style="background:white;border:1px solid #e2e8f0;border-radius:16px;
+        <div style="background:#0e1120;border:1px solid rgba(140,120,255,.18);border-radius:16px;
                     padding:28px;text-align:center;margin-bottom:12px;
                     box-shadow:0 2px 8px rgba(0,0,0,0.05);">
             <div style="font-size:52px;margin-bottom:12px;">📄</div>
-            <div style="font-weight:700;font-size:17px;color:#0f172a;margin-bottom:6px;">PDF Report</div>
+            <div style="font-weight:700;font-size:17px;color:#eef0ff;margin-bottom:6px;">PDF Report</div>
             <div style="font-size:13px;color:#64748b;line-height:1.6;">
                 Professional formatted report with:<br>
                 ✅ Score breakdown table<br>
                 ✅ All critical issues with fixes<br>
                 ✅ AI quick wins & content options<br>
                 ✅ Technical recommendations<br>
-                ✅ adityasharma.ai branding
+                ✅ Clean, client-ready formatting
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -1726,11 +2024,11 @@ elif page == "📤 Export":
 
     with ex2:
         st.markdown("""
-        <div style="background:white;border:1px solid #e2e8f0;border-radius:16px;
+        <div style="background:#0e1120;border:1px solid rgba(140,120,255,.18);border-radius:16px;
                     padding:28px;text-align:center;margin-bottom:12px;
                     box-shadow:0 2px 8px rgba(0,0,0,0.05);">
             <div style="font-size:52px;margin-bottom:12px;">📝</div>
-            <div style="font-weight:700;font-size:17px;color:#0f172a;margin-bottom:6px;">Markdown Report</div>
+            <div style="font-weight:700;font-size:17px;color:#eef0ff;margin-bottom:6px;">Markdown Report</div>
             <div style="font-size:13px;color:#64748b;line-height:1.6;">
                 Clean Markdown for:<br>
                 ✅ Notion & Obsidian<br>
@@ -1765,23 +2063,23 @@ elif page == "🔑 Settings":
     if current_key:
         src = "Your key (entered below)" if st.session_state.get("user_api_key","").strip() else "Server-configured"
         st.markdown(f"""
-        <div style="background:#f0fdf4;border:2px solid #86efac;border-radius:14px;
+        <div style="background:rgba(52,211,153,.12);border:2px solid #86efac;border-radius:14px;
                     padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:14px;">
             <div style="font-size:28px;">🟢</div>
             <div>
-                <div style="font-weight:700;color:#15803d;font-size:15px;">API Key Active</div>
-                <div style="font-size:12px;color:#166534;margin-top:2px;">Source: {src} · AI recommendations enabled</div>
+                <div style="font-weight:700;color:#6ee7b7;font-size:15px;">API Key Active</div>
+                <div style="font-size:12px;color:#6ee7b7;margin-top:2px;">Source: {src} · AI recommendations enabled</div>
             </div>
         </div>
         """, unsafe_allow_html=True)
     else:
         st.markdown("""
-        <div style="background:#fef2f2;border:2px solid #fca5a5;border-radius:14px;
+        <div style="background:rgba(251,113,133,.12);border:2px solid #fca5a5;border-radius:14px;
                     padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:14px;">
             <div style="font-size:28px;">🔴</div>
             <div>
                 <div style="font-weight:700;color:#dc2626;font-size:15px;">No API Key</div>
-                <div style="font-size:12px;color:#991b1b;margin-top:2px;">
+                <div style="font-size:12px;color:#fda4af;margin-top:2px;">
                     Rule-based audit works without a key · AI suggestions require OpenAI key
                 </div>
             </div>
@@ -1813,15 +2111,49 @@ elif page == "🔑 Settings":
                 st.rerun()
 
         st.markdown("""
-        <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;
+        <div style="background:rgba(251,191,36,.12);border:1px solid #fde68a;border-radius:10px;
                     padding:12px 14px;margin-top:10px;">
-            <div style="font-size:12px;font-weight:600;color:#92400e;margin-bottom:3px;">🔒 Privacy</div>
-            <div style="font-size:12px;color:#78350f;line-height:1.6;">
+            <div style="font-size:12px;font-weight:600;color:#fcd34d;margin-bottom:3px;">🔒 Privacy</div>
+            <div style="font-size:12px;color:#fcd34d;line-height:1.6;">
                 Your key is stored in browser session memory only.<br>
                 Never saved to any database or server. Cleared when you close the tab.
             </div>
         </div>
         """, unsafe_allow_html=True)
+
+        # ── SerpAPI key (live keyword rankings) ───────────────────────────────
+        st.markdown('<div class="sec-hdr">🔑 SerpAPI Key — Live Rankings</div>', unsafe_allow_html=True)
+        serp_active = rankings.has_key()
+        st.markdown(f"""
+        <div style="background:{'rgba(52,211,153,.12)' if serp_active else 'rgba(140,120,255,.10)'};
+                    border:1px solid {'rgba(52,211,153,.4)' if serp_active else 'rgba(140,120,255,.3)'};
+                    border-radius:10px;padding:10px 14px;margin-bottom:10px;font-size:12.5px;color:#c9cdf2;">
+            {'🟢 Connected — Keyword Rankings &amp; Pages can fetch live Google positions.' if serp_active
+              else 'Powers the 🔑 Keyword Rankings &amp; 📄 Pages tabs (Google US + SF Bay Area). Get a free key at '
+                   '<a href="https://serpapi.com/manage-api-key" target="_blank" style="color:#22d3ee;">serpapi.com</a>.'}
+        </div>
+        """, unsafe_allow_html=True)
+        serp_entered = st.text_input("SerpAPI Key", value=st.session_state.get("serp_api_key", ""),
+                                     type="password", placeholder="your SerpAPI key",
+                                     label_visibility="collapsed", key="serp_input")
+        sc1, sc2 = st.columns(2)
+        with sc1:
+            if st.button("💾 Save SerpAPI Key", use_container_width=True):
+                if serp_entered.strip():
+                    st.session_state.serp_api_key = serp_entered.strip()
+                    os.environ["SERPAPI_KEY"] = serp_entered.strip()
+                    st.success("✅ SerpAPI key saved — rank tracking enabled.")
+                    st.rerun()
+                else:
+                    st.error("Please enter a key.")
+        with sc2:
+            if st.button("🗑️ Clear SerpAPI Key", use_container_width=True):
+                st.session_state.serp_api_key = ""
+                os.environ.pop("SERPAPI_KEY", None)
+                st.rerun()
+        st.caption(f"Budget: a full refresh = {len(rankings.DEFAULT_KEYWORDS)} keywords × 2 locations "
+                   f"= {len(rankings.DEFAULT_KEYWORDS)*2} searches. Cached "
+                   f"{rankings.REFRESH_AFTER_DAYS} days.")
 
         st.markdown('<div class="sec-hdr">🔍 What Works Without a Key?</div>', unsafe_allow_html=True)
         no_key_features = [
@@ -1840,7 +2172,7 @@ elif page == "🔑 Settings":
             <div style="display:flex;gap:10px;padding:7px 0;border-bottom:1px solid #f1f5f9;">
                 <span style="color:{color};font-size:14px;flex-shrink:0;">{icon}</span>
                 <div>
-                    <div style="font-size:13px;font-weight:500;color:#0f172a;">{title}</div>
+                    <div style="font-size:13px;font-weight:500;color:#eef0ff;">{title}</div>
                     <div style="font-size:11px;color:#64748b;">{desc}</div>
                 </div>
             </div>
@@ -1849,8 +2181,8 @@ elif page == "🔑 Settings":
     with s2:
         st.markdown('<div class="sec-hdr">📋 Get an API Key</div>', unsafe_allow_html=True)
         st.markdown("""
-        <div style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:18px;">
-            <div style="font-size:13px;color:#374151;line-height:2.2;">
+        <div style="background:#0e1120;border:1px solid rgba(140,120,255,.18);border-radius:12px;padding:18px;">
+            <div style="font-size:13px;color:#c9cdf2;line-height:2.2;">
                 1. Visit <a href="https://platform.openai.com/api-keys" target="_blank"
                    style="color:#4f46e5;font-weight:600;">platform.openai.com/api-keys</a><br>
                 2. Sign in or create a free account<br>
@@ -1878,8 +2210,8 @@ elif page == "🔑 Settings":
             st.markdown(f"""
             <div style="display:flex;justify-content:space-between;padding:6px 12px;
                         background:{'#eff6ff' if item.startswith('Total') else 'white'};
-                        border:1px solid #e2e8f0;border-radius:8px;margin:2px 0;">
-                <span style="font-size:12px;color:#374151;">{item}</span>
+                        border:1px solid rgba(140,120,255,.18);border-radius:8px;margin:2px 0;">
+                <span style="font-size:12px;color:#c9cdf2;">{item}</span>
                 <span style="font-size:12px;{bold}">{cost}</span>
             </div>
             """, unsafe_allow_html=True)
