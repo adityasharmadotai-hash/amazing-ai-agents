@@ -68,12 +68,11 @@ LOCATION_ALIASES: dict[str, list[str]] = {
     ],
 }
 
-# All discovery providers. serpapi/apify/perplexity find LinkedIn POSTS; gemini
+# All discovery sources. serpapi/apify/perplexity find LinkedIn POSTS; gemini
 # finds layoff NEWS instead (grounded Google Search can't reach login-walled
 # LinkedIn posts, so that backend is repurposed for news — see
-# agent/sources/gemini_search.py). Gemini is excluded from "all"/merge mode to
-# keep that mode post-focused and avoid extra Gemini spend, but stays selectable
-# explicitly for news coverage without a separate search key.
+# agent/sources/gemini_search.py). Gemini news is INCLUDED in "all"/merge mode
+# (whenever a Gemini key is set) so merged scans get news alongside posts.
 _ALL_PROVIDERS = ("serpapi", "apify", "perplexity", "gemini")
 
 # Query dictionary — MANY phrases, each searched INDEPENDENTLY (never combined
@@ -270,10 +269,12 @@ def _locations_are_us() -> bool:
 
 
 def active_sources() -> list[str]:
-    """The LinkedIn provider(s) a scan should run, resolved from LINKEDIN_SOURCE.
+    """The discovery source(s) a scan should run, resolved from LINKEDIN_SOURCE.
 
-    - "all"/"merge"/blank -> every provider we have a key for (Gemini excluded:
-      it returns 0). Falls back to ["serpapi"] if no key is set.
+    - "all"/"merge"/blank -> every source we have a key for: the LinkedIn-post
+      providers (SerpAPI/Apify/Perplexity) PLUS Gemini news (added whenever a
+      Gemini key is set, which it always is — it's required for extraction — so
+      "all" always has at least news coverage). Falls back to ["serpapi"].
     - otherwise a single name or a comma/space-separated list, validated against
       the known providers.
     """
@@ -286,6 +287,8 @@ def active_sources() -> list[str]:
             out.append("apify")
         if PERPLEXITY_API_KEY:
             out.append("perplexity")
+        if GEMINI_API_KEY:
+            out.append("gemini")   # layoff-news coverage via grounded web search
         return out or ["serpapi"]
     names = [s for s in src.replace(",", " ").split() if s]
     picked = [n for n in names if n in _ALL_PROVIDERS]
@@ -412,9 +415,7 @@ def missing_required() -> list[str]:
     elif single == "serpapi":
         required["SERPAPI_KEY"] = SERPAPI_KEY
     # single == "gemini" needs no extra key (reuses GEMINI_API_KEY).
-    # Merge/"all" mode needs at least one search-provider key — flag it if none.
-    missing = [k for k, v in required.items() if not v]
-    if single is None and not (SERPAPI_KEY or APIFY_TOKEN or PERPLEXITY_API_KEY):
-        missing.append("a LinkedIn provider key (SERPAPI_KEY, APIFY_TOKEN, or "
-                       "PERPLEXITY_API_KEY)")
-    return missing
+    # "all"/merge mode always includes Gemini news (GEMINI_API_KEY is required
+    # above), so it can run without any LinkedIn-provider key — a provider only
+    # ADDS individual-post coverage on top of the news. Nothing extra to require.
+    return [k for k, v in required.items() if not v]

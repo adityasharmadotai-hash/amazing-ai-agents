@@ -73,13 +73,12 @@ CONFIG_KEYS: list[dict] = [
         "group": "LinkedIn source",
         "secret": False,
         "required": True,
-        "help": "`all` (recommended) = merge every provider you have a key for "
-                "(SerpAPI + Apify + Perplexity), run together and dedupe — max "
-                "coverage. Or pick one: `serpapi` (cheap Google snippets), `apify` "
-                "(full scrape, most volume), `perplexity` (live web search). "
-                "`gemini` finds layoff **news** (not LinkedIn posts) via Google "
-                "Search — no extra key needed; it's excluded from `all` to keep "
-                "that mode post-focused.",
+        "help": "`all` (recommended) = merge every source you have a key for "
+                "(SerpAPI + Apify + Perplexity for LinkedIn posts, **plus Gemini "
+                "news**), run together and dedupe — max coverage. Or pick one: "
+                "`serpapi` (cheap Google snippets), `apify` (full scrape, most "
+                "volume), `perplexity` (live web search), or `gemini` (layoff "
+                "**news** via Google Search — no extra key needed).",
         "steps": [
             "Leave as `all` to merge every keyed provider for maximum coverage.",
             "Or type a single provider name to use just that one.",

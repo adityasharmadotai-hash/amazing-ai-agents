@@ -67,11 +67,13 @@ def render():
 
     if source == "all":
         active = ", ".join(config.active_sources()) or "none yet"
-        st.info("**All (merge) mode — recommended.** Runs every provider you have "
-                "a key for (SerpAPI + Apify + Perplexity) at once and dedupes the "
-                "results — the widest coverage. Add keys below for each provider "
-                f"you want included. **Currently active:** {active}. Gemini is "
-                "excluded (it can't find LinkedIn posts).", icon="⭐")
+        st.info("**All (merge) mode — recommended.** Runs every source you have a "
+                "key for at once and dedupes the results — the widest coverage. "
+                "That's SerpAPI + Apify + Perplexity for LinkedIn **posts**, plus "
+                "**Gemini news** (layoff articles via Google Search, using your "
+                "Gemini key — no extra key needed). Add keys below for each "
+                f"LinkedIn provider you want included. **Currently active:** "
+                f"{active}.", icon="⭐")
     elif source == "serpapi":
         st.info("**SerpAPI mode:** you only need a SerpAPI key below. Cheap Google-"
                 "indexed snippets — good for getting started.", icon="🟢")
