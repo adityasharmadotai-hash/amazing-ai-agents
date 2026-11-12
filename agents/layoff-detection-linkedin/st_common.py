@@ -426,7 +426,7 @@ _BRAND_CSS = """
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 :root { --brand:#6d5efc; --brand-2:#8b5cf6; --ink:#1e2233; --muted:#6b7280;
-        --line:#e8eaf2; --card:#ffffff; --bg:#f5f6fb; }
+        --line:#e8eaf2; --card:#ffffff; --bg:#f5f6fb; color-scheme: light; }
 
 html, body, .stApp, [data-testid="stAppViewContainer"],
 [data-testid="stSidebar"] * , .stMarkdown, button, input, textarea, select {
@@ -475,6 +475,21 @@ label, [data-testid="stWidgetLabel"], [data-testid="stWidgetLabel"] p,
 [data-testid="stSidebarNav"] a span, [data-testid="stSidebarNav"] a p {
   color:var(--ink) !important;
 }
+
+/* Force light surfaces so bordered containers, expanders and dropdown menus
+   don't render dark (with invisible content) under a dark base theme. */
+[data-testid="stVerticalBlockBorderWrapper"],
+[data-testid="stExpander"], [data-testid="stExpander"] details,
+[data-testid="stExpanderDetails"], [data-testid="stForm"] {
+  background:var(--card) !important;
+}
+[data-baseweb="popover"], [data-baseweb="menu"],
+[data-baseweb="menu"] li, [role="listbox"], [role="option"] {
+  background:#fff !important; color:var(--ink) !important;
+}
+/* Toggles/sliders value text and generic widget text. */
+[data-testid="stWidgetLabel"] *, [data-testid="stTickBar"],
+[data-testid="stThumbValue"] { color:var(--ink) !important; }
 
 /* ---------- Hero ---------- */
 .ls-hero {
@@ -529,9 +544,14 @@ label, [data-testid="stWidgetLabel"], [data-testid="stWidgetLabel"] p,
 [data-testid="stMetricLabel"] p { font-weight:600; color:var(--muted); }
 
 /* ---------- Buttons ---------- */
+/* Force a light face + dark text on secondary/download/form buttons so they're
+   readable even when the base theme is dark (otherwise it's dark-on-dark and the
+   label vanishes). Primary buttons override this below with their own !important
+   gradient + white text. */
 .stButton>button, .stDownloadButton>button, .stFormSubmitButton>button {
   border-radius:12px; font-weight:600; border:1px solid var(--line);
   transition:.15s; padding:.5rem 1rem;
+  background:var(--card) !important; color:var(--ink) !important;
 }
 .stButton>button:hover, .stDownloadButton>button:hover { border-color:var(--brand);
   color:var(--brand); }
