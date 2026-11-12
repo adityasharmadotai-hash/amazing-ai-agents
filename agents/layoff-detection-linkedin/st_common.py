@@ -77,7 +77,9 @@ CONFIG_KEYS: list[dict] = [
                 "(SerpAPI + Apify + Perplexity), run together and dedupe — max "
                 "coverage. Or pick one: `serpapi` (cheap Google snippets), `apify` "
                 "(full scrape, most volume), `perplexity` (live web search). "
-                "`gemini` can't find LinkedIn posts and is excluded from `all`.",
+                "`gemini` finds layoff **news** (not LinkedIn posts) via Google "
+                "Search — no extra key needed; it's excluded from `all` to keep "
+                "that mode post-focused.",
         "steps": [
             "Leave as `all` to merge every keyed provider for maximum coverage.",
             "Or type a single provider name to use just that one.",
@@ -311,6 +313,33 @@ CONFIG_KEYS: list[dict] = [
         "help": "When a post doesn't state a country, scrape the profile to find "
                 "it (Apify only; costs one extra profile scrape).",
         "steps": ["`true` recovers more US leads; `false` saves scrapes."],
+    },
+    {
+        "key": "GEMINI_NEWS_MAX_SEARCHES",
+        "label": "Gemini news searches per scan",
+        "group": "Tuning",
+        "secret": False,
+        "required": False,
+        "default": "4",
+        "help": "Gemini (news) only: how many grounded Google searches to run per "
+                "scan (each is one Gemini call). Grounding self-expands each into "
+                "several web queries, so a handful already gives broad coverage. "
+                "Higher = more coverage and cost.",
+        "steps": ["`4` is a sensible default; lower it to cut Gemini spend."],
+    },
+    {
+        "key": "NEWS_TRUSTED_DOMAINS",
+        "label": "Trusted news domains (optional)",
+        "group": "Tuning",
+        "secret": False,
+        "required": False,
+        "help": "Gemini (news) only: restrict results to specific news domains. "
+                "Leave blank to allow any reputable outlet the model finds.",
+        "steps": [
+            "Enter domains separated by commas or pipes, e.g. "
+            "`reuters.com | techcrunch.com | bloomberg.com`.",
+            "Leave blank to let Gemini use any reputable news source.",
+        ],
     },
 ]
 

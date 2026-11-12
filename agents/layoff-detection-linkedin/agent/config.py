@@ -68,9 +68,12 @@ LOCATION_ALIASES: dict[str, list[str]] = {
     ],
 }
 
-# All LinkedIn discovery providers. Gemini is excluded from "all"/merge mode
-# because Google Search grounding cannot reach individual LinkedIn posts (it
-# returns 0) — but it stays selectable explicitly for anyone who wants it.
+# All discovery providers. serpapi/apify/perplexity find LinkedIn POSTS; gemini
+# finds layoff NEWS instead (grounded Google Search can't reach login-walled
+# LinkedIn posts, so that backend is repurposed for news — see
+# agent/sources/gemini_search.py). Gemini is excluded from "all"/merge mode to
+# keep that mode post-focused and avoid extra Gemini spend, but stays selectable
+# explicitly for news coverage without a separate search key.
 _ALL_PROVIDERS = ("serpapi", "apify", "perplexity", "gemini")
 
 # Query dictionary — MANY phrases, each searched INDEPENDENTLY (never combined
@@ -130,6 +133,7 @@ def refresh() -> None:
     global LINKEDIN_QUERIES, APIFY_MAX_KEYWORD_VARIANTS
     global EXPANSION_ENABLED, EXPANSION_MAX_COMPANIES, EXPANSION_QUERIES_PER_COMPANY
     global SCAN_BUDGET_USD
+    global GEMINI_NEWS_MAX_SEARCHES, NEWS_TRUSTED_DOMAINS
 
     # Required
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
@@ -182,6 +186,15 @@ def refresh() -> None:
     # paid actor run). Variants are pulled from all queries, deduped, then capped
     # here. Higher = more coverage, more cost.
     APIFY_MAX_KEYWORD_VARIANTS = _int("APIFY_MAX_KEYWORD_VARIANTS", 8)
+
+    # Gemini news source (grounded Google Search): how many grounded searches to
+    # run per scan (each is one Gemini call). Grounding self-expands each prompt
+    # into several web queries, so a handful is plenty.
+    GEMINI_NEWS_MAX_SEARCHES = _int("GEMINI_NEWS_MAX_SEARCHES", 4)
+    # Optional allowlist of news domains the Gemini news source may use (comma /
+    # pipe separated, e.g. "reuters.com, techcrunch.com"). Empty = allow any
+    # reputable outlet the model finds.
+    NEWS_TRUSTED_DOMAINS = _parse_list(os.getenv("NEWS_TRUSTED_DOMAINS", ""))
 
     # ── Company-expansion (second-pass discovery) ──────────────────────────
     # After the first pass discovers companies, expand the strongest ones with

@@ -16,7 +16,7 @@ _SOURCE_LABELS = {
     "serpapi": "🟢  SerpAPI — free tier, fastest to set up",
     "apify": "🔵  Apify — paid, full LinkedIn post scraping (more volume)",
     "perplexity": "🟠  Perplexity web search — live search with citations (needs a key)",
-    "gemini": "🟣  Gemini web search — no extra key, but can't find LinkedIn posts",
+    "gemini": "🟣  Gemini web search — finds layoff NEWS (no extra key needed)",
 }
 _GROUP_ICONS = {
     "Required": "🔑",
@@ -83,10 +83,12 @@ def render():
                 "Live web search returning real LinkedIn post URLs — fresh, no "
                 "scraper. Billed per search.", icon="🟠")
     else:
-        st.info("**Gemini web search mode:** no extra key needed, but note Google "
-                "Search can't reach individual LinkedIn posts, so this usually "
-                "returns 0. Use **All** or another provider for real coverage.",
-                icon="🟣")
+        st.info("**Gemini web search mode:** no extra key needed (reuses your "
+                "Gemini key). Google Search can't reach login-walled LinkedIn "
+                "posts, so this backend finds recent layoff **news** from "
+                "reputable sites instead — same keywords, same target location. "
+                "Great for company announcements; pair with a LinkedIn provider "
+                "(or **All**) to also catch laid-off individuals.", icon="🟣")
 
     # ── Live status ────────────────────────────────────────────────────────
     missing = config.missing_required()
